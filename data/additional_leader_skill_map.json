@@ -1,0 +1,329 @@
+{
+    "first-year": [
+        "Nishikino Maki", "Hoshizora Rin", "Koizumi Hanayo", 
+        "Kurosawa Ruby", "Kunikida Hanamaru", "Tsushima Yoshiko",
+        "Tennoji Rina", "Nakasu Kasumi", "Osaka Shizuku", "Mifune Shioriko",
+        "Arashi Chisato", "Hazuki Ren", "Heanna Sumire", "Onitsuka Natsumi",
+        "Sakurakoji Kinako", "Shibuya Kanon", "Tang Keke", "Wakana Shiki",
+        "Yoneme Mei"
+    ],
+    "second-year": [
+        "Kosaka Honoka", "Minami Kotori", "Sonoda Umi", 
+        "Takami Chika", "Sakurauchi Riko", "Watanabe You",
+        "Uehara Ayumu", "Miyashita Ai", "Yuki Setsuna", "Lanzhu Zhong"
+    ],
+    "third-year": [
+        "Ayase Eli", "Tojo Nozomi", "Yazawa Nico", 
+        "Matsuura Kanan", "Kurosawa Dia", "Ohara Mari",
+        "Asaka Karin", "Konoe Kanata", "Emma Verde", "Mia Taylor"
+    ],
+    "1st years": [
+        "Nishikino Maki", "Hoshizora Rin", "Koizumi Hanayo", 
+        "Kurosawa Ruby", "Kunikida Hanamaru", "Tsushima Yoshiko",
+        "Tennoji Rina", "Nakasu Kasumi", "Osaka Shizuku", "Mifune Shioriko",
+        "Arashi Chisato", "Hazuki Ren", "Heanna Sumire", "Onitsuka Natsumi",
+        "Sakurakoji Kinako", "Shibuya Kanon", "Tang Keke", "Wakana Shiki",
+        "Yoneme Mei"
+    ],
+    "2nd years": [
+        "Kosaka Honoka", "Minami Kotori", "Sonoda Umi", 
+        "Takami Chika", "Sakurauchi Riko", "Watanabe You",
+        "Uehara Ayumu", "Miyashita Ai", "Yuki Setsuna", "Lanzhu Zhong"
+    ],
+    "3rd years": [
+        "Ayase Eli", "Tojo Nozomi", "Yazawa Nico", 
+        "Matsuura Kanan", "Kurosawa Dia", "Ohara Mari",
+        "Asaka Karin", "Konoe Kanata", "Emma Verde", "Mia Taylor"
+    ],
+    "μ's": [
+        "Nishikino Maki", "Hoshizora Rin", "Koizumi Hanayo", 
+        "Kosaka Honoka", "Minami Kotori", "Sonoda Umi", 
+        "Ayase Eli", "Tojo Nozomi", "Yazawa Nico"
+    ],
+    "Aqours": [
+        "Kurosawa Ruby", "Kunikida Hanamaru", "Tsushima Yoshiko",
+        "Takami Chika", "Sakurauchi Riko", "Watanabe You",
+        "Matsuura Kanan", "Kurosawa Dia", "Ohara Mari"
+    ],
+    "Nijigasaki Idol Club": [
+        "Tennoji Rina", "Nakasu Kasumi", "Osaka Shizuku", "Mifune Shioriko",
+        "Uehara Ayumu", "Miyashita Ai", "Yuki Setsuna", "Lanzhu Zhong",
+        "Asaka Karin", "Konoe Kanata", "Emma Verde", "Mia Taylor"
+    ],
+    "Liella!": [
+        "Arashi Chisato", "Hazuki Ren", "Heanna Sumire", "Onitsuka Natsumi",
+        "Sakurakoji Kinako", "Shibuya Kanon", "Tang Keke", "Wakana Shiki",
+        "Yoneme Mei"
+    ],
+    "Printemps": [
+        "Koizumi Hanayo", "Kosaka Honoka", "Minami Kotori"
+    ],
+    "BiBi": [
+        "Ayase Eli", "Yazawa Nico", "Nishikino Maki"
+    ],
+    "lily white": [
+        "Tojo Nozomi", "Hoshizora Rin", "Sonoda Umi"
+    ],
+    "CYaRon！": [
+        "Kurosawa Ruby", "Takami Chika", "Watanabe You"
+    ],
+    "AZALEA": [
+        "Kunikida Hanamaru", "Matsuura Kanan", "Kurosawa Dia"
+    ],
+    "Guilty Kiss": [
+        "Tsushima Yoshiko", "Sakurauchi Riko", "Ohara Mari"
+    ],
+    "first-year μ's": [
+        "Nishikino Maki", "Hoshizora Rin", "Koizumi Hanayo"
+    ],
+    "second-year μ's": [
+        "Kosaka Honoka", "Minami Kotori", "Sonoda Umi"
+    ],
+    "third-year μ's": [
+        "Ayase Eli", "Tojo Nozomi", "Yazawa Nico"
+    ],
+    "first-year Aqours": [
+        "Kurosawa Ruby", "Kunikida Hanamaru", "Tsushima Yoshiko"
+    ],
+    "second-year Aqours": [
+        "Takami Chika", "Sakurauchi Riko", "Watanabe You"
+    ],
+    "third-year Aqours": [
+        "Matsuura Kanan", "Kurosawa Dia", "Ohara Mari"
+    ],
+    "Honoka, Eli": [
+        "Kosaka Honoka", "Ayase Eli"
+    ],
+    "Honoka, Kotori": [
+        "Kosaka Honoka", "Minami Kotori"
+    ],
+    "Honoka, Maki": [
+        "Kosaka Honoka", "Nishikino Maki"
+    ],
+    "Honoka, Nozomi": [
+        "Kosaka Honoka", "Tojo Nozomi"
+    ],
+    "Honoka, Hanayo": [
+        "Kosaka Honoka", "Koizumi Hanayo"
+    ],
+    "Honoka, Nico": [
+        "Kosaka Honoka", "Yazawa Nico"
+    ],
+    "Eli, Kotori": [
+        "Ayase Eli", "Minami Kotori"
+    ],
+    "Eli, Umi": [
+        "Ayase Eli", "Sonoda Umi"
+    ],
+    "Eli, Maki": [
+        "Ayase Eli", "Nishikino Maki"
+    ],
+    "Eli, Nozomi": [
+        "Ayase Eli", "Tojo Nozomi"
+    ],
+    "Eli, Nico": [
+        "Ayase Eli", "Yazawa Nico"
+    ],
+    "Kotori, Umi": [
+        "Minami Kotori", "Sonoda Umi"
+    ],
+    "Kotori, Rin": [
+        "Minami Kotori", "Hoshizora Rin"
+    ],
+    "Kotori, Maki": [
+        "Minami Kotori", "Nishikino Maki"
+    ],
+    "Kotori, Hanayo": [
+        "Minami Kotori", "Koizumi Hanayo"
+    ],
+    "Kotori, Nico": [
+        "Minami Kotori", "Yazawa Nico"
+    ],
+    "Umi, Rin": [
+        "Sonoda Umi", "Hoshizora Rin"
+    ],
+    "Umi, Maki": [
+        "Sonoda Umi", "Nishikino Maki"
+    ],
+    "Umi, Nozomi": [
+        "Sonoda Umi", "Tojo Nozomi"
+    ],
+    "Umi, Hanayo": [
+        "Sonoda Umi", "Koizumi Hanayo"
+    ],
+    "Umi, Nico": [
+        "Sonoda Umi", "Yazawa Nico"
+    ],
+    "Rin, Maki": [
+        "Hoshizora Rin", "Nishikino Maki"
+    ],
+    "Rin, Nozomi": [
+        "Hoshizora Rin", "Tojo Nozomi"
+    ],
+    "Rin, Hanayo": [
+        "Hoshizora Rin", "Koizumi Hanayo"
+    ],
+    "Rin, Nico": [
+        "Hoshizora Rin", "Yazawa Nico"
+    ],
+    "Maki, Nozomi": [
+        "Nishikino Maki", "Tojo Nozomi"
+    ],
+    "Maki, Hanayo": [
+        "Nishikino Maki", "Koizumi Hanayo"
+    ],
+    "Maki, Nico": [
+        "Nishikino Maki", "Yazawa Nico"
+    ],
+    "Nozomi, Hanayo": [
+        "Tojo Nozomi", "Koizumi Hanayo"
+    ],
+    "Nozomi, Nico": [
+        "Tojo Nozomi", "Yazawa Nico"
+    ],
+    "Hanayo, Nico": [
+        "Koizumi Hanayo", "Yazawa Nico"
+    ],
+    "Chika, Kanan": [
+        "Takami Chika", "Matsuura Kanan"
+    ],
+    "Chika, You": [
+        "Takami Chika", "Watanabe You"
+    ],
+    "Chika, Yoshiko": [
+        "Takami Chika", "Tsushima Yoshiko"
+    ],
+    "Chika, Hanamaru": [
+        "Takami Chika", "Kunikida Hanamaru"
+    ],
+    "Chika, Mari": [
+        "Takami Chika", "Ohara Mari"
+    ],
+    "Chika, Ruby": [
+        "Takami Chika", "Kurosawa Ruby"
+    ],
+    "Riko, Kanan": [
+        "Sakurauchi Riko", "Matsuura Kanan"
+    ],
+    "Riko, Dia": [
+        "Sakurauchi Riko", "Kurosawa Dia"
+    ],
+    "Riko, You": [
+        "Sakurauchi Riko", "Watanabe You"
+    ],
+    "Riko, Yoshiko": [
+        "Sakurauchi Riko", "Tsushima Yoshiko"
+    ],
+    "Riko, Hanamaru": [
+        "Sakurauchi Riko", "Kunikida Hanamaru"
+    ],
+    "Riko, Mari": [
+        "Sakurauchi Riko", "Ohara Mari"
+    ],
+    "Kanan, Dia": [
+        "Matsuura Kanan", "Kurosawa Dia"
+    ],
+    "Kanan, You": [
+        "Matsuura Kanan", "Watanabe You"
+    ],
+    "Kanan, Yoshiko": [
+        "Matsuura Kanan", "Tsushima Yoshiko"
+    ],
+    "Kanan, Hanamaru": [
+        "Matsuura Kanan", "Kunikida Hanamaru"
+    ],
+    "Kanan, Mari": [
+        "Matsuura Kanan", "Ohara Mari"
+    ],
+    "Kanan, Ruby": [
+        "Matsuura Kanan", "Kurosawa Ruby"
+    ],
+    "Dia, Yoshiko": [
+        "Kurosawa Dia", "Tsushima Yoshiko"
+    ],
+    "Dia, You": [
+        "Kurosawa Dia", "Watanabe You"
+    ],
+    "Dia, Hanamaru": [
+        "Kurosawa Dia", "Kunikida Hanamaru"
+    ],
+    "Dia, Mari": [
+        "Kurosawa Dia", "Ohara Mari"
+    ],
+    "Dia, Ruby": [
+        "Kurosawa Dia", "Kurosawa Ruby"
+    ],
+    "You, Hanamaru": [
+        "Watanabe You", "Kunikida Hanamaru"
+    ],
+    "You, Mari": [
+        "Watanabe You", "Ohara Mari"
+    ],
+    "You, Ruby": [
+        "Watanabe You", "Kurosawa Ruby"
+    ],
+    "Yoshiko, Hanamaru": [
+        "Tsushima Yoshiko", "Kunikida Hanamaru"
+    ],
+    "Yoshiko, Mari": [
+        "Tsushima Yoshiko", "Ohara Mari"
+    ],
+    "Yoshiko, Ruby": [
+        "Tsushima Yoshiko", "Kurosawa Ruby"
+    ],
+    "Hanamaru, Ruby": [
+        "Kunikida Hanamaru", "Kurosawa Ruby"
+    ],
+    "Nishikino Maki": ["Nishikino Maki"],
+    "Hoshizora Rin": ["Hoshizora Rin"],
+    "Koizumi Hanayo": ["Koizumi Hanayo"], 
+    "Kosaka Honoka": ["Kosaka Honoka"],
+    "Minami Kotori": ["Minami Kotori"],
+    "Sonoda Umi": ["Sonoda Umi"], 
+    "Ayase Eli": ["Ayase Eli"],
+    "Tojo Nozomi": ["Tojo Nozomi"],
+    "Yazawa Nico": ["Yazawa Nico"],
+    "Kurosawa Ruby": ["Kurosawa Ruby"],
+    "Kunikida Hanamaru": ["Kunikida Hanamaru"],
+    "Tsushima Yoshiko": ["Tsushima Yoshiko"],
+    "Takami Chika": ["Takami Chika"],
+    "Sakurauchi Riko": ["Sakurauchi Riko"],
+    "Watanabe You": ["Watanabe You"],
+    "Matsuura Kanan": ["Matsuura Kanan"],
+    "Kurosawa Dia": ["Kurosawa Dia"],
+    "Ohara Mari": ["Ohara Mari"],
+    "Tennoji Rina": ["Tennoji Rina"],
+    "Nakasu Kasumi": ["Nakasu Kasumi"],
+    "Osaka Shizuku": ["Osaka Shizuku"],
+    "Mifune Shioriko": ["Mifune Shioriko"],
+    "Uehara Ayumu": ["Uehara Ayumu"],
+    "Miyashita Ai": ["Miyashita Ai"],
+    "Yuki Setsuna": ["Yuki Setsuna"],
+    "Lanzhu Zhong": ["Lanzhu Zhong"],
+    "Asaka Karin": ["Asaka Karin"],
+    "Konoe Kanata": ["Konoe Kanata"],
+    "Emma Verde": ["Emma Verde"],
+    "Mia Taylor": ["Mia Taylor"],
+    "Arashi Chisato": ["Arashi Chisato"],
+    "Hazuki Ren": ["Hazuki Ren"],
+    "Heanna Sumire": ["Heanna Sumire"],
+    "Onitsuka Natsumi": ["Onitsuka Natsumi"],
+    "Sakurakoji Kinako": ["Sakurakoji Kinako"],
+    "Shibuya Kanon": ["Shibuya Kanon"],
+    "Tang Keke": ["Tang Keke"],
+    "Wakana Shiki": ["Wakana Shiki"],
+    "Yoneme Mei": ["Yoneme Mei"],
+    "All": [
+        "Nishikino Maki", "Hoshizora Rin", "Koizumi Hanayo", 
+        "Kurosawa Ruby", "Kunikida Hanamaru", "Tsushima Yoshiko",
+        "Tennoji Rina", "Nakasu Kasumi", "Osaka Shizuku", "Mifune Shioriko",
+        "Arashi Chisato", "Hazuki Ren", "Heanna Sumire", "Onitsuka Natsumi",
+        "Sakurakoji Kinako", "Shibuya Kanon", "Tang Keke", "Wakana Shiki",
+        "Yoneme Mei", "Kosaka Honoka", "Minami Kotori", "Sonoda Umi", 
+        "Takami Chika", "Sakurauchi Riko", "Watanabe You",
+        "Uehara Ayumu", "Miyashita Ai", "Yuki Setsuna", "Lanzhu Zhong",
+        "Ayase Eli", "Tojo Nozomi", "Yazawa Nico", 
+        "Matsuura Kanan", "Kurosawa Dia", "Ohara Mari",
+        "Asaka Karin", "Konoe Kanata", "Emma Verde", "Mia Taylor"
+    ]
+}

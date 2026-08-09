@@ -1,0 +1,3445 @@
+[
+    {
+        "leader_skill_id": 1,
+        "leader_attribute": null,
+        "leader_secondary_attribute": null,
+        "leader_value": null,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 2,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.03,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 3,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.04,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 4,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.06,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 5,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 6,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "BiBi",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 7,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 8,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 9,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 10,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "AZALEA",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 11,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "CYaRon\uff01",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 12,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 13,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Guilty Kiss",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 14,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 15,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 16,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 17,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Printemps",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 18,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 19,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 20,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "AZALEA",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 21,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Guilty Kiss",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 22,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Printemps",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 23,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 24,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 25,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 26,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 27,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "BiBi",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 28,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 29,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 30,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 31,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 32,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "CYaRon\uff01",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 33,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 34,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 35,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 36,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 37,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 38,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 39,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.11,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.07
+        }
+    },
+    {
+        "leader_skill_id": 40,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Honoka, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 41,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Kanan, Dia",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 42,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Umi, Rin",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 43,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Riko, Mari",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 44,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Hanayo, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 45,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 46,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 47,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Honoka, Hanayo",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 48,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Yoshiko, Hanamaru",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 49,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Yoshiko, Ruby",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 50,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Rin, Maki",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 51,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Maki, Hanayo",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 52,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 53,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Chika, You",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 54,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Kotori, Rin",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 55,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Dia, You",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 56,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Eli, Umi",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 57,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Kotori, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 58,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "You, Hanamaru",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 59,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Chika, Kanan",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 60,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Nozomi, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 61,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Riko, Dia",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 62,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 63,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Riko, Kanan",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 64,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Kotori, Maki",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 65,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Dia, Ruby",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 66,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Chika, Mari",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 67,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Riko, Hanamaru",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 68,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Kotori, Umi",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 69,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Eli, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 70,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "You, Ruby",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 71,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 72,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Riko, Yoshiko",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 73,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Honoka, Maki",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 74,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Rin, Hanayo",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 75,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Honoka, Eli",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 76,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Kanan, Hanamaru",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 77,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Honoka, Hanayo",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 78,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Kanan, Yoshiko",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 79,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Umi, Maki",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 80,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Chika, Ruby",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 81,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Nozomi, Nico",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 82,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Kanan, Ruby",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 83,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Riko, You",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 84,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Kotori, Hanayo",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 85,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Rin, Hanayo",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 86,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Rin, Nico",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 87,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Yoshiko, Mari",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 88,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Eli, Kotori",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 89,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Honoka, Eli",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 90,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Kanan, Dia",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 91,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 92,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "CYaRon\uff01",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 93,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 94,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 95,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "AZALEA",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 96,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 97,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "Printemps",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 98,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 99,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "BiBi",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 100,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 101,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 102,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "AZALEA",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 103,
+        "leader_attribute": "Smile",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Smile",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 104,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.03,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 105,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.04,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 106,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.06,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 107,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "AZALEA",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 108,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Guilty Kiss",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 109,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 110,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 111,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 112,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Printemps",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 113,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "BiBi",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 114,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 115,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 116,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 117,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "CYaRon\uff01",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 118,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 119,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 120,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 121,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "BiBi",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 122,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "CYaRon\uff01",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 123,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 124,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 125,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 126,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 127,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 128,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 129,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 130,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Guilty Kiss",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 131,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 132,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 133,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "AZALEA",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 134,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 135,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 136,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 137,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Printemps",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 138,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 139,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 140,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 141,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.11,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.07
+        }
+    },
+    {
+        "leader_skill_id": 142,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 143,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Eli, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 144,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Riko, Hanamaru",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 145,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 146,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 147,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Nozomi, Hanayo",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 148,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Kanan, Mari",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 149,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "You, Mari",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 150,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Dia, Yoshiko",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 151,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Kotori, Rin",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 152,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Hanamaru, Ruby",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 153,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Maki, Hanayo",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 154,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 155,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Kanan, Dia",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 156,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Eli, Maki",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 157,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Chika, Yoshiko",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 158,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Riko, Dia",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 159,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Chika, Hanamaru",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 160,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Umi, Hanayo",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 161,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Honoka, Kotori",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 162,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Chika, You",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 163,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Kotori, Maki",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 164,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 165,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Eli, Nozomi",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 166,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Eli, Umi",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 167,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 168,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "You, Ruby",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 169,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Maki, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 170,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Kotori, Umi",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 171,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Rin, Nozomi",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 172,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Umi, Nozomi",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 173,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Riko, Kanan",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 174,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Dia, Mari",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 175,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Riko, Mari",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 176,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Honoka, Eli",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 177,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Kanan, You",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 178,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Nozomi, Nico",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 179,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Maki, Nozomi",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 180,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Rin, Hanayo",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 181,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Rin, Nico",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 182,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Yoshiko, Mari",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 183,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Eli, Kotori",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 184,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Riko, Mari",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 185,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Dia, Hanamaru",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 186,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Umi, Nico",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 187,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Honoka, Nozomi",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 188,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Kanan, Hanamaru",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 189,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Kotori, Rin",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 190,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Chika, Ruby",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 191,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Chika, Hanamaru",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 192,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Honoka, Hanayo",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 193,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Umi, Maki",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 194,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Riko, You",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 195,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "You, Ruby",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 196,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 197,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "CYaRon\uff01",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 198,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 199,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 200,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "AZALEA",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 201,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Printemps",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 202,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 203,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "BiBi",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 204,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 205,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 206,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "BiBi",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 207,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "Guilty Kiss",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 208,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 209,
+        "leader_attribute": "Pure",
+        "leader_secondary_attribute": "Cool",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Pure",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 210,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.03,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 211,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.04,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 212,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.06,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 213,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 214,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 215,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "AZALEA",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 216,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Guilty Kiss",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 217,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 218,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 219,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 220,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.01
+        }
+    },
+    {
+        "leader_skill_id": 221,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 222,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Printemps",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 223,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "BiBi",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 224,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "CYaRon\uff01",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 225,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.07,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.02
+        }
+    },
+    {
+        "leader_skill_id": 226,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Printemps",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 227,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 228,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 229,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "BiBi",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 230,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 231,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 232,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 233,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 234,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "CYaRon\uff01",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 235,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 236,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 237,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 238,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 239,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 240,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 241,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Nijigasaki Idol Club",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 242,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 243,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Guilty Kiss",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 244,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 245,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "AZALEA",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 246,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.09,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.03
+        }
+    },
+    {
+        "leader_skill_id": 247,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.11,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.07
+        }
+    },
+    {
+        "leader_skill_id": 248,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "You, Hanamaru",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 249,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Maki, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 250,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Chika, Kanan",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 251,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Rin, Hanayo",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 252,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Riko, Yoshiko",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 253,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Umi, Nozomi",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 254,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Umi, Hanayo",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 255,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Honoka, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 256,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Kanan, You",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 257,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Chika, Mari",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 258,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Honoka, Maki",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 259,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Hanayo, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 260,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Kanan, Mari",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 261,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Rin, Maki",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 262,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Dia, Mari",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 263,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Dia, Yoshiko",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 264,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Umi, Rin",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 265,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": null,
+            "leader_extra_target": null,
+            "leader_extra_value": null
+        }
+    },
+    {
+        "leader_skill_id": 266,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Dia, You",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 267,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Nozomi, Hanayo",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 268,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Eli, Maki",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 269,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Chika, Yoshiko",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 270,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Aqours",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 271,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Liella!",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 272,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Yoshiko, Ruby",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 273,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "You, Mari",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 274,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Honoka, Kotori",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 275,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Chika, Hanamaru",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 276,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Honoka, Hanayo",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 277,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Yoshiko, Hanamaru",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 278,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Hanamaru, Ruby",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 279,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "\u03bc's",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 280,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Dia, Ruby",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 281,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Eli, Nozomi",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 282,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Kotori, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 283,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Nozomi, Nico",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 284,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Rin, Nozomi",
+            "leader_extra_value": 0.09
+        }
+    },
+    {
+        "leader_skill_id": 285,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Dia, Yoshiko",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 286,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Honoka, Eli",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 287,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Kanan, Yoshiko",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 288,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Kanan, Dia",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 289,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Kotori, Rin",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 290,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Dia, Hanamaru",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 291,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Kanan, Ruby",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 292,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Riko, You",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 293,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Maki, Nozomi",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 294,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Eli, Kotori",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 295,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Kotori, Hanayo",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 296,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Riko, Mari",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 297,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Umi, Nico",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 298,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Honoka, Nozomi",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 299,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": null,
+        "leader_value": 0.15,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "You, Ruby",
+            "leader_extra_value": 0.12
+        }
+    },
+    {
+        "leader_skill_id": 300,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 301,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 302,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "AZALEA",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 303,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Guilty Kiss",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 304,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 305,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Printemps",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 306,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "BiBi",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 307,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Smile",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 308,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "Printemps",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 309,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "lily white",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 310,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "third-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 311,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "CYaRon\uff01",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 312,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "second-year",
+            "leader_extra_value": 0.06
+        }
+    },
+    {
+        "leader_skill_id": 313,
+        "leader_attribute": "Cool",
+        "leader_secondary_attribute": "Pure",
+        "leader_value": 0.12,
+        "extra": {
+            "leader_extra_attribute": "Cool",
+            "leader_extra_target": "first-year",
+            "leader_extra_value": 0.06
+        }
+    }
+]

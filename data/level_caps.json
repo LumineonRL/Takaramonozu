@@ -1,0 +1,22 @@
+{
+    "N": {
+        "unidolized": 30,
+        "idolized": 40
+    },
+    "R": {
+        "unidolized": 40,
+        "idolized": 60
+    },
+    "SR": {
+        "unidolized": 60,
+        "idolized": 80
+    },
+    "SSR": {
+        "unidolized": 70,
+        "idolized": 90
+    },
+    "UR": {
+        "unidolized": 80,
+        "idolized": 100
+    }
+}
