@@ -176629,7 +176629,7 @@
         "rarity": "SR",
         "attribute": "Smile",
         "character": "Tennoji Rina",
-        "is_promo": false,
+        "is_promo": true,
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
