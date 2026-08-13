@@ -67,9 +67,6 @@ pub struct SkillDef {
     pub effect: SkillEffect,
     pub trigger: SkillTrigger,
     pub target: Option<TargetId>,
-    /// Row count of the payload table, which is the amplify ceiling rather than
-    /// the skill cap: an Encore (8 rows) at level 5 under a +7 Amplify resolves
-    /// at 8, not 12. Lookups saturate here instead of bounds-checking.
     pub rows: u8,
     /// `[payload, payload + rows)` in the value/duration arenas.
     pub payload: u32,

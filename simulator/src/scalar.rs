@@ -3,23 +3,21 @@
 //! So it takes the floats and reprsents them as integers, which we can do
 //! since we have a fixed number of decimal places.
 
-/// Hundredths. Used for Skill `value`s, whose meaning changes depending on the effect
+/// Used for Skill `value`s, whose meaning changes depending on the effect
 /// A skill's value is actually really annoying to represent because of how it's meaning
 /// changes depending on the type of skill it's attached to so I'll mark this as a TBD that
 /// might change in the future.
 /// max is flat score for a Scorer (`14_824_000` = 148240.00)
 pub type Centi = u32;
 
-/// Milliseconds. Used for Skill `duration`s; max observed `43_000`.
+/// Used for Skill `duration`s; max observed `43_000`.
 pub type Millis = u16;
 
 /// Percent as written on the card: `93` means 93%, i.e. 0.93. Activation
 /// chance (max 93) and leader values (max 15).
 ///
 /// Note that this is a storage type for rates that came out of cards.json, all of
-/// which are 0..=100. However, It is deliberately too narrow for a rate as the simulator will
-/// need to handle because Skill Rate Up + Amplify shenanigans can technicaly get a skill activation chance
-/// to exceed 256% (I think... I actually need to check this edge case. Mark it as a TODO).
+/// which are 0..=100.
 pub type Pct = u8;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

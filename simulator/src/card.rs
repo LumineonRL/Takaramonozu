@@ -7,7 +7,7 @@ use crate::skill::SkillId;
 pub struct CardIdx(pub u16);
 
 /// Index into the leader-skill table, of which there are 313.
-/// Made Slot 0 is the identity leader since N cards have no leader skill
+/// Made Slot 0 the identity leader since N cards have no leader skill
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LeaderId(pub u16);
 
