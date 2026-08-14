@@ -87,6 +87,8 @@ impl RawSkill {
     }
 }
 
+/// # Errors
+/// Any generic error that could occur from any of the above functions.
 pub fn parse(bytes: &[u8]) -> serde_json::Result<Vec<RawCard>> {
     serde_json::from_slice(bytes)
 }
