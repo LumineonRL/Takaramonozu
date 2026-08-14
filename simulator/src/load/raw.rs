@@ -86,3 +86,67 @@ impl RawSkill {
             .filter(|t| !t.is_empty())
     }
 }
+
+pub fn parse(bytes: &[u8]) -> serde_json::Result<Vec<RawCard>> {
+    serde_json::from_slice(bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cards() -> Vec<RawCard> {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/cards.json");
+        let bytes = std::fs::read(path).expect("cards.json");
+        parse(&bytes).expect("schema")
+    }
+
+    #[test]
+    fn check_card_count() {
+        let cards = cards();
+        assert_eq!(cards.len(), 3826);
+        let mut ids: Vec<u16> = cards.iter().map(|c| c.card_id).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), 3826);
+    }
+
+    #[test]
+    fn check_skill_format() {
+        for c in cards() {
+            let s = &c.skill;
+            let rows = s.level.len();
+            assert_eq!(s.is_present(), rows > 0, "card {}", c.card_id);
+            assert!(
+                s.threshold.len() == rows
+                    && s.chance.len() == rows
+                    && s.value.len() == rows
+                    && s.duration.len() == rows,
+                "card {} ragged",
+                c.card_id
+            );
+            let expected: Vec<u8> = (1..=rows as u8).collect();
+            assert_eq!(s.level, expected, "card {}", c.card_id);
+        }
+    }
+
+    /// Makes sure that there's no nulls in the middle of an array that has non-null values.
+    #[test]
+    fn check_unexpected_nulls() {
+        for c in cards() {
+            let s = &c.skill;
+            for (name, col) in [
+                ("threshold", &s.threshold),
+                ("value", &s.value),
+                ("duration", &s.duration),
+            ] {
+                let nulls = col.iter().filter(|v| v.is_none()).count();
+                assert!(
+                    nulls == 0 || nulls == col.len(),
+                    "card {} has a mixed {name} column",
+                    c.card_id
+                );
+            }
+        }
+    }
+}
