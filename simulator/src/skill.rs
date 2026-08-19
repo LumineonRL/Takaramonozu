@@ -15,7 +15,7 @@ use core::num::{NonZeroU8, NonZeroU16};
 
 use crate::scalar::{Centi, Millis, Pct};
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(u8)]
 pub enum SkillEffect {
     Scorer,
@@ -32,7 +32,7 @@ pub enum SkillEffect {
     Spark,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(u8)]
 pub enum SkillTrigger {
     RhythmIcons,
@@ -46,7 +46,7 @@ pub enum SkillTrigger {
 
 /// One of the 14 distinct skill `target` strings, set on 100 cards. Resolves to
 /// a `CharacterSet` at compile time; `NonZero` so `Option<TargetId>` is 1 byte.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct TargetId(pub NonZeroU8);
 
 /// Index into [`SkillArena::defs`]. Slot 0 is a dead entry, which buys the niche
@@ -56,7 +56,7 @@ pub struct SkillId(pub NonZeroU16);
 
 /// What it takes to arm. `threshold` is integral in every row of the source and
 /// tops out at 18000 (from a score based scorer); Star Notes stores 1.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Arming {
     pub threshold: u16,
     pub chance: Pct,

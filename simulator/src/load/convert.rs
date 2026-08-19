@@ -196,6 +196,8 @@ impl Roster {
 
 #[cfg(test)]
 mod tests {
+    use core::assert_matches;
+
     use super::*;
     use crate::load::raw::{self, RawCard};
 
@@ -263,6 +265,13 @@ mod tests {
         assert_eq!(millis(0.05), Ok(50));
         assert_eq!(millis(0.0005), Err(ErrorKind::NotFixedPoint(0.0005)));
         assert_eq!(centi(148_240.0), Ok(14_824_000));
-        assert_eq!(rarity("SSSR"), Err(ErrorKind::Unknown("SSSR".into())));
+        assert_matches!(rarity("SSSR"), Err(ErrorKind::Unknown(s)) if &*s == "SSSR");
+    }
+
+    #[test]
+    fn check_errors_carry_the_card_and_field() {
+        let err = pct(0.935).at(66, "chance").expect_err("not fixed point");
+        assert_matches!(err, LoadError { card_id: Some(66), field: "chance", .. });
+        assert_eq!(err.to_string(), "card 66, field `chance`: 0.935 is not exact in this unit");
     }
 }
