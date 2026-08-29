@@ -1,14 +1,14 @@
-//! Takes the 3505 unique cards skills and places them into a [`SkillArena`]
+//! Folds the 3505 card skills into a [`SkillArena`] of 2460 distinct ones,
+//! plus an unused entry at slot 0 so that a card with no skill costs nothing
+//! to store. See [`SkillId`] for why that works.
 
-use std::collections::HashMap;
 use core::num::{NonZeroU8, NonZeroU16};
+use std::collections::HashMap;
 
 use crate::load::convert::{self, At, LoadError};
 use crate::load::raw::RawSkill;
 use crate::scalar::{Centi, Millis};
-use crate::skill::{
-    Arming, SkillArena, SkillDef, SkillEffect, SkillId, SkillTrigger, TargetId,
-};
+use crate::skill::{Arming, SkillArena, SkillDef, SkillEffect, SkillId, SkillTrigger, TargetId};
 
 /// Base level is 1..=8 for every card in the game and the shortest skill table
 /// is 8 rows (the URs), so arming is always exactly this many rows.
@@ -24,17 +24,18 @@ struct Key {
     durations: Vec<Millis>,
 }
 
-pub struct Interner {
+pub struct Table {
     pub arena: SkillArena,
     /// The 14 distinct `target` strings.
     pub targets: Vec<Box<str>>,
     seen: HashMap<Key, SkillId>,
 }
 
-impl Default for Interner {
+impl Default for Table {
     fn default() -> Self {
         let mut arena = SkillArena::default();
-        // Slot 0 is no skill
+        // Slot 0 is never handed out. Its contents are never read; it is here
+        // only so that no real skill has id 0.
         arena.defs.push(SkillDef {
             effect: SkillEffect::Scorer,
             trigger: SkillTrigger::Combo,
@@ -47,13 +48,13 @@ impl Default for Interner {
     }
 }
 
-impl Interner {
+impl Table {
     /// # Errors
     /// Any field that does not convert
     /// # Panics
     /// Past 65535 distinct skills or 255 targets, neither of which the frozen
     /// data comes close to.
-    pub fn skill(&mut self, card_id: u16, raw: &RawSkill) -> Result<Option<SkillId>, LoadError> {
+    pub fn insert(&mut self, card_id: u16, raw: &RawSkill) -> Result<Option<SkillId>, LoadError> {
         if !raw.is_present() {
             return Ok(None);
         }
@@ -137,54 +138,56 @@ mod tests {
         raw::parse(&std::fs::read(path).expect("cards.json")).expect("schema")
     }
 
-    fn interned() -> (Interner, Vec<(u16, Option<SkillId>)>) {
-        let mut interner = Interner::default();
+    fn built() -> (Table, Vec<(u16, Option<SkillId>)>) {
+        let mut table = Table::default();
         let ids = cards()
             .iter()
-            .map(|c| (c.card_id, interner.skill(c.card_id, &c.skill).expect("convert")))
+            .map(|c| (c.card_id, table.insert(c.card_id, &c.skill).expect("convert")))
             .collect();
-        (interner, ids)
+        (table, ids)
     }
 
     #[test]
     fn check_corpus_folds_to_the_expected_tables() {
-        let (interner, ids) = interned();
+        let (table, ids) = built();
         assert_eq!(ids.iter().filter(|(_, id)| id.is_none()).count(), 321);
         // 2460 distinct skills plus the dead slot 0.
-        assert_eq!(interner.arena.defs.len(), 2461);
-        assert_eq!(interner.arena.arming.len(), 2460 * ARMING_ROWS);
-        assert_eq!(interner.arena.values.len(), interner.arena.durations.len());
-        assert_eq!(interner.targets.len(), 14);
+        assert_eq!(table.arena.defs.len(), 2461);
+        assert_eq!(table.arena.arming.len(), 2460 * ARMING_ROWS);
+        assert_eq!(table.arena.values.len(), table.arena.durations.len());
+        assert_eq!(table.targets.len(), 14);
     }
 
     /// Every card must read back out of the arena what its own rows said, which
     /// is what dedupe is allowed to preserve and nothing else.
     #[test]
     fn check_every_card_round_trips_through_the_arena() {
-        let (interner, ids) = interned();
+        let (table, ids) = built();
         for (card, (card_id, id)) in cards().iter().zip(ids) {
             assert_eq!(card.card_id, card_id);
             let Some(id) = id else { continue };
-            let def = &interner.arena.defs[id.0.get() as usize];
+            let def = &table.arena.defs[id.0.get() as usize];
             let raw = &card.skill;
             assert_eq!(def.rows as usize, raw.level.len());
 
             for row in 0..ARMING_ROWS {
                 #[expect(clippy::cast_possible_truncation, reason = "row < 8")]
-                let armed = interner.arena.arming(def, row as u8 + 1);
+                let armed = table.arena.arming(def, row as u8 + 1);
                 assert_eq!(armed.chance, convert::pct(raw.chance[row]).expect("chance"));
             }
             for (row, value) in raw.value.iter().enumerate() {
                 #[expect(clippy::cast_possible_truncation, reason = "row < 16")]
-                let (got, _) = interner.arena.payload(def, row as u8 + 1);
+                let (got, _) = table.arena.payload(def, row as u8 + 1);
                 assert_eq!(got, value.map_or(0, |v| convert::centi(v).expect("value")));
             }
         }
     }
 
-    /// The dead slot is what keeps `Option<SkillId>` the same size as `SkillId`.
+    /// Leaving slot 0 unused is what keeps a skill-less card free: see
+    /// [`SkillId`]. If this ever fails, `Option<SkillId>` grew a second field
+    /// and every card got wider.
     #[test]
-    fn check_skill_id_niche_is_free() {
+    fn check_optional_skill_id_costs_nothing() {
         assert_eq!(size_of::<Option<SkillId>>(), size_of::<SkillId>());
     }
 }
