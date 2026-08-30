@@ -17,6 +17,12 @@ pub struct LoadError {
 pub enum ErrorKind {
     Unknown(Box<str>),
     NotFixedPoint(f64),
+    /// A field a sibling field made mandatory. The leader `extra` triple is
+    /// all-or-nothing, and a `leader_attribute` implies a `leader_value`.
+    Missing,
+    /// A value that's theoretically possible but violates the rules that exist in cards.json.
+    /// Like if an N had an 8 SIS max or something.
+    Invariant,
 }
 
 impl fmt::Display for LoadError {
@@ -28,6 +34,8 @@ impl fmt::Display for LoadError {
         match &self.kind {
             ErrorKind::Unknown(s) => write!(f, "unknown value {s:?}"),
             ErrorKind::NotFixedPoint(v) => write!(f, "{v} is not exact in this unit"),
+            ErrorKind::Missing => write!(f, "absent, but a sibling field requires it"),
+            ErrorKind::Invariant => write!(f, "contradicts a known invariant of the source"),
         }
     }
 }
@@ -120,7 +128,7 @@ fn scaled<T: TryFrom<u32>>(value: f64, factor: f64) -> Result<T, ErrorKind> {
     if (scaled - whole).abs() > 1e-6 || !(0.0..=f64::from(u32::MAX)).contains(&whole) {
         return Err(err());
     }
-    T::try_from(whole as u32).map_err(|_| err()) 
+    T::try_from(whole as u32).map_err(|_| err())
 }
 
 /// Hundredths, for skills like `value`: `3.85 -> 385` or `400.0 -> 40000`.
@@ -211,11 +219,12 @@ mod tests {
         for c in &cards() {
             rarity(&c.rarity).expect("rarity");
             attribute(&c.attribute).expect("attribute");
-            for s in [&c.leader_skill.leader_attribute, &c.leader_skill.leader_secondary_attribute]
-                .into_iter()
-                .chain([&c.leader_skill.extra.leader_extra_attribute])
-                .flatten()
-            {
+            let attributes = [
+                &c.leader_skill.leader_attribute,
+                &c.leader_skill.leader_secondary_attribute,
+                &c.leader_skill.extra.leader_extra_attribute,
+            ];
+            for s in attributes.into_iter().flatten() {
                 attribute(s).expect("leader attribute");
             }
             if c.skill.is_present() {

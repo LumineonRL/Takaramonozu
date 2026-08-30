@@ -1,6 +1,8 @@
 // So the goal is convert cards.json into an rkyv file.
 // But we need to load that in first with serde.
 
+use std::collections::HashMap;
+
 use serde::Deserialize;
 use serde::de::IgnoredAny;
 
@@ -56,6 +58,38 @@ pub struct RawLeaderExtra {
     pub leader_extra_value: Option<f64>,
 }
 
+/// One entry of `unique_leader_skills.json`.
+///
+/// The same shape as [`RawLeader`] with an id bolted on. Kept separate rather
+/// than flattened because `serde(flatten)` and `deny_unknown_fields` do not
+/// compose.
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct RawUniqueLeader {
+    pub leader_skill_id: u16,
+    pub leader_attribute: Option<String>,
+    pub leader_secondary_attribute: Option<String>,
+    pub leader_value: Option<f64>,
+    pub extra: RawLeaderExtra,
+}
+
+impl RawUniqueLeader {
+    /// Clones, which is irrelevant on a 313-entry cross-check that runs offline.
+    #[must_use]
+    pub fn to_leader(&self) -> RawLeader {
+        RawLeader {
+            leader_attribute: self.leader_attribute.clone(),
+            leader_secondary_attribute: self.leader_secondary_attribute.clone(),
+            leader_value: self.leader_value,
+            extra: RawLeaderExtra {
+                leader_extra_attribute: self.extra.leader_extra_attribute.clone(),
+                leader_extra_target: self.extra.leader_extra_target.clone(),
+                leader_extra_value: self.extra.leader_extra_value,
+            },
+        }
+    }
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct RawSkill {
@@ -81,15 +115,29 @@ impl RawSkill {
 
     #[must_use]
     pub fn target(&self) -> Option<&str> {
-        self.target
-            .as_deref()
-            .filter(|t| !t.is_empty())
+        self.target.as_deref().filter(|t| !t.is_empty())
     }
 }
 
+/// `additional_leader_skill_map.json` maps a `leader_extra_target` name to the
+/// character names it corresponds to.
+pub type RawTargetMap = HashMap<String, Vec<String>>;
+
 /// # Errors
-/// Any generic error that could occur from any of the above functions.
+/// Any deviation from the schema above, including an unknown field.
 pub fn parse(bytes: &[u8]) -> serde_json::Result<Vec<RawCard>> {
+    serde_json::from_slice(bytes)
+}
+
+/// # Errors
+/// Anything that is not an object of string arrays.
+pub fn parse_target_map(bytes: &[u8]) -> serde_json::Result<RawTargetMap> {
+    serde_json::from_slice(bytes)
+}
+
+/// # Errors
+/// Any deviation from [`RawUniqueLeader`].
+pub fn parse_unique_leaders(bytes: &[u8]) -> serde_json::Result<Vec<RawUniqueLeader>> {
     serde_json::from_slice(bytes)
 }
 
@@ -104,7 +152,7 @@ mod tests {
     }
 
     #[test]
-    fn check_card_count() {
+    fn parses_every_card_with_unique_ids() {
         let cards = cards();
         assert_eq!(cards.len(), 3826);
         let mut ids: Vec<u16> = cards.iter().map(|c| c.card_id).collect();
@@ -113,8 +161,9 @@ mod tests {
         assert_eq!(ids.len(), 3826);
     }
 
+    /// The parallel arrays are a table, and `level` is only ever its row numbers.
     #[test]
-    fn check_skill_format() {
+    fn skill_arrays_are_parallel_and_level_is_positional() {
         for c in cards() {
             let s = &c.skill;
             let rows = s.level.len();
@@ -127,14 +176,46 @@ mod tests {
                 "card {} ragged",
                 c.card_id
             );
+            #[allow(clippy::cast_possible_truncation, reason = "rows <= 16")]
             let expected: Vec<u8> = (1..=rows as u8).collect();
             assert_eq!(s.level, expected, "card {}", c.card_id);
         }
     }
 
-    /// Makes sure that there's no nulls in the middle of an array that has non-null values.
     #[test]
-    fn check_unexpected_nulls() {
+    fn leader_null_patterns_are_structural() {
+        let mut identity = 0;
+        for c in cards() {
+            let l = &c.leader_skill;
+            let e = &l.extra;
+            let extras = [
+                e.leader_extra_attribute.is_some(),
+                e.leader_extra_target.is_some(),
+                e.leader_extra_value.is_some(),
+            ];
+            assert!(
+                extras == [true; 3] || extras == [false; 3],
+                "card {} has a partial leader extra",
+                c.card_id
+            );
+            if l.leader_attribute.is_none() {
+                assert!(
+                    l.leader_value.is_none()
+                        && l.leader_secondary_attribute.is_none()
+                        && extras == [false; 3],
+                    "card {} has no leader attribute but carries leader data",
+                    c.card_id
+                );
+                identity += 1;
+            } else {
+                assert!(l.leader_value.is_some(), "card {} has no leader value", c.card_id);
+            }
+        }
+        assert_eq!(identity, 321, "the identity leader belongs to the N cards alone");
+    }
+
+    #[test]
+    fn null_columns_are_all_or_nothing() {
         for c in cards() {
             let s = &c.skill;
             for (name, col) in [
