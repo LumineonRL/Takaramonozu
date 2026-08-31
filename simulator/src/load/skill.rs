@@ -2,12 +2,12 @@
 //! plus an unused entry at slot 0 so that a card with no skill costs nothing
 //! to store. See [`SkillId`] for why that works.
 
-use core::num::{NonZeroU8, NonZeroU16};
+use core::num::NonZeroU16;
 use std::collections::HashMap;
 
-use crate::load::convert::{self, At, LoadError};
-use crate::load::raw::RawSkill;
-use crate::scalar::{Centi, Millis};
+use crate::load::convert::{self, At, ErrorKind, LoadError, Roster};
+use crate::load::raw::{RawSkill, RawTargetMap};
+use crate::scalar::{Centi, CharacterSet, Millis};
 use crate::skill::{Arming, SkillArena, SkillDef, SkillEffect, SkillId, SkillTrigger, TargetId};
 
 /// Base level is 1..=8 for every card in the game and the shortest skill table
@@ -24,10 +24,54 @@ struct Key {
     durations: Vec<Millis>,
 }
 
+/// Encodes the 14 distinct skill target strings into bitmasks, out of
+/// `year_group_target.json`.
+#[derive(Clone, PartialEq, Eq, Default, Debug)]
+pub struct Targets {
+    names: Vec<Box<str>>,
+    sets: Vec<CharacterSet>,
+}
+
+impl Targets {
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.sets.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.sets.is_empty()
+    }
+
+    #[must_use]
+    pub fn set(&self, id: TargetId) -> Option<CharacterSet> {
+        self.sets.get(id.index()).copied()
+    }
+
+    #[must_use]
+    pub fn name(&self, id: TargetId) -> Option<&str> {
+        self.names.get(id.index()).map(Box::as_ref)
+    }
+
+    fn id(
+        &mut self,
+        name: &str,
+        map: &RawTargetMap,
+        roster: &Roster,
+    ) -> Result<TargetId, ErrorKind> {
+        if let Some(i) = self.names.iter().position(|n| **n == *name) {
+            return Ok(TargetId::from_index(i));
+        }
+        let set = convert::character_set(name, map, roster)?;
+        self.names.push(name.into());
+        self.sets.push(set);
+        Ok(TargetId::from_index(self.names.len() - 1))
+    }
+}
+
 pub struct Table {
     pub arena: SkillArena,
-    /// The 14 distinct `target` strings.
-    pub targets: Vec<Box<str>>,
+    pub targets: Targets,
     seen: HashMap<Key, SkillId>,
 }
 
@@ -44,7 +88,7 @@ impl Default for Table {
             payload: 0,
             arming: 0,
         });
-        Self { arena, targets: Vec::new(), seen: HashMap::new() }
+        Self { arena, targets: Targets::default(), seen: HashMap::new() }
     }
 }
 
@@ -54,13 +98,23 @@ impl Table {
     /// # Panics
     /// Past 65535 distinct skills or 255 targets, neither of which the frozen
     /// data comes close to.
-    pub fn insert(&mut self, card_id: u16, raw: &RawSkill) -> Result<Option<SkillId>, LoadError> {
+    pub fn insert(
+        &mut self,
+        card_id: u16,
+        raw: &RawSkill,
+        map: &RawTargetMap,
+        roster: &Roster,
+    ) -> Result<Option<SkillId>, LoadError> {
         if !raw.is_present() {
             return Ok(None);
         }
         let effect = convert::effect(&raw.effect).at(card_id, "type")?;
         let trigger = convert::trigger(&raw.activation).at(card_id, "activation")?;
-        let target = raw.target().map(|t| self.target(t));
+        let target = raw
+            .target()
+            .map(|t| self.targets.id(t, map, roster))
+            .transpose()
+            .at(card_id, "target")?;
 
         let mut arming = [Arming { threshold: 0, chance: 0 }; ARMING_ROWS];
         for (row, out) in arming.iter_mut().enumerate() {
@@ -116,40 +170,46 @@ impl Table {
         self.seen.insert(key, id);
         id
     }
-
-    /// 14 strings, so a scan beats a second map.
-    fn target(&mut self, name: &str) -> TargetId {
-        let i = self.targets.iter().position(|t| **t == *name).unwrap_or_else(|| {
-            self.targets.push(name.into());
-            self.targets.len() - 1
-        });
-        let slot = u8::try_from(i + 1).expect("target table fits u8");
-        TargetId(NonZeroU8::new(slot).expect("slots are 1 based"))
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    use core::assert_matches;
+
     use super::*;
     use crate::load::raw::{self, RawCard};
 
-    fn cards() -> Vec<RawCard> {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/cards.json");
-        raw::parse(&std::fs::read(path).expect("cards.json")).expect("schema")
+    fn read(name: &str) -> Vec<u8> {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/");
+        std::fs::read(format!("{path}{name}")).expect("data file")
     }
 
-    fn built() -> (Table, Vec<(u16, Option<SkillId>)>) {
+    fn cards() -> Vec<RawCard> {
+        raw::parse(&read("cards.json")).expect("schema")
+    }
+
+    fn map() -> RawTargetMap {
+        raw::parse_target_map(&read("year_group_target.json")).expect("schema")
+    }
+
+    fn built() -> (Table, Roster, Vec<(u16, Option<SkillId>)>) {
+        let cards = cards();
+        let roster = Roster::build(cards.iter().map(|c| c.character.as_str()));
+        let map = map();
         let mut table = Table::default();
-        let ids = cards()
+        let ids = cards
             .iter()
-            .map(|c| (c.card_id, table.insert(c.card_id, &c.skill).expect("convert")))
+            .map(|c| {
+                let id = table.insert(c.card_id, &c.skill, &map, &roster);
+                (c.card_id, id.expect("convert"))
+            })
             .collect();
-        (table, ids)
+        (table, roster, ids)
     }
 
     #[test]
     fn check_corpus_folds_to_the_expected_tables() {
-        let (table, ids) = built();
+        let (table, _, ids) = built();
         assert_eq!(ids.iter().filter(|(_, id)| id.is_none()).count(), 321);
         // 2460 distinct skills plus the dead slot 0.
         assert_eq!(table.arena.defs.len(), 2461);
@@ -162,7 +222,7 @@ mod tests {
     /// is what dedupe is allowed to preserve and nothing else.
     #[test]
     fn check_every_card_round_trips_through_the_arena() {
-        let (table, ids) = built();
+        let (table, _, ids) = built();
         for (card, (card_id, id)) in cards().iter().zip(ids) {
             assert_eq!(card.card_id, card_id);
             let Some(id) = id else { continue };
@@ -183,11 +243,63 @@ mod tests {
         }
     }
 
+    /// The big difference between how skill and leader skills are handled
+    ///  is that leader skills can be pairs but skills can be any of groups,
+    /// year-groups (which would be a trio), or a sub-unit (which are also only trios in SIF)
+    #[test]
+    fn check_targets_resolve_to_whole_groups() {
+        let (table, roster, _) = built();
+        assert_eq!(table.targets.len(), 14);
+        for i in 0..table.targets.len() {
+            let id = TargetId::from_index(i);
+            let name = table.targets.name(id).expect("in range");
+            let members = match name {
+                "μ's" | "Aqours" => 9,
+                _ => 3,
+            };
+            assert_eq!(table.targets.set(id).expect("in range").0.count_ones(), members, "{name}");
+        }
+
+        let names: Vec<&str> = (0..table.targets.len())
+            .map(|i| table.targets.name(TargetId::from_index(i)).expect("in range"))
+            .collect();
+        assert!(!names.contains(&"All"), "no card asks for the All key");
+
+        // The stored mask is the whole group, including its own own bit
+        let nico = roster.id("Yazawa Nico").expect("in roster");
+        let third = convert::character_set("third-year μ's", &map(), &roster).expect("resolve");
+        assert!(third.contains(nico));
+    }
+
+    #[test]
+    fn check_every_target_round_trips_through_the_table() {
+        let (table, _, ids) = built();
+        for (card, (card_id, id)) in cards().iter().zip(ids) {
+            assert_eq!(card.card_id, card_id);
+            let Some(id) = id else { continue };
+            let target = table.arena.defs[id.0.get() as usize].target;
+            assert_eq!(target.and_then(|t| table.targets.name(t)), card.skill.target());
+        }
+    }
+
+    #[test]
+    fn check_an_unmapped_target_is_an_error() {
+        let mut cards = cards();
+        let roster = Roster::build(cards.iter().map(|c| c.character.as_str()));
+        let c = cards.iter_mut().find(|c| c.skill.target().is_some()).expect("a targeted skill");
+        c.skill.target = Some("A-RISE".into());
+        let err = Table::default()
+            .insert(c.card_id, &c.skill, &map(), &roster)
+            .expect_err("not in year_group_target.json");
+        assert_matches!(err, LoadError { field: "target", kind: ErrorKind::Unknown(s), .. }
+            if &*s == "A-RISE");
+    }
+
     /// Leaving slot 0 unused is what keeps a skill-less card free: see
     /// [`SkillId`]. If this ever fails, `Option<SkillId>` grew a second field
-    /// and every card got wider.
     #[test]
-    fn check_optional_skill_id_costs_nothing() {
+    fn check_optional_ids_cost_nothing() {
         assert_eq!(size_of::<Option<SkillId>>(), size_of::<SkillId>());
+        assert_eq!(size_of::<Option<TargetId>>(), 1);
     }
 }

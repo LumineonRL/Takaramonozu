@@ -2,7 +2,8 @@
 
 use core::fmt;
 
-use crate::scalar::{Attribute, Centi, CharacterId, Millis, Pct, Rarity};
+use crate::load::raw::RawTargetMap;
+use crate::scalar::{Attribute, Centi, CharacterId, CharacterSet, Millis, Pct, Rarity};
 use crate::skill::{SkillEffect, SkillTrigger};
 
 #[derive(Clone, PartialEq, Debug)]
@@ -156,6 +157,27 @@ pub fn millis(value: f64) -> Result<Millis, ErrorKind> {
 /// A fractional threshold, or one past 65535.
 pub fn threshold(value: f64) -> Result<u16, ErrorKind> {
     scaled(value, 1.0)
+}
+
+/// A target name over the roster bitmask it covers.
+///
+/// Used for leader extras from additional_leader_skipp_map.json
+/// and skill targets from year_group_target.json.
+///
+/// # Errors
+/// A name the map does not carry, or a member outside the roster.
+pub fn character_set(
+    name: &str,
+    map: &RawTargetMap,
+    roster: &Roster,
+) -> Result<CharacterSet, ErrorKind> {
+    let members = map.get(name).ok_or_else(|| ErrorKind::Unknown(name.into()))?;
+    let mut bits = 0u128;
+    for member in members {
+        let id = roster.id(member).ok_or_else(|| ErrorKind::Unknown(member.as_str().into()))?;
+        bits |= 1 << id.0;
+    }
+    Ok(CharacterSet(bits))
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default)]

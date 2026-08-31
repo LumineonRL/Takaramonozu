@@ -39,12 +39,12 @@ impl Targets {
 
     #[must_use]
     pub fn set(&self, id: LeaderTargetId) -> Option<CharacterSet> {
-        self.sets.get(id.0 as usize).copied()
+        self.sets.get(id.index()).copied()
     }
 
     #[must_use]
     pub fn name(&self, id: LeaderTargetId) -> Option<&str> {
-        self.names.get(id.0 as usize).map(Box::as_ref)
+        self.names.get(id.index()).map(Box::as_ref)
     }
 
     fn id(
@@ -54,33 +54,15 @@ impl Targets {
         roster: &Roster,
     ) -> Result<LeaderTargetId, ErrorKind> {
         if let Some(i) = self.names.iter().position(|n| **n == *name) {
-            return Ok(LeaderTargetId(index(i)));
+            return Ok(LeaderTargetId::from_index(i));
         }
-        let set = resolve(name, map, roster)?;
+        let set = convert::character_set(name, map, roster)?;
         self.names.push(name.into());
         self.sets.push(set);
-        Ok(LeaderTargetId(index(self.names.len() - 1)))
+        Ok(LeaderTargetId::from_index(self.names.len() - 1))
     }
 }
 
-/// # Panics
-/// Past 255 targets. There are only 74 in cards.json
-#[expect(clippy::cast_possible_truncation, reason = "asserted immediately above")]
-fn index(i: usize) -> u8 {
-    assert!(i < 256, "{i} targets do not fit a LeaderTargetId");
-    i as u8
-}
-
-/// Target maps to a key in the roster bitmask.
-fn resolve(name: &str, map: &RawTargetMap, roster: &Roster) -> Result<CharacterSet, ErrorKind> {
-    let members = map.get(name).ok_or_else(|| ErrorKind::Unknown(name.into()))?;
-    let mut bits = 0u128;
-    for member in members {
-        let id = roster.id(member).ok_or_else(|| ErrorKind::Unknown(member.as_str().into()))?;
-        bits |= 1 << id.0;
-    }
-    Ok(CharacterSet(bits))
-}
 pub struct Table {
     /// Slot 0 is [`IDENTITY`], which is `leader_skill_id` 1 upstream.
     pub by_id: Vec<LeaderSkill>,
@@ -288,7 +270,7 @@ mod tests {
     fn check_targets_resolve_to_distinct_sets() {
         let (table, roster, _) = built();
         let mut sets: Vec<u128> = (0..table.targets.len())
-            .map(|i| table.targets.set(LeaderTargetId(index(i))).expect("in range").0)
+            .map(|i| table.targets.set(LeaderTargetId::from_index(i)).expect("in range").0)
             .collect();
         assert!(sets.iter().all(|s| *s != 0), "a target resolved to nobody");
         sets.sort_unstable();
@@ -297,11 +279,12 @@ mod tests {
 
         let map = map();
         for (name, members) in [("Chika, Hanamaru", 2), ("Aqours", 9), ("first-year", 19)] {
-            let set = resolve(name, &map, &roster).expect("resolve");
+            let set = convert::character_set(name, &map, &roster).expect("resolve");
             assert_eq!(set.0.count_ones(), members, "{name}");
         }
         let chika = roster.id("Takami Chika").expect("in roster");
-        assert!(resolve("Chika, Hanamaru", &map, &roster).expect("resolve").contains(chika));
+        let pair = convert::character_set("Chika, Hanamaru", &map, &roster).expect("resolve");
+        assert!(pair.contains(chika));
     }
 
     /// `Attribute` only ever holds 3 of the 256 values a byte can take, so the
@@ -316,7 +299,8 @@ mod tests {
     #[test]
     fn check_unknown_target_is_an_error() {
         let (_, roster, _) = built();
-        let err = resolve("Nobody, Nohow", &map(), &roster).expect_err("not a target");
+        let err =
+            convert::character_set("Nobody, Nohow", &map(), &roster).expect_err("not a target");
         assert_eq!(err, ErrorKind::Unknown("Nobody, Nohow".into()));
     }
 }

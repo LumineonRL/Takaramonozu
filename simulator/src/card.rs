@@ -14,7 +14,21 @@ pub struct LeaderId(pub u16);
 /// One of the 74 `leader_extra_target` values, which could be groups, sub groups,
 /// year groups, or character pair groups like `"Eli, Umi"`.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct LeaderTargetId(pub u8);
+pub struct LeaderTargetId(u8);
+
+impl LeaderTargetId {
+    /// # Panics
+    /// Past 256 targets. There are 74.
+    #[must_use]
+    pub fn from_index(i: usize) -> Self {
+        Self(u8::try_from(i).expect("leader target table fits u8"))
+    }
+
+    #[must_use]
+    pub const fn index(self) -> usize {
+        self.0 as usize
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Card {

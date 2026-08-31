@@ -21,7 +21,7 @@ pub struct CardDb {
     pub cards: Vec<Card>,
     pub meta: Vec<CardMeta>,
     pub skills: SkillArena,
-    pub skill_targets: Vec<Box<str>>,
+    pub skill_targets: skill::Targets,
     pub leaders: Vec<LeaderSkill>,
     pub leader_targets: leader::Targets,
     pub roster: Roster,
@@ -33,7 +33,11 @@ impl CardDb {
     ///
     /// # Panics
     /// Past 65535 cards, which is what a [`CardIdx`] holds.
-    pub fn build(raw: &[RawCard], map: &RawTargetMap) -> Result<Self, LoadError> {
+    pub fn build(
+        raw: &[RawCard],
+        leader_map: &RawTargetMap,
+        year_group: &RawTargetMap,
+    ) -> Result<Self, LoadError> {
         let roster = Roster::build(raw.iter().map(|c| c.character.as_str()));
         let mut order: Vec<&RawCard> = raw.iter().collect();
         order.sort_unstable_by_key(|c| c.card_id);
@@ -49,8 +53,8 @@ impl CardDb {
             }
             cards.push(Card {
                 stats: [stats(&c.stats.unidolized), stats(&c.stats.idolized)],
-                skill: skills.insert(c.card_id, &c.skill)?,
-                leader: leaders.insert(c.card_id, &c.leader_skill, map, &roster)?,
+                skill: skills.insert(c.card_id, &c.skill, year_group, &roster)?,
+                leader: leaders.insert(c.card_id, &c.leader_skill, leader_map, &roster)?,
                 character: roster.id(&c.character).expect("names of the characters"),
                 attribute: convert::attribute(&c.attribute).at(c.card_id, "attribute")?,
             });
@@ -144,13 +148,18 @@ mod tests {
         raw::parse_target_map(&read("additional_leader_skill_map.json")).expect("schema")
     }
 
+    fn year_group() -> RawTargetMap {
+        raw::parse_target_map(&read("year_group_target.json")).expect("schema")
+    }
+
     fn built() -> CardDb {
-        CardDb::build(&cards(), &map()).unwrap_or_else(|e| panic!("corpus is valid: {e}"))
+        CardDb::build(&cards(), &map(), &year_group())
+            .unwrap_or_else(|e| panic!("corpus is valid: {e}"))
     }
 
     /// [`CardDb`] has no `Debug`, so `expect_err` is unavailable.
     fn rejected(cards: &[RawCard], why: &str) -> LoadError {
-        match CardDb::build(cards, &map()) {
+        match CardDb::build(cards, &map(), &year_group()) {
             Err(e) => e,
             Ok(_) => panic!("built anyway: {why}"),
         }
@@ -175,9 +184,12 @@ mod tests {
 
         let mut shuffled = cards();
         shuffled.reverse();
-        let other = CardDb::build(&shuffled, &map()).unwrap_or_else(|e| panic!("{e}"));
+        let other =
+            CardDb::build(&shuffled, &map(), &year_group()).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(db.cards, other.cards);
         assert_eq!(db.meta, other.meta);
+        assert_eq!(db.skill_targets, other.skill_targets);
+        assert_eq!(db.leader_targets, other.leader_targets);
     }
 
     /// Both halves of a card have to stay on the same row, and a saved deck's

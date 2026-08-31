@@ -7,7 +7,7 @@
 //! cache-lines and all that.
 //! For this reason, `(threshold, chance)` are armed, resolved once per card at team-compile time
 //! from the card's own level and never read again, because Amplify moves the
-//! effect and not the trigger. `(value, duration)` on the other hand is payload: read only on
+//! effect and not the trigger. `(value, duration)` is payload: read only on
 //! activation, indexed by the effective (potentially amplified) level. The two
 //! halves therefore live in different arenas rather than in one row.
 
@@ -44,13 +44,32 @@ pub enum SkillTrigger {
     YearGroup,
 }
 
-/// One of the 14 distinct skill `target` strings, set on 100 cards. Resolves to
-/// a `CharacterSet` at compile time; `NonZero` so `Option<TargetId>` is 1 byte.
+/// One of the 14 distinct skill target strings, set on 100 cards. Resolves to
+/// a CharacterSet at load. NonZero so `Option<TargetId>` is 1 byte.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct TargetId(pub NonZeroU8);
+pub struct TargetId(NonZeroU8);
 
-/// Index into [`SkillArena::defs`]. Slot 0 is a dead entry, which buys the niche
-/// that makes `Option<SkillId>` free for the 321 cards with no skill.
+impl TargetId {
+    /// # Panics
+    /// Past 255 targets. There are 14.
+    #[must_use]
+    pub fn from_index(i: usize) -> Self {
+        let slot = u8::try_from(i + 1).expect("target table fits u8");
+        Self(NonZeroU8::new(slot).expect("slots are 1 based"))
+    }
+
+    #[must_use]
+    pub const fn index(self) -> usize {
+        self.0.get() as usize - 1
+    }
+}
+
+/// Index into [`SkillArena::defs`].
+///
+/// Slot 0 is deliberately left unused, so 0 is not a valid id - which is what
+/// `NonZeroU16` says. That lets the compiler spend the now-impossible 0 on
+/// representing `None`, so `Option<SkillId>` is the same 2 bytes as a bare
+/// `SkillId` and the 321 cards with no skill pay nothing for the field.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct SkillId(pub NonZeroU16);
 
@@ -67,6 +86,9 @@ pub struct SkillDef {
     pub effect: SkillEffect,
     pub trigger: SkillTrigger,
     pub target: Option<TargetId>,
+    /// Row count of the payload table, which is the amplify ceiling rather than
+    /// the skill cap: an Encore (8 rows) at level 5 under a +7 Amplify resolves
+    /// at 8, not 12. Lookups saturate here instead of bounds-checking.
     pub rows: u8,
     /// `[payload, payload + rows)` in the value/duration arenas.
     pub payload: u32,
