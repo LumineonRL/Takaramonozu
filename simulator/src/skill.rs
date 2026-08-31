@@ -45,7 +45,7 @@ pub enum SkillTrigger {
 }
 
 /// One of the 14 distinct skill target strings, set on 100 cards. Resolves to
-/// a CharacterSet at load. NonZero so `Option<TargetId>` is 1 byte.
+/// a `CharacterSet` at load. `NonZero` so `Option<TargetId>` is 1 byte.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct TargetId(NonZeroU8);
 

@@ -216,9 +216,7 @@ mod tests {
         let file = unique();
         assert_eq!(file.len(), 313);
         for u in &file {
-            table
-                .insert(u.leader_skill_id, &u.to_leader(), &map, &roster)
-                .expect("convert");
+            table.insert(u.leader_skill_id, &u.to_leader(), &map, &roster).expect("convert");
         }
         assert_eq!(table.by_id.len(), 313, "the corpus and the reference file disagree");
     }

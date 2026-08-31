@@ -161,8 +161,8 @@ pub fn threshold(value: f64) -> Result<u16, ErrorKind> {
 
 /// A target name over the roster bitmask it covers.
 ///
-/// Used for leader extras from additional_leader_skipp_map.json
-/// and skill targets from year_group_target.json.
+/// Used for leader extras from `additional_leader_skill_map.json`
+/// and skill targets from `year_group_target.json`.
 ///
 /// # Errors
 /// A name the map does not carry, or a member outside the roster.
