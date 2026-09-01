@@ -19,7 +19,10 @@ pub struct LoadError {
 #[derive(Clone, PartialEq, Debug)]
 pub enum ErrorKind {
     Unknown(Box<str>),
+    /// Not a whole number once scaled, so shape is wrong.
     NotFixedPoint(f64),
+    /// Exact, but past the width the field is stored in.
+    OutOfRange(f64),
     /// A field a sibling field made mandatory. The leader `extra` triple is
     /// all-or-nothing, and a `leader_attribute` implies a `leader_value`.
     Missing,
@@ -35,8 +38,10 @@ impl fmt::Display for LoadError {
         }
         write!(f, "field `{}`: ", self.field)?;
         match &self.kind {
+            #[expect(clippy::use_debug, reason = "quotes the offending token")]
             ErrorKind::Unknown(s) => write!(f, "unknown value {s:?}"),
             ErrorKind::NotFixedPoint(v) => write!(f, "{v} is not exact in this unit"),
+            ErrorKind::OutOfRange(v) => write!(f, "{v} does not fit this field"),
             ErrorKind::Missing => write!(f, "absent, but a sibling field requires it"),
             ErrorKind::Invariant => write!(f, "contradicts a known invariant of the source"),
         }
@@ -124,14 +129,23 @@ closed_set!(trigger -> SkillTrigger {
     clippy::cast_sign_loss,
     reason = "range checked immediately above"
 )]
-fn scaled<T: TryFrom<u32>>(value: f64, factor: f64) -> Result<T, ErrorKind> {
+#[expect(
+    clippy::map_err_ignore,
+    reason = "`TryFromIntError` already reports this"
+)]
+fn scaled<T>(value: f64, factor: f64) -> Result<T, ErrorKind>
+where
+    T: TryFrom<u32>,
+{
     let scaled = value * factor;
     let whole = scaled.round();
-    let err = || ErrorKind::NotFixedPoint(value);
-    if (scaled - whole).abs() > 1e-6 || !(0.0..=f64::from(u32::MAX)).contains(&whole) {
-        return Err(err());
+    if (scaled - whole).abs() > 1e-6 {
+        return Err(ErrorKind::NotFixedPoint(value));
     }
-    T::try_from(whole as u32).map_err(|_| err())
+    if !(0.0..=f64::from(u32::MAX)).contains(&whole) {
+        return Err(ErrorKind::OutOfRange(value));
+    }
+    T::try_from(whole as u32).map_err(|_| ErrorKind::OutOfRange(value))
 }
 
 /// Hundredths, for skills like `value`: `3.85 -> 385` or `400.0 -> 40000`.
@@ -174,7 +188,7 @@ pub fn character_set(
     roster: &Roster,
 ) -> Result<CharacterSet, ErrorKind> {
     let members = map.get(name).ok_or_else(|| ErrorKind::Unknown(name.into()))?;
-    let mut bits = 0u128;
+    let mut bits = 0_u128;
     for member in members {
         let id = roster.id(member).ok_or_else(|| ErrorKind::Unknown(member.as_str().into()))?;
         bits |= 1 << id.0;
@@ -295,10 +309,14 @@ mod tests {
     fn check_reject_impossible_values() {
         assert_eq!(pct(0.56), Ok(56)); // the float that is not 56 exactly
         assert_eq!(pct(0.935), Err(ErrorKind::NotFixedPoint(0.935)));
-        assert_eq!(pct(3.0), Err(ErrorKind::NotFixedPoint(3.0))); // 300 past `Pct`
         assert_eq!(millis(0.05), Ok(50));
         assert_eq!(millis(0.0005), Err(ErrorKind::NotFixedPoint(0.0005)));
         assert_eq!(centi(148_240.0), Ok(14_824_000));
+        assert_eq!(pct(3.0), Err(ErrorKind::OutOfRange(3.0))); // 300 past `Pct`
+        assert_eq!(millis(99.0), Err(ErrorKind::OutOfRange(99.0))); // 99 s past `Millis`
+        assert_eq!(centi(-1.0), Err(ErrorKind::OutOfRange(-1.0)));
+        assert_eq!(centi(1e12), Err(ErrorKind::OutOfRange(1e12))); // past the u32 gate
+
         assert_matches!(rarity("SSSR"), Err(ErrorKind::Unknown(s)) if &*s == "SSSR");
     }
 
@@ -307,5 +325,8 @@ mod tests {
         let err = pct(0.935).at(66, "chance").expect_err("not fixed point");
         assert_matches!(err, LoadError { card_id: Some(66), field: "chance", .. });
         assert_eq!(err.to_string(), "card 66, field `chance`: 0.935 is not exact in this unit");
+
+        let wide = pct(3.0).at(66, "chance").expect_err("out of range");
+        assert_eq!(wide.to_string(), "card 66, field `chance`: 3 does not fit this field");
     }
 }

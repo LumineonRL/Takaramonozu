@@ -57,14 +57,19 @@ impl TargetId {
     /// # Panics
     /// Past 255 targets. There are 14.
     #[must_use]
+    #[expect(clippy::expect_used, reason = "capacity bound, documented above")]
     pub fn from_index(i: usize) -> Self {
-        let slot = u8::try_from(i + 1).expect("target table fits u8");
-        Self(NonZeroU8::new(slot).expect("slots are 1 based"))
+        let slot = u8::try_from(i)
+            .ok()
+            .and_then(|n| n.checked_add(1))
+            .and_then(NonZeroU8::new)
+            .expect("target table fits u8");
+        Self(slot)
     }
 
     #[must_use]
     pub const fn index(self) -> usize {
-        self.0.get() as usize - 1
+        self.0.get().saturating_sub(1) as usize
     }
 }
 
@@ -120,16 +125,20 @@ impl SkillArena {
     /// top of a base 8, so requests up to 24 arrive here and clamp.
     #[inline]
     #[must_use]
+    #[expect(clippy::indexing_slicing, reason = "`push` allocated `rows` slots at this offset")]
+    #[expect(clippy::arithmetic_side_effects, reason = "arena offsets, checked on push")]
     pub fn payload(&self, def: &SkillDef, level: u8) -> (Centi, Millis) {
-        let row = def.payload as usize + (level.clamp(1, def.rows) as usize - 1);
+        let row = def.payload as usize + level.min(def.rows).saturating_sub(1) as usize;
         (self.values[row], self.durations[row])
     }
 
     /// `level` is the card's own level, 1..=8.
     #[inline]
     #[must_use]
+    #[expect(clippy::indexing_slicing, reason = "`push` allocated `rows` slots at this offset")]
+    #[expect(clippy::arithmetic_side_effects, reason = "arena offsets, checked on push")]
     pub fn arming(&self, def: &SkillDef, level: u8) -> Arming {
-        self.arming[def.arming as usize + (level.clamp(1, 8) as usize - 1)]
+        self.arming[def.arming as usize + level.min(8).saturating_sub(1) as usize]
     }
 }
 

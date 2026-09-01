@@ -60,9 +60,10 @@ impl Targets {
             return Ok(LeaderTargetId::from_index(i));
         }
         let set = convert::character_set(name, map, roster)?;
+        let i = self.names.len();
         self.names.push(name.into());
         self.sets.push(set);
-        Ok(LeaderTargetId::from_index(self.names.len() - 1))
+        Ok(LeaderTargetId::from_index(i))
     }
 }
 
@@ -117,6 +118,11 @@ impl Table {
         if let Some(&id) = self.seen.get(&skill) {
             return Ok(id);
         }
+        #[expect(
+            clippy::expect_used,
+            clippy::unwrap_in_result,
+            reason = "capacity bound, documented above"
+        )]
         let slot = u16::try_from(self.by_id.len()).expect("leader table fits u16");
         let id = LeaderId(slot);
         self.by_id.push(skill);

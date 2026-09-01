@@ -34,7 +34,10 @@ pub trait Kind {
 
 /// The conversion to little endian (big endian also would've worked) was done to keep the header size the
 /// same regardless of body size.
-fn header<T: Kind>(body: u32) -> [u8; HEADER] {
+fn header<T>(body: u32) -> [u8; HEADER]
+where
+    T: Kind,
+{
     let mut h = [0; HEADER];
     h[..8].copy_from_slice(&T::MAGIC);
     h[8..12].copy_from_slice(&T::VERSION.to_le_bytes());
@@ -78,8 +81,11 @@ where
         let file = File::open(path)?;
         // SAFETY: the caller guarantees the file is not modified while mapped.
         let map = unsafe { Mmap::map(&file) }?;
-        let body = map.len().checked_sub(HEADER).and_then(|n| u32::try_from(n).ok());
-        if body.is_none_or(|n| map[..HEADER] != header::<T>(n)) {
+        let ok = map
+            .split_at_checked(HEADER)
+            .and_then(|(head, body)| Some((head, u32::try_from(body.len()).ok()?)))
+            .is_some_and(|(head, len)| head == header::<T>(len));
+        if !ok {
             let why = "not an archive of this kind and version";
             return Err(io::Error::new(io::ErrorKind::InvalidData, why));
         }
@@ -88,8 +94,9 @@ where
 
     #[must_use]
     pub fn root(&self) -> &T::Archived {
+        let body = self.map.get(HEADER..).unwrap_or_default();
         // SAFETY: the header matched, so the body came out of `write` for this.
-        unsafe { rkyv::access_unchecked(&self.map[HEADER..]) }
+        unsafe { rkyv::access_unchecked(body) }
     }
 }
 
@@ -161,6 +168,7 @@ mod tests {
         let path = path("round-trip");
         write(&path, &db).expect("write");
 
+        // SAFETY: `write` just produced this file and nothing else touches it.
         let mapped: Mapped<CardDb> = unsafe { Mapped::open(&path) }.expect("open");
         let body = mapped.map.as_ptr() as usize + HEADER;
         assert_eq!(body % 16, 0, "the header misaligned the body");
@@ -177,6 +185,7 @@ mod tests {
         std::fs::write(&path, &bytes).expect("rewrite");
 
         // `Mapped` has no `Debug`, since `CardDb` has none either.
+        // SAFETY: this test owns the path. Its entire point is that `open` should reject it.
         match unsafe { Mapped::<CardDb>::open(&path) } {
             Err(e) => assert_eq!(e.kind(), io::ErrorKind::InvalidData),
             Ok(_) => panic!("mapped an archive from another version"),

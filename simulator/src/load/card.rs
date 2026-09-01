@@ -43,6 +43,7 @@ impl CardDb {
     ///
     /// # Panics
     /// Past 65535 cards, which is what a [`CardIdx`] holds.
+    #[expect(clippy::panic_in_result_fn, reason = "capacity bound, documented above")]
     pub fn build(
         raw: &[RawCard],
         leader_map: &RawTargetMap,
@@ -65,6 +66,10 @@ impl CardDb {
                 stats: [stats(&c.stats.unidolized), stats(&c.stats.idolized)],
                 skill: skills.insert(c.card_id, &c.skill, year_group, &roster)?,
                 leader: leaders.insert(c.card_id, &c.leader_skill, leader_map, &roster)?,
+                #[expect(
+                    clippy::expect_used,
+                    reason = "the roster is built from these characters"
+                )]
                 character: roster.id(&c.character).expect("names of the characters"),
                 attribute: convert::attribute(&c.attribute).at(c.card_id, "attribute")?,
             });
@@ -104,6 +109,7 @@ fn stats(s: &RawStats) -> Stats {
     Stats([s.smile, s.pure, s.cool])
 }
 
+#[expect(clippy::indexing_slicing, reason = "`Rarity` has exactly the 5 rows used")]
 fn meta(c: &RawCard) -> Result<CardMeta, LoadError> {
     let rarity = convert::rarity(&c.rarity).at(c.card_id, "rarity")?;
     let (u, i) = (&c.stats.unidolized, &c.stats.idolized);

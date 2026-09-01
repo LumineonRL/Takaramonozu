@@ -66,9 +66,10 @@ impl Targets {
             return Ok(TargetId::from_index(i));
         }
         let set = convert::character_set(name, map, roster)?;
+        let i = self.names.len();
         self.names.push(name.into());
         self.sets.push(set);
-        Ok(TargetId::from_index(self.names.len() - 1))
+        Ok(TargetId::from_index(i))
     }
 }
 
@@ -119,29 +120,38 @@ impl Table {
             .transpose()
             .at(card_id, "target")?;
 
+        let rows = raw.value.len();
+        if rows < ARMING_ROWS
+            || raw.threshold.len() != rows
+            || raw.chance.len() != rows
+            || raw.duration.len() != rows
+        {
+            return Err(ErrorKind::Invariant).at(card_id, "rows");
+        }
+
         let mut arming = [Arming::default(); ARMING_ROWS];
-        for (row, out) in arming.iter_mut().enumerate() {
+        for ((out, &threshold), &chance) in arming.iter_mut().zip(&raw.threshold).zip(&raw.chance) {
             // Six skills have no threshold. Star Notes rolls on every star note,
             // and the five Year Group ones arm on a set cover a counter cannot
             // express, so nothing sensible goes here.
-            out.threshold = match (raw.threshold[row], trigger) {
+            out.threshold = match (threshold, trigger) {
                 (Some(t), _) => convert::threshold(t).at(card_id, "threshold")?,
                 (None, SkillTrigger::YearGroup) => 0,
                 (None, _) => 1,
             };
-            out.chance = convert::pct(raw.chance[row]).at(card_id, "chance")?;
+            out.chance = convert::pct(chance).at(card_id, "chance")?;
         }
 
         // Perfect Lock, Total Trick, Sync and Encore carry no value.
         // Stores 0 rather than an `Option`
-        let mut values = Vec::with_capacity(raw.value.len());
-        let mut durations = Vec::with_capacity(raw.duration.len());
-        for row in 0..raw.value.len() {
-            values.push(match raw.value[row] {
+        let mut values = Vec::with_capacity(rows);
+        let mut durations = Vec::with_capacity(rows);
+        for (&value, &duration) in raw.value.iter().zip(&raw.duration) {
+            values.push(match value {
                 Some(v) => convert::centi(v).at(card_id, "value")?,
                 None => 0,
             });
-            durations.push(match raw.duration[row] {
+            durations.push(match duration {
                 Some(d) => convert::millis(d).at(card_id, "duration")?,
                 None => 0,
             });
@@ -154,6 +164,7 @@ impl Table {
         Ok(Some(self.push(key)))
     }
 
+    #[expect(clippy::expect_used, reason = "capacity bounds, documented on `insert`")]
     fn push(&mut self, key: Key) -> SkillId {
         let def = SkillDef {
             effect: key.effect,

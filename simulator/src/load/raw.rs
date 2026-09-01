@@ -176,7 +176,7 @@ mod tests {
                 "card {} ragged",
                 c.card_id
             );
-            #[allow(clippy::cast_possible_truncation, reason = "rows <= 16")]
+            #[expect(clippy::cast_possible_truncation, reason = "rows <= 16")]
             let expected: Vec<u8> = (1..=rows as u8).collect();
             assert_eq!(s.level, expected, "card {}", c.card_id);
         }

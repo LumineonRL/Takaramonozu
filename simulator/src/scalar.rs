@@ -38,7 +38,6 @@ pub enum Attribute {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 #[repr(u8)]
-#[allow(clippy::upper_case_acronyms, reason = "in-game rarity names")]
 pub enum Rarity {
     N = 0,
     R = 1,
@@ -86,6 +85,7 @@ pub struct Stats(pub [u16; 3]);
 impl Stats {
     #[inline]
     #[must_use]
+    #[expect(clippy::indexing_slicing, reason = "`Attribute` has exactly these 3 possibilities")]
     pub const fn get(self, a: Attribute) -> u16 {
         self.0[a as usize]
     }

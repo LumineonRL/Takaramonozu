@@ -25,6 +25,7 @@ impl LeaderTargetId {
     /// # Panics
     /// Past 256 targets. There are 74.
     #[must_use]
+    #[expect(clippy::expect_used, reason = "capacity bound, documented above")]
     pub fn from_index(i: usize) -> Self {
         Self(u8::try_from(i).expect("leader target table fits u8"))
     }
