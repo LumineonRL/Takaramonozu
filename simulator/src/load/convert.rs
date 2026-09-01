@@ -129,10 +129,7 @@ closed_set!(trigger -> SkillTrigger {
     clippy::cast_sign_loss,
     reason = "range checked immediately above"
 )]
-#[expect(
-    clippy::map_err_ignore,
-    reason = "`TryFromIntError` already reports this"
-)]
+#[expect(clippy::map_err_ignore, reason = "`TryFromIntError` already reports this")]
 fn scaled<T>(value: f64, factor: f64) -> Result<T, ErrorKind>
 where
     T: TryFrom<u32>,
