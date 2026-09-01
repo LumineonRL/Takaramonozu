@@ -4,6 +4,8 @@
 
 use std::collections::HashMap;
 
+use rkyv::{Archive, Deserialize, Serialize};
+
 use crate::card::{LeaderExtra, LeaderId, LeaderSkill, LeaderTargetId};
 use crate::load::convert::{self, At, ErrorKind, LoadError, Roster};
 use crate::load::raw::{RawLeader, RawTargetMap};
@@ -20,7 +22,8 @@ const IDENTITY: LeaderSkill = LeaderSkill {
 
 /// Encodes `leader_extra_target` strings into bitmasks.
 /// Should be 74 unique extra targets.
-#[derive(Clone, PartialEq, Eq, Default, Debug)]
+#[derive(Clone, PartialEq, Eq, Default, Debug, Archive, Serialize, Deserialize)]
+#[rkyv(compare(PartialEq))]
 pub struct Targets {
     names: Vec<Box<str>>,
     sets: Vec<CharacterSet>,

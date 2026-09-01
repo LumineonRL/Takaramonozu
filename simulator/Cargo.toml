@@ -15,5 +15,7 @@ debug = false
 pedantic = { level = "warn", priority = -1 }
 
 [dependencies]
+memmap2 = "0.9.11"
+rkyv = "0.8.18"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"

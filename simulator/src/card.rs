@@ -1,3 +1,6 @@
+use rkyv::{Archive, Deserialize, Serialize};
+
+use crate::archive::portable;
 use crate::scalar::{Attribute, CharacterId, Pct, Rarity, Stats};
 use crate::skill::SkillId;
 
@@ -9,11 +12,13 @@ pub struct CardIdx(pub u16);
 /// Index into the leader-skill table, of which there are 313.
 /// Made Slot 0 is the identity leader since N cards have no leader skill
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(transparent)]
 pub struct LeaderId(pub u16);
 
 /// One of the 74 `leader_extra_target` values, which could be groups, sub groups,
 /// year groups, or character pair groups like `"Eli, Umi"`.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[repr(transparent)]
 pub struct LeaderTargetId(u8);
 
 impl LeaderTargetId {
@@ -31,6 +36,7 @@ impl LeaderTargetId {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(C)]
 pub struct Card {
     /// Unidolized and Idolized
     pub stats: [Stats; 2],
@@ -42,7 +48,8 @@ pub struct Card {
 
 /// Information about a card that matters for users adding cards to their Deck
 /// but that does NOT matter for team building / the simulation itself.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Archive, Serialize, Deserialize)]
+#[rkyv(compare(PartialEq))]
 pub struct CardMeta {
     pub card_id: u16,
     pub rarity: Rarity,
@@ -60,6 +67,7 @@ pub struct CardMeta {
 
 /// A `Guest` is exactly this with no card attached.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[repr(C)]
 pub struct LeaderSkill {
     /// The stat that receives the boost.
     pub attribute: Attribute,
@@ -70,8 +78,11 @@ pub struct LeaderSkill {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[repr(C)]
 pub struct LeaderExtra {
     pub attribute: Attribute,
     pub target: LeaderTargetId,
     pub value: Pct,
 }
+
+portable!(LeaderId, LeaderTargetId, LeaderExtra, LeaderSkill, Card);

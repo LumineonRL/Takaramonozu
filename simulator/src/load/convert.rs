@@ -2,6 +2,8 @@
 
 use core::fmt;
 
+use rkyv::{Archive, Deserialize, Serialize};
+
 use crate::load::raw::RawTargetMap;
 use crate::scalar::{Attribute, Centi, CharacterId, CharacterSet, Millis, Pct, Rarity};
 use crate::skill::{SkillEffect, SkillTrigger};
@@ -180,7 +182,8 @@ pub fn character_set(
     Ok(CharacterSet(bits))
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default)]
+#[derive(Clone, PartialEq, Eq, Debug, Default, Archive, Serialize, Deserialize)]
+#[rkyv(compare(PartialEq))]
 pub struct Roster {
     names: Vec<Box<str>>,
 }

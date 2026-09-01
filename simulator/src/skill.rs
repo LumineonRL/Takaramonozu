@@ -13,6 +13,9 @@
 
 use core::num::{NonZeroU8, NonZeroU16};
 
+use rkyv::{Archive, Deserialize, Serialize};
+
+use crate::archive::portable;
 use crate::scalar::{Centi, Millis, Pct};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -47,6 +50,7 @@ pub enum SkillTrigger {
 /// One of the 14 distinct skill target strings, set on 100 cards. Resolves to
 /// a `CharacterSet` at load. `NonZero` so `Option<TargetId>` is 1 byte.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[repr(transparent)]
 pub struct TargetId(NonZeroU8);
 
 impl TargetId {
@@ -71,17 +75,22 @@ impl TargetId {
 /// representing `None`, so `Option<SkillId>` is the same 2 bytes as a bare
 /// `SkillId` and the 321 cards with no skill pay nothing for the field.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(transparent)]
 pub struct SkillId(pub NonZeroU16);
 
 /// What it takes to arm. `threshold` is integral in every row of the source and
 /// tops out at 18000 (from a score based scorer); Star Notes stores 1.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
+#[repr(C)]
 pub struct Arming {
     pub threshold: u16,
     pub chance: Pct,
+    /// rkyv will not write a type whose padding is uninitialized.
+    _pad: u8,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(C)]
 pub struct SkillDef {
     pub effect: SkillEffect,
     pub trigger: SkillTrigger,
@@ -97,7 +106,8 @@ pub struct SkillDef {
     pub arming: u32,
 }
 
-#[derive(Default)]
+#[derive(Default, Archive, Serialize, Deserialize)]
+#[rkyv(compare(PartialEq))]
 pub struct SkillArena {
     pub defs: Vec<SkillDef>,
     pub values: Vec<Centi>,
@@ -122,3 +132,5 @@ impl SkillArena {
         self.arming[def.arming as usize + (level.clamp(1, 8) as usize - 1)]
     }
 }
+
+portable!(SkillEffect, SkillTrigger, TargetId, SkillId, Arming, SkillDef);

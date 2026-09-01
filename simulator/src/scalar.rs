@@ -4,6 +4,8 @@
 //! So it takes the floats and represents them as integers, which we can do
 //! since we have a fixed number of decimal places.
 
+use crate::archive::portable;
+
 /// Hundredths. Used for Skill `value`s, whose meaning changes depending on the
 /// effect.
 ///
@@ -55,11 +57,13 @@ pub enum Form {
 
 /// One of 99 potential character values including all N girls.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(transparent)]
 pub struct CharacterId(pub u8);
 
 /// The roster fits in a `u128`, so every group, year group and leader-extra
 /// target, including ship card targets.
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+#[repr(transparent)]
 pub struct CharacterSet(pub u128);
 
 impl CharacterSet {
@@ -86,3 +90,5 @@ impl Stats {
         self.0[a as usize]
     }
 }
+
+portable!(Attribute, Rarity, CharacterId, CharacterSet, Stats);

@@ -5,6 +5,8 @@
 use core::num::NonZeroU16;
 use std::collections::HashMap;
 
+use rkyv::{Archive, Deserialize, Serialize};
+
 use crate::load::convert::{self, At, ErrorKind, LoadError, Roster};
 use crate::load::raw::{RawSkill, RawTargetMap};
 use crate::scalar::{Centi, CharacterSet, Millis};
@@ -26,7 +28,8 @@ struct Key {
 
 /// Encodes the 14 distinct skill target strings into bitmasks, out of
 /// `year_group_target.json`.
-#[derive(Clone, PartialEq, Eq, Default, Debug)]
+#[derive(Clone, PartialEq, Eq, Default, Debug, Archive, Serialize, Deserialize)]
+#[rkyv(compare(PartialEq))]
 pub struct Targets {
     names: Vec<Box<str>>,
     sets: Vec<CharacterSet>,
@@ -116,7 +119,7 @@ impl Table {
             .transpose()
             .at(card_id, "target")?;
 
-        let mut arming = [Arming { threshold: 0, chance: 0 }; ARMING_ROWS];
+        let mut arming = [Arming::default(); ARMING_ROWS];
         for (row, out) in arming.iter_mut().enumerate() {
             // Six skills have no threshold. Star Notes rolls on every star note,
             // and the five Year Group ones arm on a set cover a counter cannot

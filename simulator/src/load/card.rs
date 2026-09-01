@@ -1,5 +1,8 @@
 //! Assemble the cards from skills and leader skills
 
+use rkyv::{Archive, Deserialize, Serialize};
+
+use crate::archive::Kind;
 use crate::card::{Card, CardIdx, CardMeta, LeaderSkill};
 use crate::load::convert::{self, At, ErrorKind, LoadError, Roster};
 use crate::load::raw::{RawCard, RawStats, RawTargetMap};
@@ -17,6 +20,8 @@ const SIS: [[[u8; 4]; 2]; 5] = [
     [[4, 4, 4, 8], [2, 2, 2, 2]], // UR
 ];
 
+#[derive(Archive, Serialize, Deserialize)]
+#[rkyv(compare(PartialEq))]
 pub struct CardDb {
     pub cards: Vec<Card>,
     pub meta: Vec<CardMeta>,
@@ -25,6 +30,11 @@ pub struct CardDb {
     pub leaders: Vec<LeaderSkill>,
     pub leader_targets: leader::Targets,
     pub roster: Roster,
+}
+
+impl Kind for CardDb {
+    const MAGIC: [u8; 8] = *b"LLSIFCDB";
+    const VERSION: u32 = 1;
 }
 
 impl CardDb {
@@ -261,5 +271,6 @@ mod tests {
     #[test]
     fn check_the_hot_half_stays_small() {
         assert_eq!(size_of::<Card>(), 18);
+        assert_eq!(size_of::<rkyv::Archived<Card>>(), 18);
     }
 }
