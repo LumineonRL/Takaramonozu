@@ -4,12 +4,10 @@
 
 use std::collections::HashMap;
 
-use rkyv::{Archive, Deserialize, Serialize};
-
-use crate::card::{LeaderExtra, LeaderId, LeaderSkill, LeaderTargetId};
-use crate::load::convert::{self, At, ErrorKind, LoadError, Roster};
+use crate::card::{LeaderExtra, LeaderId, LeaderSkill, LeaderTargets};
+use crate::load::convert::{self, At, ErrorKind, LoadError};
 use crate::load::raw::{RawLeader, RawTargetMap};
-use crate::scalar::{Attribute, CharacterSet};
+use crate::scalar::{Attribute, Roster};
 
 /// A bit of a hacky way to represent no leader skill by applying
 /// a boost of 0%
@@ -20,57 +18,10 @@ const IDENTITY: LeaderSkill = LeaderSkill {
     extra: None,
 };
 
-/// Encodes `leader_extra_target` strings into bitmasks.
-/// Should be 74 unique extra targets.
-#[derive(Clone, PartialEq, Eq, Default, Debug, Archive, Serialize, Deserialize)]
-#[rkyv(compare(PartialEq))]
-pub struct Targets {
-    names: Vec<Box<str>>,
-    sets: Vec<CharacterSet>,
-}
-
-impl Targets {
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.sets.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.sets.is_empty()
-    }
-
-    #[must_use]
-    pub fn set(&self, id: LeaderTargetId) -> Option<CharacterSet> {
-        self.sets.get(id.index()).copied()
-    }
-
-    #[must_use]
-    pub fn name(&self, id: LeaderTargetId) -> Option<&str> {
-        self.names.get(id.index()).map(Box::as_ref)
-    }
-
-    fn id(
-        &mut self,
-        name: &str,
-        map: &RawTargetMap,
-        roster: &Roster,
-    ) -> Result<LeaderTargetId, ErrorKind> {
-        if let Some(i) = self.names.iter().position(|n| **n == *name) {
-            return Ok(LeaderTargetId::from_index(i));
-        }
-        let set = convert::character_set(name, map, roster)?;
-        let i = self.names.len();
-        self.names.push(name.into());
-        self.sets.push(set);
-        Ok(LeaderTargetId::from_index(i))
-    }
-}
-
 pub struct Table {
     /// Slot 0 is [`IDENTITY`], which is `leader_skill_id` 1 upstream.
     pub by_id: Vec<LeaderSkill>,
-    pub targets: Targets,
+    pub targets: LeaderTargets,
     seen: HashMap<LeaderSkill, LeaderId>,
 }
 
@@ -78,7 +29,7 @@ impl Default for Table {
     fn default() -> Self {
         Self {
             by_id: vec![IDENTITY],
-            targets: Targets::default(),
+            targets: LeaderTargets::default(),
             seen: HashMap::from([(IDENTITY, LeaderId(0))]),
         }
     }
@@ -154,7 +105,10 @@ impl Table {
         };
         Ok(Some(LeaderExtra {
             attribute: convert::attribute(attribute).at(card_id, "leader_extra_attribute")?,
-            target: self.targets.id(target, map, roster).at(card_id, "leader_extra_target")?,
+            target: self
+                .targets
+                .intern(target, || convert::character_set(target, map, roster))
+                .at(card_id, "leader_extra_target")?,
             value: convert::pct(value).at(card_id, "leader_extra_value")?,
         }))
     }
@@ -163,6 +117,7 @@ impl Table {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::card::LeaderTargetId;
     use crate::load::raw::{self, RawCard, RawUniqueLeader};
 
     fn read(name: &str) -> Vec<u8> {

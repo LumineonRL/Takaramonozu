@@ -16,7 +16,7 @@ use core::num::{NonZeroU8, NonZeroU16};
 use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::archive::portable;
-use crate::scalar::{Centi, Millis, Pct};
+use crate::scalar::{Centi, CharacterSet, Millis, Pct};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(u8)]
@@ -109,6 +109,57 @@ pub struct SkillDef {
     /// Base of this skill's 8 arming rows. Always 8: base level is 1..=8 for
     /// every card in the game, and rows past 8 padded.
     pub arming: u32,
+}
+
+/// Encodes the 14 distinct skill target strings into bitmasks, out of
+/// `year_group_target.json`.
+#[derive(Clone, PartialEq, Eq, Default, Debug, Archive, Serialize, Deserialize)]
+#[rkyv(compare(PartialEq))]
+pub struct Targets {
+    names: Vec<Box<str>>,
+    sets: Vec<CharacterSet>,
+}
+
+impl Targets {
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.sets.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.sets.is_empty()
+    }
+
+    #[must_use]
+    pub fn set(&self, id: TargetId) -> Option<CharacterSet> {
+        self.sets.get(id.index()).copied()
+    }
+
+    #[must_use]
+    pub fn name(&self, id: TargetId) -> Option<&str> {
+        self.names.get(id.index()).map(Box::as_ref)
+    }
+
+    /// # Errors
+    /// Whatever `resolve` returns for a name that is not already interned.
+    ///
+    /// # Panics
+    /// Past 255 targets, which is what a [`TargetId`] holds. There are 14.
+    pub fn intern<E>(
+        &mut self,
+        name: &str,
+        resolve: impl FnOnce() -> Result<CharacterSet, E>,
+    ) -> Result<TargetId, E> {
+        if let Some(i) = self.names.iter().position(|n| **n == *name) {
+            return Ok(TargetId::from_index(i));
+        }
+        let set = resolve()?;
+        let i = self.names.len();
+        self.names.push(name.into());
+        self.sets.push(set);
+        Ok(TargetId::from_index(i))
+    }
 }
 
 #[derive(Default, Archive, Serialize, Deserialize)]

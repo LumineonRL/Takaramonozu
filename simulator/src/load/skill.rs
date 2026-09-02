@@ -5,12 +5,12 @@
 use core::num::NonZeroU16;
 use std::collections::HashMap;
 
-use rkyv::{Archive, Deserialize, Serialize};
-
-use crate::load::convert::{self, At, ErrorKind, LoadError, Roster};
+use crate::load::convert::{self, At, ErrorKind, LoadError};
 use crate::load::raw::{RawSkill, RawTargetMap};
-use crate::scalar::{Centi, CharacterSet, Millis};
-use crate::skill::{Arming, SkillArena, SkillDef, SkillEffect, SkillId, SkillTrigger, TargetId};
+use crate::scalar::{Centi, Millis, Roster};
+use crate::skill::{
+    Arming, SkillArena, SkillDef, SkillEffect, SkillId, SkillTrigger, TargetId, Targets,
+};
 
 /// Base level is 1..=8 for every card in the game and the shortest skill table
 /// is 8 rows (the URs), so arming is always exactly this many rows.
@@ -24,53 +24,6 @@ struct Key {
     arming: [Arming; ARMING_ROWS],
     values: Vec<Centi>,
     durations: Vec<Millis>,
-}
-
-/// Encodes the 14 distinct skill target strings into bitmasks, out of
-/// `year_group_target.json`.
-#[derive(Clone, PartialEq, Eq, Default, Debug, Archive, Serialize, Deserialize)]
-#[rkyv(compare(PartialEq))]
-pub struct Targets {
-    names: Vec<Box<str>>,
-    sets: Vec<CharacterSet>,
-}
-
-impl Targets {
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.sets.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.sets.is_empty()
-    }
-
-    #[must_use]
-    pub fn set(&self, id: TargetId) -> Option<CharacterSet> {
-        self.sets.get(id.index()).copied()
-    }
-
-    #[must_use]
-    pub fn name(&self, id: TargetId) -> Option<&str> {
-        self.names.get(id.index()).map(Box::as_ref)
-    }
-
-    fn id(
-        &mut self,
-        name: &str,
-        map: &RawTargetMap,
-        roster: &Roster,
-    ) -> Result<TargetId, ErrorKind> {
-        if let Some(i) = self.names.iter().position(|n| **n == *name) {
-            return Ok(TargetId::from_index(i));
-        }
-        let set = convert::character_set(name, map, roster)?;
-        let i = self.names.len();
-        self.names.push(name.into());
-        self.sets.push(set);
-        Ok(TargetId::from_index(i))
-    }
 }
 
 pub struct Table {
@@ -116,7 +69,7 @@ impl Table {
         let trigger = convert::trigger(&raw.activation).at(card_id, "activation")?;
         let target = raw
             .target()
-            .map(|t| self.targets.id(t, map, roster))
+            .map(|t| self.targets.intern(t, || convert::character_set(t, map, roster)))
             .transpose()
             .at(card_id, "target")?;
 

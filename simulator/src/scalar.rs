@@ -4,6 +4,8 @@
 //! So it takes the floats and represents them as integers, which we can do
 //! since we have a fixed number of decimal places.
 
+use rkyv::{Archive, Deserialize, Serialize};
+
 use crate::archive::portable;
 
 /// Hundredths. Used for Skill `value`s, whose meaning changes depending on the
@@ -70,6 +72,51 @@ impl CharacterSet {
     #[must_use]
     pub const fn contains(self, c: CharacterId) -> bool {
         ((self.0 >> c.0) & 1) == 1
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Default, Archive, Serialize, Deserialize)]
+#[rkyv(compare(PartialEq))]
+pub struct Roster {
+    names: Vec<Box<str>>,
+}
+
+impl Roster {
+    /// # Panics
+    /// Past 128 names, which is what a `CharacterSet` bitmask holds.
+    /// There are 99 unique names.
+    /// But idk what if someone wants to mod / extend the sim with new characters
+    /// one day? Or what if custom characters become a thing on private servers
+    /// one day?
+    #[must_use]
+    pub fn build<'a>(names: impl IntoIterator<Item = &'a str>) -> Self {
+        let mut names: Vec<Box<str>> = names.into_iter().map(Box::from).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert!(names.len() <= 128, "{} characters do not fit a CharacterSet", names.len());
+        Self { names }
+    }
+
+    #[must_use]
+    #[expect(clippy::cast_possible_truncation, reason = "len checked at build")]
+    pub fn id(&self, name: &str) -> Option<CharacterId> {
+        let i = self.names.binary_search_by(|n| (**n).cmp(name)).ok()?;
+        Some(CharacterId(i as u8))
+    }
+
+    #[must_use]
+    pub fn name(&self, id: CharacterId) -> Option<&str> {
+        self.names.get(id.0 as usize).map(Box::as_ref)
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.names.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.names.is_empty()
     }
 }
 

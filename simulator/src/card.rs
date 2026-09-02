@@ -1,8 +1,8 @@
 use rkyv::{Archive, Deserialize, Serialize};
 
-use crate::archive::portable;
-use crate::scalar::{Attribute, CharacterId, Pct, Rarity, Stats};
-use crate::skill::SkillId;
+use crate::archive::{Kind, portable};
+use crate::scalar::{Attribute, CharacterId, CharacterSet, Pct, Rarity, Roster, Stats};
+use crate::skill::{self, SkillArena, SkillId};
 
 /// card index needed for team building to pair accessory to a card
 /// Not used in hot loop.
@@ -86,4 +86,106 @@ pub struct LeaderExtra {
     pub value: Pct,
 }
 
+/// Encodes `leader_extra_target` strings into bitmasks.
+/// Should be 74 unique extra targets.
+#[derive(Clone, PartialEq, Eq, Default, Debug, Archive, Serialize, Deserialize)]
+#[rkyv(compare(PartialEq))]
+pub struct LeaderTargets {
+    names: Vec<Box<str>>,
+    sets: Vec<CharacterSet>,
+}
+
+impl LeaderTargets {
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.sets.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.sets.is_empty()
+    }
+
+    #[must_use]
+    pub fn set(&self, id: LeaderTargetId) -> Option<CharacterSet> {
+        self.sets.get(id.index()).copied()
+    }
+
+    #[must_use]
+    pub fn name(&self, id: LeaderTargetId) -> Option<&str> {
+        self.names.get(id.index()).map(Box::as_ref)
+    }
+
+    /// # Errors
+    /// Whatever `resolve` returns for a name that is not already interned.
+    ///
+    /// # Panics
+    /// Past 256 targets, which is what a [`LeaderTargetId`] holds. There are 74.
+    pub fn intern<E>(
+        &mut self,
+        name: &str,
+        resolve: impl FnOnce() -> Result<CharacterSet, E>,
+    ) -> Result<LeaderTargetId, E> {
+        if let Some(i) = self.names.iter().position(|n| **n == *name) {
+            return Ok(LeaderTargetId::from_index(i));
+        }
+        let set = resolve()?;
+        let i = self.names.len();
+        self.names.push(name.into());
+        self.sets.push(set);
+        Ok(LeaderTargetId::from_index(i))
+    }
+}
+
+/// Every card table the simulator reads, and the unit the archive is written
+/// in. Assembling one is the preprocessor's job: see `load::card::build`.
+#[derive(Archive, Serialize, Deserialize)]
+#[rkyv(compare(PartialEq))]
+pub struct CardDb {
+    pub cards: Vec<Card>,
+    pub meta: Vec<CardMeta>,
+    pub skills: SkillArena,
+    pub skill_targets: skill::Targets,
+    pub leaders: Vec<LeaderSkill>,
+    pub leader_targets: LeaderTargets,
+    pub roster: Roster,
+}
+
+impl Kind for CardDb {
+    const MAGIC: [u8; 8] = *b"LLSIFCDB";
+    const VERSION: u32 = 1;
+}
+
+impl CardDb {
+    /// `card_id` is what a saved deck stores, since [`CardIdx`] is a position in
+    /// this table and moves whenever the corpus does.
+    #[must_use]
+    #[expect(clippy::cast_possible_truncation, reason = "len checked at build")]
+    pub fn index(&self, card_id: u16) -> Option<CardIdx> {
+        let i = self.meta.binary_search_by_key(&card_id, |m| m.card_id).ok()?;
+        Some(CardIdx(i as u16))
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.cards.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.cards.is_empty()
+    }
+}
+
 portable!(LeaderId, LeaderTargetId, LeaderExtra, LeaderSkill, Card);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_the_hot_half_stays_small() {
+        assert_eq!(size_of::<Card>(), 18);
+        assert_eq!(size_of::<rkyv::Archived<Card>>(), 18);
+    }
+}

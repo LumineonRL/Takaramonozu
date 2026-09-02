@@ -28,7 +28,7 @@ const HEADER: usize = 16;
 pub trait Kind {
     const MAGIC: [u8; 8];
     /// TODO: Kind of brittle but this reads a manually-bumped version number.
-    /// the `Card` one is in `load/card.rs`.
+    /// the `Card` one is in `card.rs`.
     const VERSION: u32;
 }
 
@@ -142,7 +142,8 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::load::card::CardDb;
+    use crate::card::CardDb;
+    use crate::load::card;
     use crate::load::raw;
 
     fn read(name: &str) -> Vec<u8> {
@@ -155,7 +156,7 @@ mod tests {
         let leaders =
             raw::parse_target_map(&read("additional_leader_skill_map.json")).expect("schema");
         let year_group = raw::parse_target_map(&read("year_group_target.json")).expect("schema");
-        CardDb::build(&cards, &leaders, &year_group).unwrap_or_else(|e| panic!("{e}"))
+        card::build(&cards, &leaders, &year_group).unwrap_or_else(|e| panic!("{e}"))
     }
 
     fn path(name: &str) -> PathBuf {
