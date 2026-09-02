@@ -2,9 +2,10 @@
 
 use core::fmt;
 
+use simulator::scalar::{Attribute, Centi, CharacterSet, Millis, Pct, Rarity, Roster};
+use simulator::skill::{SkillEffect, TriggerType};
+
 use crate::load::raw::RawTargetMap;
-use crate::scalar::{Attribute, Centi, CharacterSet, Millis, Pct, Rarity, Roster};
-use crate::skill::{SkillEffect, TriggerType};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct LoadError {
@@ -128,6 +129,7 @@ closed_set!(trigger -> TriggerType {
     reason = "range checked immediately above"
 )]
 #[expect(clippy::map_err_ignore, reason = "`TryFromIntError` already reports this")]
+#[expect(clippy::float_arithmetic, reason = "the only float arithmetic in the crate")]
 fn scaled<T>(value: f64, factor: f64) -> Result<T, ErrorKind>
 where
     T: TryFrom<u32>,

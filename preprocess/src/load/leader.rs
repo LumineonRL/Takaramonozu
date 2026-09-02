@@ -4,10 +4,11 @@
 
 use std::collections::HashMap;
 
-use crate::card::{LeaderExtra, LeaderId, LeaderSkill, LeaderTargets};
+use simulator::card::{LeaderExtra, LeaderId, LeaderSkill, LeaderTargets};
+use simulator::scalar::{Attribute, Roster};
+
 use crate::load::convert::{self, At, ErrorKind, LoadError};
 use crate::load::raw::{RawLeader, RawTargetMap};
-use crate::scalar::{Attribute, Roster};
 
 /// A bit of a hacky way to represent no leader skill by applying
 /// a boost of 0%
@@ -117,7 +118,8 @@ impl Table {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::card::LeaderTargetId;
+    use simulator::card::LeaderTargetId;
+
     use crate::load::raw::{self, RawCard, RawUniqueLeader};
 
     fn read(name: &str) -> Vec<u8> {

@@ -5,12 +5,13 @@
 use core::num::NonZeroU16;
 use std::collections::HashMap;
 
-use crate::load::convert::{self, At, ErrorKind, LoadError};
-use crate::load::raw::{RawSkill, RawTargetMap};
-use crate::scalar::{Centi, Millis, Roster};
-use crate::skill::{
+use simulator::scalar::{Centi, Millis, Roster};
+use simulator::skill::{
     SkillArena, SkillDef, SkillEffect, SkillId, TargetId, Targets, Trigger, TriggerType,
 };
+
+use crate::load::convert::{self, At, ErrorKind, LoadError};
+use crate::load::raw::{RawSkill, RawTargetMap};
 
 /// Base level is 1..=8 for every card in the game and the shortest skill table
 /// is 8 rows (the URs), so the trigger table is always exactly this many rows.

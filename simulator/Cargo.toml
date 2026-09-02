@@ -1,58 +1,11 @@
 [package]
 name = "simulator"
-version = "0.1.0"
-edition = "2024"
-
-[profile.release]
-opt-level = 3
-lto = "fat"
-codegen-units = 1
-panic = "abort"
-strip = "symbols"
-debug = false
-
-[lints.clippy]
-pedantic = { level = "warn", priority = -1 }
-restriction = { level = "warn", priority = -1 }
-blanket_clippy_restriction_lints = "allow"
-
-# Dumb unidiomatic lints
-implicit_return = "allow"
-question_mark_used = "allow"
-pattern_type_mismatch = "allow"
-shadow_reuse = "allow"
-single_char_lifetime_names = "allow"
-min_ident_chars = "allow"
-default_numeric_fallback = "allow"
-absolute_paths = "allow"
-impl_trait_in_params = "allow"
-pub_with_shorthand = "allow"
-single_call_fn = "allow"
-missing_trait_methods = "allow"
-unused_trait_names = "allow"
-integer_division_remainder_used = "allow"
-self_named_module_files = "allow"
-module_name_repetitions = "allow"
-separated_literal_suffix = "allow"
-arbitrary_source_item_ordering = "allow"
-inline_modules = "allow"
-missing_docs_in_private_items = "allow"
-doc_paragraphs_missing_punctuation = "allow"
-missing_inline_in_public_items = "allow"
-as_conversions = "allow"
-
-# Wrong for this crate specifically.
-exhaustive_structs = "allow" # `preprocess` constructs this.
-exhaustive_enums = "allow"   # exhaustive `match` on `Attribute`/`Rarity` is their
-                             # entire point
-partial_pub_fields = "allow" # `Trigger::_pad` and `Table::seen` are private on purpose
-little_endian_bytes = "allow" # the archive header is explicitly LE, see archive.rs
-missing_asserts_for_indexing = "allow" # false positive on `windows(2)`
-non_ascii_literal = "allow"          # μ's
-float_arithmetic = "allow"   # There will be a lot of this.
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-memmap2 = "0.9.11"
-rkyv = "0.8.18"
-serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
+memmap2 = { workspace = true }
+rkyv = { workspace = true }
+
+[lints]
+workspace = true

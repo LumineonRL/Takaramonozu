@@ -1,3 +1,5 @@
+#![expect(clippy::little_endian_bytes, reason = "the header is explicitly LE, see `header`")]
+
 //! Framing and mmap access for the rkyv archives.
 //!
 //! There's some custom logic here that adds a header before the body rkyv wrote.
@@ -142,21 +144,39 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::card::CardDb;
-    use crate::load::card;
-    use crate::load::raw;
-
-    fn read(name: &str) -> Vec<u8> {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/");
-        std::fs::read(format!("{path}{name}")).expect("data file")
-    }
+    use crate::card::{Card, CardDb, CardMeta, LeaderSkill, LeaderTargets};
+    use crate::scalar::{Attribute, CharacterId, Roster, Stats};
+    use crate::skill::{SkillArena, Targets};
 
     fn built() -> CardDb {
-        let cards = raw::parse(&read("cards.json")).expect("schema");
-        let leaders =
-            raw::parse_target_map(&read("additional_leader_skill_map.json")).expect("schema");
-        let year_group = raw::parse_target_map(&read("year_group_target.json")).expect("schema");
-        card::build(&cards, &leaders, &year_group).unwrap_or_else(|e| panic!("{e}"))
+        CardDb {
+            cards: vec![Card {
+                stats: [Stats([1, 2, 3]), Stats([4, 5, 6])],
+                skill: None,
+                leader: crate::card::LeaderId(0),
+                character: CharacterId(0),
+                attribute: Attribute::Smile,
+            }],
+            meta: vec![CardMeta {
+                card_id: 66,
+                rarity: crate::scalar::Rarity::UR,
+                sis_base: [4, 4],
+                sis_max: [4, 8],
+                display_name: "Initial Honoka".into(),
+                is_promo: false,
+                is_preidolized_non_promo: false,
+            }],
+            skills: SkillArena::default(),
+            skill_targets: Targets::default(),
+            leaders: vec![LeaderSkill {
+                attribute: Attribute::Smile,
+                secondary: None,
+                value: 0,
+                extra: None,
+            }],
+            leader_targets: LeaderTargets::default(),
+            roster: Roster::build(["Kousaka Honoka"]),
+        }
     }
 
     fn path(name: &str) -> PathBuf {

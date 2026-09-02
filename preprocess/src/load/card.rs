@@ -1,10 +1,11 @@
 //! Assemble the cards from skills and leader skills
 
-use crate::card::{Card, CardDb, CardMeta};
+use simulator::card::{Card, CardDb, CardMeta};
+use simulator::scalar::{Roster, Stats};
+
 use crate::load::convert::{self, At, ErrorKind, LoadError};
 use crate::load::raw::{RawCard, RawStats, RawTargetMap};
 use crate::load::{leader, skill};
-use crate::scalar::{Roster, Stats};
 
 // unidolized min, unidolized max, idolized min, idolized max.
 // regular first, promos second.
@@ -20,7 +21,7 @@ const SIS: [[[u8; 4]; 2]; 5] = [
 /// Any field that does not convert
 ///
 /// # Panics
-/// Past 65535 cards, which is what a [`CardIdx`](crate::card::CardIdx) holds.
+/// Past 65535 cards, which is what a [`CardIdx`](simulator::card::CardIdx) holds.
 #[expect(clippy::panic_in_result_fn, reason = "capacity bound, documented above")]
 pub fn build(
     raw: &[RawCard],
@@ -104,9 +105,10 @@ mod tests {
     use core::assert_matches;
 
     use super::*;
-    use crate::card::LeaderId;
+    use simulator::card::LeaderId;
+    use simulator::scalar::Rarity;
+
     use crate::load::raw;
-    use crate::scalar::Rarity;
 
     fn read(name: &str) -> Vec<u8> {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/");
