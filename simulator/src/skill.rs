@@ -5,9 +5,9 @@
 //! components as we potentially will need to look up different skill levels inside of
 //! the hot loop. We also don't want to carry more values than we need to because of
 //! cache-lines and all that.
-//! For this reason, `(threshold, chance)` are armed, resolved once per card at team-compile time
-//! from the card's own level and never read again, because Amplify moves the
-//! effect and not the trigger. `(value, duration)` is payload: read only on
+//! For this reason, `(threshold, chance)` is the trigger, resolved once per card at
+//! team-compile time from the card's own level and never read again, because Amplify
+//! moves the effect and not the trigger. `(value, duration)` is payload: read only on
 //! activation, indexed by the effective (potentially amplified) level. The two
 //! halves therefore live in different arenas rather than in one row.
 
@@ -37,7 +37,7 @@ pub enum SkillEffect {
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(u8)]
-pub enum SkillTrigger {
+pub enum TriggerType {
     RhythmIcons,
     Perfects,
     Combo,
@@ -83,11 +83,11 @@ impl TargetId {
 #[repr(transparent)]
 pub struct SkillId(pub NonZeroU16);
 
-/// What it takes to arm. `threshold` is integral in every row of the source and
+/// What it takes to fire. `threshold` is integral in every row of the source and
 /// tops out at 18000 (from a score based scorer); Star Notes stores 1.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
 #[repr(C)]
-pub struct Arming {
+pub struct Trigger {
     pub threshold: u16,
     pub chance: Pct,
     /// rkyv will not write a type whose padding is uninitialized.
@@ -98,7 +98,7 @@ pub struct Arming {
 #[repr(C)]
 pub struct SkillDef {
     pub effect: SkillEffect,
-    pub trigger: SkillTrigger,
+    pub trigger_type: TriggerType,
     pub target: Option<TargetId>,
     /// Row count of the payload table, which is the amplify ceiling rather than
     /// the skill cap: an Encore (8 rows) at level 5 under a +7 Amplify resolves
@@ -106,9 +106,9 @@ pub struct SkillDef {
     pub rows: u8,
     /// `[payload, payload + rows)` in the value/duration arenas.
     pub payload: u32,
-    /// Base of this skill's 8 arming rows. Always 8: base level is 1..=8 for
+    /// Base of this skill's 8 trigger rows. Always 8: base level is 1..=8 for
     /// every card in the game, and rows past 8 padded.
-    pub arming: u32,
+    pub trigger: u32,
 }
 
 /// Encodes the 14 distinct skill target strings into bitmasks, out of
@@ -168,7 +168,7 @@ pub struct SkillArena {
     pub defs: Vec<SkillDef>,
     pub values: Vec<Centi>,
     pub durations: Vec<Millis>,
-    pub arming: Vec<Arming>,
+    pub triggers: Vec<Trigger>,
 }
 
 impl SkillArena {
@@ -188,9 +188,9 @@ impl SkillArena {
     #[must_use]
     #[expect(clippy::indexing_slicing, reason = "`push` allocated `rows` slots at this offset")]
     #[expect(clippy::arithmetic_side_effects, reason = "arena offsets, checked on push")]
-    pub fn arming(&self, def: &SkillDef, level: u8) -> Arming {
-        self.arming[def.arming as usize + level.min(8).saturating_sub(1) as usize]
+    pub fn trigger(&self, def: &SkillDef, level: u8) -> Trigger {
+        self.triggers[def.trigger as usize + level.min(8).saturating_sub(1) as usize]
     }
 }
 
-portable!(SkillEffect, SkillTrigger, TargetId, SkillId, Arming, SkillDef);
+portable!(SkillEffect, TriggerType, TargetId, SkillId, Trigger, SkillDef);

@@ -45,7 +45,7 @@ as_conversions = "allow"
 exhaustive_structs = "allow" # `preprocess` constructs this.
 exhaustive_enums = "allow"   # exhaustive `match` on `Attribute`/`Rarity` is their
                              # entire point
-partial_pub_fields = "allow" # `Arming::_pad` and `Table::seen` are private on purpose
+partial_pub_fields = "allow" # `Trigger::_pad` and `Table::seen` are private on purpose
 little_endian_bytes = "allow" # the archive header is explicitly LE, see archive.rs
 missing_asserts_for_indexing = "allow" # false positive on `windows(2)`
 non_ascii_literal = "allow"          # μ's

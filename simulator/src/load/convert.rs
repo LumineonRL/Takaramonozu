@@ -4,7 +4,7 @@ use core::fmt;
 
 use crate::load::raw::RawTargetMap;
 use crate::scalar::{Attribute, Centi, CharacterSet, Millis, Pct, Rarity, Roster};
-use crate::skill::{SkillEffect, SkillTrigger};
+use crate::skill::{SkillEffect, TriggerType};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct LoadError {
@@ -106,14 +106,14 @@ closed_set!(effect -> SkillEffect {
     "Spark" => SkillEffect::Spark,
 });
 
-closed_set!(trigger -> SkillTrigger {
-    "Rhythm Icons" => SkillTrigger::RhythmIcons,
-    "Perfects" => SkillTrigger::Perfects,
-    "Combo" => SkillTrigger::Combo,
-    "Time" => SkillTrigger::Time,
-    "Score" => SkillTrigger::Score,
-    "Star Notes" => SkillTrigger::StarNotes,
-    "Year Group" => SkillTrigger::YearGroup,
+closed_set!(trigger -> TriggerType {
+    "Rhythm Icons" => TriggerType::RhythmIcons,
+    "Perfects" => TriggerType::Perfects,
+    "Combo" => TriggerType::Combo,
+    "Time" => TriggerType::Time,
+    "Score" => TriggerType::Score,
+    "Star Notes" => TriggerType::StarNotes,
+    "Year Group" => TriggerType::YearGroup,
 });
 
 /// Exact or nothing. Every scaled value in `cards.json` is whole, so a fraction

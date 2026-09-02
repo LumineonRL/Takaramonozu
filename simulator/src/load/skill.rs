@@ -9,19 +9,19 @@ use crate::load::convert::{self, At, ErrorKind, LoadError};
 use crate::load::raw::{RawSkill, RawTargetMap};
 use crate::scalar::{Centi, Millis, Roster};
 use crate::skill::{
-    Arming, SkillArena, SkillDef, SkillEffect, SkillId, SkillTrigger, TargetId, Targets,
+    SkillArena, SkillDef, SkillEffect, SkillId, TargetId, Targets, Trigger, TriggerType,
 };
 
 /// Base level is 1..=8 for every card in the game and the shortest skill table
-/// is 8 rows (the URs), so arming is always exactly this many rows.
-const ARMING_ROWS: usize = 8;
+/// is 8 rows (the URs), so the trigger table is always exactly this many rows.
+const TRIGGER_ROWS: usize = 8;
 
 #[derive(PartialEq, Eq, Hash)]
 struct Key {
     effect: SkillEffect,
-    trigger: SkillTrigger,
+    trigger_type: TriggerType,
     target: Option<TargetId>,
-    arming: [Arming; ARMING_ROWS],
+    triggers: [Trigger; TRIGGER_ROWS],
     values: Vec<Centi>,
     durations: Vec<Millis>,
 }
@@ -39,11 +39,11 @@ impl Default for Table {
         // only so that no real skill has id 0.
         arena.defs.push(SkillDef {
             effect: SkillEffect::Scorer,
-            trigger: SkillTrigger::Combo,
+            trigger_type: TriggerType::Combo,
             target: None,
             rows: 0,
             payload: 0,
-            arming: 0,
+            trigger: 0,
         });
         Self { arena, targets: Targets::default(), seen: HashMap::new() }
     }
@@ -66,7 +66,7 @@ impl Table {
             return Ok(None);
         }
         let effect = convert::effect(&raw.effect).at(card_id, "type")?;
-        let trigger = convert::trigger(&raw.activation).at(card_id, "activation")?;
+        let trigger_type = convert::trigger(&raw.activation).at(card_id, "activation")?;
         let target = raw
             .target()
             .map(|t| self.targets.intern(t, || convert::character_set(t, map, roster)))
@@ -74,7 +74,7 @@ impl Table {
             .at(card_id, "target")?;
 
         let rows = raw.value.len();
-        if rows < ARMING_ROWS
+        if rows < TRIGGER_ROWS
             || raw.threshold.len() != rows
             || raw.chance.len() != rows
             || raw.duration.len() != rows
@@ -82,14 +82,15 @@ impl Table {
             return Err(ErrorKind::Invariant).at(card_id, "rows");
         }
 
-        let mut arming = [Arming::default(); ARMING_ROWS];
-        for ((out, &threshold), &chance) in arming.iter_mut().zip(&raw.threshold).zip(&raw.chance) {
+        let mut triggers = [Trigger::default(); TRIGGER_ROWS];
+        for ((out, &threshold), &chance) in triggers.iter_mut().zip(&raw.threshold).zip(&raw.chance)
+        {
             // Six skills have no threshold. Star Notes rolls on every star note,
-            // and the five Year Group ones arm on a set cover a counter cannot
+            // and the five Year Group ones fire on a set cover a counter cannot
             // express, so nothing sensible goes here.
-            out.threshold = match (threshold, trigger) {
+            out.threshold = match (threshold, trigger_type) {
                 (Some(t), _) => convert::threshold(t).at(card_id, "threshold")?,
-                (None, SkillTrigger::YearGroup) => 0,
+                (None, TriggerType::YearGroup) => 0,
                 (None, _) => 1,
             };
             out.chance = convert::pct(chance).at(card_id, "chance")?;
@@ -110,7 +111,7 @@ impl Table {
             });
         }
 
-        let key = Key { effect, trigger, target, arming, values, durations };
+        let key = Key { effect, trigger_type, target, triggers, values, durations };
         if let Some(&id) = self.seen.get(&key) {
             return Ok(Some(id));
         }
@@ -121,15 +122,15 @@ impl Table {
     fn push(&mut self, key: Key) -> SkillId {
         let def = SkillDef {
             effect: key.effect,
-            trigger: key.trigger,
+            trigger_type: key.trigger_type,
             target: key.target,
             rows: u8::try_from(key.values.len()).expect("16 rows at most"),
             payload: u32::try_from(self.arena.values.len()).expect("payload arena fits u32"),
-            arming: u32::try_from(self.arena.arming.len()).expect("arming arena fits u32"),
+            trigger: u32::try_from(self.arena.triggers.len()).expect("trigger arena fits u32"),
         };
         self.arena.values.extend_from_slice(&key.values);
         self.arena.durations.extend_from_slice(&key.durations);
-        self.arena.arming.extend_from_slice(&key.arming);
+        self.arena.triggers.extend_from_slice(&key.triggers);
 
         let slot = u16::try_from(self.arena.defs.len()).expect("skill table fits u16");
         let id = SkillId(NonZeroU16::new(slot).expect("slot 0 is the dead entry"));
@@ -180,7 +181,7 @@ mod tests {
         assert_eq!(ids.iter().filter(|(_, id)| id.is_none()).count(), 321);
         // 2460 distinct skills plus the dead slot 0.
         assert_eq!(table.arena.defs.len(), 2461);
-        assert_eq!(table.arena.arming.len(), 2460 * ARMING_ROWS);
+        assert_eq!(table.arena.triggers.len(), 2460 * TRIGGER_ROWS);
         assert_eq!(table.arena.values.len(), table.arena.durations.len());
         assert_eq!(table.targets.len(), 14);
     }
@@ -197,10 +198,10 @@ mod tests {
             let raw = &card.skill;
             assert_eq!(def.rows as usize, raw.level.len());
 
-            for row in 0..ARMING_ROWS {
+            for row in 0..TRIGGER_ROWS {
                 #[expect(clippy::cast_possible_truncation, reason = "row < 8")]
-                let armed = table.arena.arming(def, row as u8 + 1);
-                assert_eq!(armed.chance, convert::pct(raw.chance[row]).expect("chance"));
+                let trigger = table.arena.trigger(def, row as u8 + 1);
+                assert_eq!(trigger.chance, convert::pct(raw.chance[row]).expect("chance"));
             }
             for (row, value) in raw.value.iter().enumerate() {
                 #[expect(clippy::cast_possible_truncation, reason = "row < 16")]
