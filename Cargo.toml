@@ -58,3 +58,4 @@ exhaustive_enums = "allow"   # exhaustive `match` on `Attribute`/`Rarity` is the
 partial_pub_fields = "allow" # `Trigger::_pad` and `Table::seen` are private on purpose
 missing_asserts_for_indexing = "allow" # false positive on `windows(2)`
 non_ascii_literal = "allow"            # μ's
+std_instead_of_alloc = "allow" # Using HashMap and BTreeMap in preprocessor.

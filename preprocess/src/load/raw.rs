@@ -1,7 +1,10 @@
-// So the goal is convert cards.json into an rkyv file.
+// So the goal is convert static data .json into an rkyv file.
 // But we need to load that in first with serde.
+//
+// DONE: cards.json
+// IN-PROGRESS: accessories.json
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use serde::Deserialize;
 use serde::de::IgnoredAny;
@@ -119,6 +122,65 @@ impl RawSkill {
     }
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct RawAccessory {
+    pub character: String,
+    /// Entirely cosmetic
+    pub name: String,
+    pub card_id: String,
+    /// One `[smile, pure, cool]` row per level.
+    pub stats: Vec<[u16; 3]>,
+    pub skill: RawAccessorySkill,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct RawAccessorySkill {
+    pub target: String,
+    pub trigger: RawTrigger,
+    pub effect: RawEffect,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct RawTrigger {
+    pub chances: Vec<u8>,
+    /// Only ever used for Spark threshold
+    pub values: Vec<u8>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct RawEffect {
+    #[serde(rename = "type")]
+    pub effect: String,
+    pub durations: Vec<f64>,
+    pub values: Vec<u32>,
+}
+
+impl RawAccessory {
+    /// `None` when the accessory may be equipped on anything.
+    #[must_use]
+    pub fn card_id(&self) -> Option<&str> {
+        Some(self.card_id.as_str()).filter(|s| !s.is_empty())
+    }
+
+    #[must_use]
+    pub fn character(&self) -> Option<&str> {
+        Some(self.character.as_str()).filter(|s| !s.is_empty())
+    }
+}
+
+impl RawAccessorySkill {
+    #[must_use]
+    pub fn target(&self) -> Option<&str> {
+        Some(self.target.as_str()).filter(|s| !s.is_empty())
+    }
+}
+
+pub type RawAccessories = BTreeMap<u16, RawAccessory>;
+
 /// `additional_leader_skill_map.json` maps a `leader_extra_target` name to the
 /// character names it corresponds to.
 pub type RawTargetMap = HashMap<String, Vec<String>>;
@@ -136,6 +198,12 @@ pub fn parse_target_map(bytes: &[u8]) -> serde_json::Result<RawTargetMap> {
 }
 
 /// # Errors
+/// Any deviation from [`RawUAccessory`].
+pub fn parse_accessories(bytes: &[u8]) -> serde_json::Result<RawAccessories> {
+    serde_json::from_slice(bytes)
+}
+
+/// # Errors
 /// Any deviation from [`RawUniqueLeader`].
 pub fn parse_unique_leaders(bytes: &[u8]) -> serde_json::Result<Vec<RawUniqueLeader>> {
     serde_json::from_slice(bytes)
@@ -145,10 +213,21 @@ pub fn parse_unique_leaders(bytes: &[u8]) -> serde_json::Result<Vec<RawUniqueLea
 mod tests {
     use super::*;
 
+    /// Base skill level is 1..=8 for accessories as for cards and also stores the
+    /// row index of its last row.
+    const BASE_ROWS: usize = 8;
+    const LAST_BASE: usize = 7;
+
     fn cards() -> Vec<RawCard> {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/cards.json");
         let bytes = std::fs::read(path).expect("cards.json");
         parse(&bytes).expect("schema")
+    }
+
+    fn accessories() -> RawAccessories {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/accessories.json");
+        let bytes = std::fs::read(path).expect("accessories.json");
+        parse_accessories(&bytes).expect("schema")
     }
 
     #[test]
@@ -212,6 +291,79 @@ mod tests {
             }
         }
         assert_eq!(identity, 321, "the identity leader belongs to the N cards alone");
+    }
+
+    #[test]
+    fn parses_all_accessory_ids() {
+        let mut ids: Vec<u16> = accessories().into_keys().collect();
+        ids.sort_unstable();
+        assert_eq!(ids, (1..=549).collect::<Vec<u16>>());
+    }
+
+    #[test]
+    fn accessory_tables_align() {
+        for (id, a) in &accessories() {
+            let rows = a.stats.len();
+            assert!(rows == 14 || rows == 16, "accessory {id} has {rows} rows");
+            let s = &a.skill;
+            assert!(
+                s.trigger.chances.len() == rows
+                    && s.trigger.values.len() == rows
+                    && s.effect.durations.len() == rows
+                    && s.effect.values.len() == rows,
+                "accessory {id} ragged"
+            );
+        }
+    }
+
+    #[test]
+    fn the_trigger_half_is_flat_past_base_level_and_the_payload_is_not() {
+        let accs = accessories();
+        for (id, a) in &accs {
+            let s = &a.skill;
+            assert!(a.stats[BASE_ROWS..].iter().all(|r| *r == a.stats[LAST_BASE]), "{id} stats");
+            let chances = &s.trigger.chances;
+            assert!(chances[BASE_ROWS..].iter().all(|c| *c == chances[LAST_BASE]), "{id} chance");
+            let thresholds = &s.trigger.values;
+            assert!(thresholds.iter().all(|v| *v == thresholds[0]), "{id} threshold varies");
+        }
+        let moved = accs
+            .values()
+            .filter(|a| {
+                let v = &a.skill.effect.values;
+                v[BASE_ROWS..].iter().any(|x| *x != v[LAST_BASE])
+            })
+            .count();
+        assert_eq!(moved, 347, "the payload half has to keep climbing past row 8");
+    }
+
+    #[test]
+    fn character_and_card_id_match() {
+        let accs = accessories();
+        for (id, a) in &accs {
+            assert_eq!(
+                a.character().is_some(),
+                a.card_id().is_some(),
+                "accessory {id} carries one half of the pairing"
+            );
+        }
+        assert_eq!(accs.values().filter(|a| a.card_id().is_some()).count(), 484);
+    }
+
+    #[test]
+    fn only_spark_carries_a_trigger_threshold() {
+        let accs = accessories();
+        for (id, a) in &accs {
+            let s = &a.skill;
+            let spark = s.effect.effect == "Spark";
+            assert_eq!(
+                s.trigger.values.iter().any(|v| *v != 0),
+                spark,
+                "accessory {id} has a threshold for a non-Spark."
+            );
+            assert!(!spark || matches!(s.trigger.values[0], 5 | 7 | 10), "accessory {id} tier");
+        }
+        assert_eq!(accs.values().filter(|a| a.skill.effect.effect == "Spark").count(), 23);
     }
 
     #[test]
