@@ -1,3 +1,4 @@
+pub mod accessory;
 pub mod archive;
 pub mod card;
 pub mod scalar;

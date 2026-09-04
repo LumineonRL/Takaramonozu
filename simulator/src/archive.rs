@@ -136,6 +136,7 @@ macro_rules! portable {
 }
 
 const _: () = assert!(cfg!(target_endian = "little"), "the archive is host-endian");
+const _: () = assert!(size_of::<usize>() >= 8, "arena offsets assume a 64-bit usize");
 
 pub(crate) use portable;
 

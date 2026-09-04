@@ -104,6 +104,8 @@ fn meta(c: &RawCard) -> Result<CardMeta, LoadError> {
 mod tests {
     use core::assert_matches;
 
+    use simulator::skill::SkillRows;
+
     use super::*;
     use simulator::card::LeaderId;
     use simulator::scalar::Rarity;
@@ -144,7 +146,7 @@ mod tests {
         let db = built();
         assert_eq!(db.len(), 3826);
         assert_eq!(db.meta.len(), 3826);
-        assert_eq!(db.skills.defs.len(), 2461);
+        assert_eq!(db.skills.defs().len(), 2461);
         assert_eq!(db.skill_targets.len(), 14);
         assert_eq!(db.leaders.len(), 313);
         assert_eq!(db.leader_targets.len(), 74);

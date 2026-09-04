@@ -104,11 +104,8 @@ pub struct SkillDef {
     /// the skill cap: an Encore (8 rows) at level 5 under a +7 Amplify resolves
     /// at 8, not 12. Lookups saturate here instead of bounds-checking.
     pub rows: u8,
-    /// `[payload, payload + rows)` in the value/duration arenas.
-    pub payload: u32,
-    /// Base of this skill's 8 trigger rows. Always 8: base level is 1..=8 for
-    /// every card in the game, and rows past 8 padded.
-    pub trigger: u32,
+    payload: u32,
+    trigger: u32,
 }
 
 /// Encodes the 14 distinct skill target strings into bitmasks, out of
@@ -162,34 +159,131 @@ impl Targets {
     }
 }
 
-#[derive(Default, Archive, Serialize, Deserialize)]
+pub const TRIGGER_ROWS: u8 = 8;
+
+#[derive(Archive, Serialize, Deserialize)]
 #[rkyv(compare(PartialEq))]
 pub struct SkillArena {
-    pub defs: Vec<SkillDef>,
-    pub values: Vec<Centi>,
-    pub durations: Vec<Millis>,
-    pub triggers: Vec<Trigger>,
+    defs: Vec<SkillDef>,
+    values: Vec<Centi>,
+    durations: Vec<Millis>,
+    triggers: Vec<Trigger>,
+}
+
+impl Default for SkillArena {
+    fn default() -> Self {
+        Self {
+            defs: vec![SkillDef {
+                effect: SkillEffect::Scorer,
+                trigger_type: TriggerType::Combo,
+                target: None,
+                rows: 0,
+                payload: 0,
+                trigger: 0,
+            }],
+            values: Vec::new(),
+            durations: Vec::new(),
+            triggers: Vec::new(),
+        }
+    }
 }
 
 impl SkillArena {
+    /// # Panics
+    /// Empty payload, past 255 rows, past 65535 skills.
+    #[expect(clippy::expect_used, reason = "capacity bounds, documented above")]
+    pub fn push(
+        &mut self,
+        effect: SkillEffect,
+        trigger_type: TriggerType,
+        target: Option<TargetId>,
+        triggers: &[Trigger; TRIGGER_ROWS as usize],
+        payload: &[(Centi, Millis)],
+    ) -> SkillId {
+        assert!(!payload.is_empty(), "a skill with no payload rows would read the next skill's");
+        let def = SkillDef {
+            effect,
+            trigger_type,
+            target,
+            rows: u8::try_from(payload.len()).expect("16 payload rows at most"),
+            payload: u32::try_from(self.values.len()).expect("payload arena fits u32"),
+            trigger: u32::try_from(self.triggers.len()).expect("trigger arena fits u32"),
+        };
+        for &(value, duration) in payload {
+            self.values.push(value);
+            self.durations.push(duration);
+        }
+        self.triggers.extend_from_slice(triggers);
+
+        let slot = u16::try_from(self.defs.len()).expect("skill table fits u16");
+        self.defs.push(def);
+        SkillId(NonZeroU16::new(slot).expect("`default` seeded the dead slot 0"))
+    }
+
+    #[must_use]
+    pub fn trigger_rows(&self) -> usize {
+        self.triggers.len()
+    }
+}
+
+pub trait SkillRows {
+    fn defs(&self) -> &[SkillDef];
+    fn triggers(&self) -> &[Trigger];
+    fn payload_row(&self, row: usize) -> (Centi, Millis);
+
+    #[must_use]
+    fn def(&self, id: SkillId) -> Option<&SkillDef> {
+        self.defs().get(id.0.get() as usize)
+    }
+
     /// `level` is effective (post-Amplify) and 1-based; Amplify reaches +16 on
     /// top of a base 8, so requests up to 24 arrive here and clamp.
     #[inline]
     #[must_use]
-    #[expect(clippy::indexing_slicing, reason = "`push` allocated `rows` slots at this offset")]
-    #[expect(clippy::arithmetic_side_effects, reason = "arena offsets, checked on push")]
-    pub fn payload(&self, def: &SkillDef, level: u8) -> (Centi, Millis) {
-        let row = def.payload as usize + level.min(def.rows).saturating_sub(1) as usize;
-        (self.values[row], self.durations[row])
+    #[expect(clippy::arithmetic_side_effects, reason = "u32 + u8; see `archive`'s usize assert")]
+    fn payload(&self, def: &SkillDef, level: u8) -> (Centi, Millis) {
+        self.payload_row(def.payload as usize + level.min(def.rows).saturating_sub(1) as usize)
     }
 
     /// `level` is the card's own level, 1..=8.
     #[inline]
     #[must_use]
-    #[expect(clippy::indexing_slicing, reason = "`push` allocated `rows` slots at this offset")]
-    #[expect(clippy::arithmetic_side_effects, reason = "arena offsets, checked on push")]
-    pub fn trigger(&self, def: &SkillDef, level: u8) -> Trigger {
-        self.triggers[def.trigger as usize + level.min(8).saturating_sub(1) as usize]
+    #[expect(clippy::indexing_slicing, reason = "`push` allocated TRIGGER_ROWS at `def.trigger`")]
+    #[expect(clippy::arithmetic_side_effects, reason = "u32 + u8; see `archive`'s usize assert")]
+    fn trigger(&self, def: &SkillDef, level: u8) -> Trigger {
+        self.triggers()[def.trigger as usize + level.min(TRIGGER_ROWS).saturating_sub(1) as usize]
+    }
+}
+
+impl SkillRows for SkillArena {
+    fn defs(&self) -> &[SkillDef] {
+        &self.defs
+    }
+
+    fn triggers(&self) -> &[Trigger] {
+        &self.triggers
+    }
+
+    #[inline]
+    #[expect(clippy::indexing_slicing, reason = "`push` allocated `def.rows` at `def.payload`")]
+    fn payload_row(&self, row: usize) -> (Centi, Millis) {
+        (self.values[row], self.durations[row])
+    }
+}
+
+impl SkillRows for ArchivedSkillArena {
+    fn defs(&self) -> &[SkillDef] {
+        &self.defs
+    }
+
+    fn triggers(&self) -> &[Trigger] {
+        &self.triggers
+    }
+
+    #[inline]
+    #[expect(clippy::indexing_slicing, reason = "`push` allocated `def.rows` at `def.payload`")]
+    fn payload_row(&self, row: usize) -> (Centi, Millis) {
+        (self.values[row].to_native(), self.durations[row].to_native())
     }
 }
 

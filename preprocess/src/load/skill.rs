@@ -2,52 +2,33 @@
 //! plus an unused entry at slot 0 so that a card with no skill costs nothing
 //! to store. See [`SkillId`] for why that works.
 
-use core::num::NonZeroU16;
 use std::collections::HashMap;
 
 use simulator::scalar::{Centi, Millis, Roster};
 use simulator::skill::{
-    SkillArena, SkillDef, SkillEffect, SkillId, TargetId, Targets, Trigger, TriggerType,
+    SkillArena, SkillEffect, SkillId, TRIGGER_ROWS, TargetId, Targets, Trigger, TriggerType,
 };
 
 use crate::load::convert::{self, At, ErrorKind, LoadError};
 use crate::load::raw::{RawSkill, RawTargetMap};
 
-/// Base level is 1..=8 for every card in the game and the shortest skill table
-/// is 8 rows (the URs), so the trigger table is always exactly this many rows.
-const TRIGGER_ROWS: usize = 8;
+/// The number of rows a card's trigger half occupies (aka the first 8).
+const ROWS: usize = TRIGGER_ROWS as usize;
 
 #[derive(PartialEq, Eq, Hash)]
 struct Key {
     effect: SkillEffect,
     trigger_type: TriggerType,
     target: Option<TargetId>,
-    triggers: [Trigger; TRIGGER_ROWS],
-    values: Vec<Centi>,
-    durations: Vec<Millis>,
+    triggers: [Trigger; ROWS],
+    payload: Vec<(Centi, Millis)>,
 }
 
+#[derive(Default)]
 pub struct Table {
     pub arena: SkillArena,
     pub targets: Targets,
     seen: HashMap<Key, SkillId>,
-}
-
-impl Default for Table {
-    fn default() -> Self {
-        let mut arena = SkillArena::default();
-        // Slot 0 is never handed out. Its contents are never read; it is here
-        // only so that no real skill has id 0.
-        arena.defs.push(SkillDef {
-            effect: SkillEffect::Scorer,
-            trigger_type: TriggerType::Combo,
-            target: None,
-            rows: 0,
-            payload: 0,
-            trigger: 0,
-        });
-        Self { arena, targets: Targets::default(), seen: HashMap::new() }
-    }
 }
 
 impl Table {
@@ -75,7 +56,7 @@ impl Table {
             .at(card_id, "target")?;
 
         let rows = raw.value.len();
-        if rows < TRIGGER_ROWS
+        if rows < ROWS
             || raw.threshold.len() != rows
             || raw.chance.len() != rows
             || raw.duration.len() != rows
@@ -83,7 +64,7 @@ impl Table {
             return Err(ErrorKind::Invariant).at(card_id, "rows");
         }
 
-        let mut triggers = [Trigger::default(); TRIGGER_ROWS];
+        let mut triggers = [Trigger::default(); ROWS];
         for ((out, &threshold), &chance) in triggers.iter_mut().zip(&raw.threshold).zip(&raw.chance)
         {
             // Six skills have no threshold. Star Notes rolls on every star note,
@@ -99,51 +80,35 @@ impl Table {
 
         // Perfect Lock, Total Trick, Sync and Encore carry no value.
         // Stores 0 rather than an `Option`
-        let mut values = Vec::with_capacity(rows);
-        let mut durations = Vec::with_capacity(rows);
+        let mut payload = Vec::with_capacity(rows);
         for (&value, &duration) in raw.value.iter().zip(&raw.duration) {
-            values.push(match value {
-                Some(v) => convert::centi(v).at(card_id, "value")?,
-                None => 0,
-            });
-            durations.push(match duration {
-                Some(d) => convert::millis(d).at(card_id, "duration")?,
-                None => 0,
-            });
+            payload.push((
+                match value {
+                    Some(v) => convert::centi(v).at(card_id, "value")?,
+                    None => 0,
+                },
+                match duration {
+                    Some(d) => convert::millis(d).at(card_id, "duration")?,
+                    None => 0,
+                },
+            ));
         }
 
-        let key = Key { effect, trigger_type, target, triggers, values, durations };
+        let key = Key { effect, trigger_type, target, triggers, payload };
         if let Some(&id) = self.seen.get(&key) {
             return Ok(Some(id));
         }
-        Ok(Some(self.push(key)))
-    }
-
-    #[expect(clippy::expect_used, reason = "capacity bounds, documented on `insert`")]
-    fn push(&mut self, key: Key) -> SkillId {
-        let def = SkillDef {
-            effect: key.effect,
-            trigger_type: key.trigger_type,
-            target: key.target,
-            rows: u8::try_from(key.values.len()).expect("16 rows at most"),
-            payload: u32::try_from(self.arena.values.len()).expect("payload arena fits u32"),
-            trigger: u32::try_from(self.arena.triggers.len()).expect("trigger arena fits u32"),
-        };
-        self.arena.values.extend_from_slice(&key.values);
-        self.arena.durations.extend_from_slice(&key.durations);
-        self.arena.triggers.extend_from_slice(&key.triggers);
-
-        let slot = u16::try_from(self.arena.defs.len()).expect("skill table fits u16");
-        let id = SkillId(NonZeroU16::new(slot).expect("slot 0 is the dead entry"));
-        self.arena.defs.push(def);
+        let id = self.arena.push(effect, trigger_type, target, &key.triggers, &key.payload);
         self.seen.insert(key, id);
-        id
+        Ok(Some(id))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use core::assert_matches;
+
+    use simulator::skill::SkillRows;
 
     use super::*;
     use crate::load::raw::{self, RawCard};
@@ -181,9 +146,8 @@ mod tests {
         let (table, _, ids) = built();
         assert_eq!(ids.iter().filter(|(_, id)| id.is_none()).count(), 321);
         // 2460 distinct skills plus the dead slot 0.
-        assert_eq!(table.arena.defs.len(), 2461);
-        assert_eq!(table.arena.triggers.len(), 2460 * TRIGGER_ROWS);
-        assert_eq!(table.arena.values.len(), table.arena.durations.len());
+        assert_eq!(table.arena.defs().len(), 2461);
+        assert_eq!(table.arena.trigger_rows(), 2460 * ROWS);
         assert_eq!(table.targets.len(), 14);
     }
 
@@ -195,11 +159,11 @@ mod tests {
         for (card, (card_id, id)) in cards().iter().zip(ids) {
             assert_eq!(card.card_id, card_id);
             let Some(id) = id else { continue };
-            let def = &table.arena.defs[id.0.get() as usize];
+            let def = table.arena.def(id).expect("push handed this id out");
             let raw = &card.skill;
             assert_eq!(def.rows as usize, raw.level.len());
 
-            for row in 0..TRIGGER_ROWS {
+            for row in 0..ROWS {
                 #[expect(clippy::cast_possible_truncation, reason = "row < 8")]
                 let trigger = table.arena.trigger(def, row as u8 + 1);
                 assert_eq!(trigger.chance, convert::pct(raw.chance[row]).expect("chance"));
@@ -246,7 +210,7 @@ mod tests {
         for (card, (card_id, id)) in cards().iter().zip(ids) {
             assert_eq!(card.card_id, card_id);
             let Some(id) = id else { continue };
-            let target = table.arena.defs[id.0.get() as usize].target;
+            let target = table.arena.def(id).expect("push handed this id out").target;
             assert_eq!(target.and_then(|t| table.targets.name(t)), card.skill.target());
         }
     }
