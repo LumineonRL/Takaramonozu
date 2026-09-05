@@ -8,7 +8,7 @@ use simulator::accessory::{
     Accessory, AccessoryArena, AccessoryDb, AccessoryMeta, AccessorySkillId, STAT_ROWS, StatArena,
     StatsId,
 };
-use simulator::scalar::{Centi, Millis, Pct, Roster, Stats};
+use simulator::scalar::{Centi, Ms, Pct, Roster, Stats};
 use simulator::skill::{SkillEffect, TRIGGER_ROWS, TargetId, Targets};
 
 use crate::load::convert::{self, At, ErrorKind, LoadError};
@@ -27,7 +27,7 @@ struct Key {
     target: Option<TargetId>,
     threshold: u8,
     chances: [Pct; ROWS],
-    payload: Vec<(Centi, Millis)>,
+    payload: Vec<(Centi, Ms)>,
 }
 
 /// # Errors

@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use simulator::scalar::{Centi, Millis, Roster};
+use simulator::scalar::{Centi, Ms, Roster};
 use simulator::skill::{
     SkillArena, SkillEffect, SkillId, TRIGGER_ROWS, TargetId, Targets, Trigger, TriggerType,
 };
@@ -21,7 +21,7 @@ struct Key {
     trigger_type: TriggerType,
     target: Option<TargetId>,
     triggers: [Trigger; ROWS],
-    payload: Vec<(Centi, Millis)>,
+    payload: Vec<(Centi, Ms)>,
 }
 
 #[derive(Default)]

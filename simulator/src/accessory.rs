@@ -1,7 +1,7 @@
 use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::archive::{Kind, portable};
-use crate::scalar::{Centi, Millis, Pct, Stats};
+use crate::scalar::{Centi, Ms, Pct, Stats};
 use crate::skill::{self, SkillEffect, TRIGGER_ROWS, TargetId};
 
 pub const STAT_ROWS: u8 = 8;
@@ -51,7 +51,7 @@ pub struct AccessorySkillDef {
 pub struct AccessoryArena {
     defs: Vec<AccessorySkillDef>,
     values: Vec<Centi>,
-    durations: Vec<Millis>,
+    durations: Vec<Ms>,
     chances: Vec<Pct>,
 }
 
@@ -65,7 +65,7 @@ impl AccessoryArena {
         target: Option<TargetId>,
         threshold: u8,
         chances: &[Pct; TRIGGER_ROWS as usize],
-        payload: &[(Centi, Millis)],
+        payload: &[(Centi, Ms)],
     ) -> AccessorySkillId {
         assert!(!payload.is_empty(), "a skill with no payload rows would read the next skill's");
         let def = AccessorySkillDef {
@@ -91,7 +91,7 @@ impl AccessoryArena {
 pub trait AccessoryRows {
     fn defs(&self) -> &[AccessorySkillDef];
     fn chances(&self) -> &[Pct];
-    fn payload_row(&self, row: usize) -> (Centi, Millis);
+    fn payload_row(&self, row: usize) -> (Centi, Ms);
 
     #[must_use]
     fn def(&self, id: AccessorySkillId) -> Option<&AccessorySkillDef> {
@@ -101,7 +101,7 @@ pub trait AccessoryRows {
     #[inline]
     #[must_use]
     #[expect(clippy::arithmetic_side_effects, reason = "u32 + u8; see `archive`'s usize assert")]
-    fn payload(&self, def: &AccessorySkillDef, level: u8) -> (Centi, Millis) {
+    fn payload(&self, def: &AccessorySkillDef, level: u8) -> (Centi, Ms) {
         self.payload_row(def.payload as usize + level.min(def.rows).saturating_sub(1) as usize)
     }
 
@@ -125,7 +125,7 @@ impl AccessoryRows for AccessoryArena {
 
     #[inline]
     #[expect(clippy::indexing_slicing, reason = "`push` allocated `def.rows` at `def.payload`")]
-    fn payload_row(&self, row: usize) -> (Centi, Millis) {
+    fn payload_row(&self, row: usize) -> (Centi, Ms) {
         (self.values[row], self.durations[row])
     }
 }
@@ -141,7 +141,7 @@ impl AccessoryRows for ArchivedAccessoryArena {
 
     #[inline]
     #[expect(clippy::indexing_slicing, reason = "`push` allocated `def.rows` at `def.payload`")]
-    fn payload_row(&self, row: usize) -> (Centi, Millis) {
+    fn payload_row(&self, row: usize) -> (Centi, Ms) {
         (self.values[row].to_native(), self.durations[row].to_native())
     }
 }
@@ -231,7 +231,7 @@ mod tests {
 
     /// Acc 217 `UR Guren Type Special`, row 1: threshold 5, chance 11.
     fn spark(arena: &mut AccessoryArena) -> AccessorySkillId {
-        const PAYLOAD: [(Centi, Millis); 8] = [
+        const PAYLOAD: [(Centi, Ms); 8] = [
             (1000, 500),
             (2000, 1000),
             (3000, 1500),

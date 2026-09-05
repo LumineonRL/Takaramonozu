@@ -19,7 +19,17 @@ use crate::archive::portable;
 pub type Centi = u32;
 
 /// Milliseconds. Used for Skill `duration`s; max observed `43_000`.
-pub type Millis = u16;
+pub type Ms = u16;
+
+/// Thousandths. Used for the SIS `value` column, which [`Centi`] cannot carry:
+/// the four `all percent boost` values (`0.015`, `0.018`, `0.024`, `0.042`)
+/// have a third decimal place where every column of `cards.json` stops at two.
+///
+/// So a percent effect is already the fractional part of its multiplier and a
+/// flat one is `value / 1000`, which is exact on all nine of them.
+///
+/// Max is `1_400_000` (Wink 1400.00).
+pub type Milli = u32;
 
 /// Percent as written on the card: `93` means 93%, i.e. 0.93. Activation
 /// chance (max 93) and leader values (max 15).

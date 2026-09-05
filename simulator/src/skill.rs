@@ -16,7 +16,7 @@ use core::num::{NonZeroU8, NonZeroU16};
 use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::archive::portable;
-use crate::scalar::{Centi, CharacterSet, Millis, Pct};
+use crate::scalar::{Centi, CharacterSet, Ms, Pct};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(u8)]
@@ -166,7 +166,7 @@ pub const TRIGGER_ROWS: u8 = 8;
 pub struct SkillArena {
     defs: Vec<SkillDef>,
     values: Vec<Centi>,
-    durations: Vec<Millis>,
+    durations: Vec<Ms>,
     triggers: Vec<Trigger>,
 }
 
@@ -198,7 +198,7 @@ impl SkillArena {
         trigger_type: TriggerType,
         target: Option<TargetId>,
         triggers: &[Trigger; TRIGGER_ROWS as usize],
-        payload: &[(Centi, Millis)],
+        payload: &[(Centi, Ms)],
     ) -> SkillId {
         assert!(!payload.is_empty(), "a skill with no payload rows would read the next skill's");
         let def = SkillDef {
@@ -229,7 +229,7 @@ impl SkillArena {
 pub trait SkillRows {
     fn defs(&self) -> &[SkillDef];
     fn triggers(&self) -> &[Trigger];
-    fn payload_row(&self, row: usize) -> (Centi, Millis);
+    fn payload_row(&self, row: usize) -> (Centi, Ms);
 
     #[must_use]
     fn def(&self, id: SkillId) -> Option<&SkillDef> {
@@ -241,7 +241,7 @@ pub trait SkillRows {
     #[inline]
     #[must_use]
     #[expect(clippy::arithmetic_side_effects, reason = "u32 + u8; see `archive`'s usize assert")]
-    fn payload(&self, def: &SkillDef, level: u8) -> (Centi, Millis) {
+    fn payload(&self, def: &SkillDef, level: u8) -> (Centi, Ms) {
         self.payload_row(def.payload as usize + level.min(def.rows).saturating_sub(1) as usize)
     }
 
@@ -266,7 +266,7 @@ impl SkillRows for SkillArena {
 
     #[inline]
     #[expect(clippy::indexing_slicing, reason = "`push` allocated `def.rows` at `def.payload`")]
-    fn payload_row(&self, row: usize) -> (Centi, Millis) {
+    fn payload_row(&self, row: usize) -> (Centi, Ms) {
         (self.values[row], self.durations[row])
     }
 }
@@ -282,7 +282,7 @@ impl SkillRows for ArchivedSkillArena {
 
     #[inline]
     #[expect(clippy::indexing_slicing, reason = "`push` allocated `def.rows` at `def.payload`")]
-    fn payload_row(&self, row: usize) -> (Centi, Millis) {
+    fn payload_row(&self, row: usize) -> (Centi, Ms) {
         (self.values[row].to_native(), self.durations[row].to_native())
     }
 }

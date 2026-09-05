@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use simulator::scalar::{Attribute, Centi, CharacterSet, Millis, Pct, Rarity, Roster};
+use simulator::scalar::{Attribute, Centi, CharacterSet, Ms, Pct, Rarity, Roster};
 use simulator::skill::{SkillEffect, TriggerType};
 
 use crate::load::raw::RawTargetMap;
@@ -162,7 +162,7 @@ pub fn pct(value: f64) -> Result<Pct, ErrorKind> {
 /// Seconds with one decimal, for durations: `4.5 -> 4500`.
 /// # Errors
 /// More than three decimal places, or longer than 65.535 s.
-pub fn millis(value: f64) -> Result<Millis, ErrorKind> {
+pub fn millis(value: f64) -> Result<Ms, ErrorKind> {
     scaled(value, 1000.0)
 }
 
@@ -282,7 +282,7 @@ mod tests {
         assert_eq!(millis(0.0005), Err(ErrorKind::NotFixedPoint(0.0005)));
         assert_eq!(centi(148_240.0), Ok(14_824_000));
         assert_eq!(pct(3.0), Err(ErrorKind::OutOfRange(3.0))); // 300 past `Pct`
-        assert_eq!(millis(99.0), Err(ErrorKind::OutOfRange(99.0))); // 99 s past `Millis`
+        assert_eq!(millis(99.0), Err(ErrorKind::OutOfRange(99.0))); // 99 s past `Ms`
         assert_eq!(centi(-1.0), Err(ErrorKind::OutOfRange(-1.0)));
         assert_eq!(centi(1e12), Err(ErrorKind::OutOfRange(1e12))); // past the u32 gate
 
