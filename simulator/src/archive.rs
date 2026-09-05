@@ -72,6 +72,9 @@ impl<T: Archive + Kind> Mapped<T>
 where
     T::Archived: Portable,
 {
+    const ALIGNED: () =
+        assert!(align_of::<T::Archived>() <= HEADER, "the body is only aligned to HEADER");
+
     /// # Errors
     /// Can't open file for whatever reason
     /// Header is wrong / denied
@@ -83,10 +86,9 @@ where
         let file = File::open(path)?;
         // SAFETY: the caller guarantees the file is not modified while mapped.
         let map = unsafe { Mmap::map(&file) }?;
-        let ok = map
-            .split_at_checked(HEADER)
-            .and_then(|(head, body)| Some((head, u32::try_from(body.len()).ok()?)))
-            .is_some_and(|(head, len)| head == header::<T>(len));
+        let ok = map.split_at_checked(HEADER).is_some_and(|(head, body)| {
+            u32::try_from(body.len()).is_ok_and(|len| head == header::<T>(len))
+        });
         if !ok {
             let why = "not an archive of this kind and version";
             return Err(io::Error::new(io::ErrorKind::InvalidData, why));
@@ -96,8 +98,11 @@ where
 
     #[must_use]
     pub fn root(&self) -> &T::Archived {
-        let body = self.map.get(HEADER..).unwrap_or_default();
-        // SAFETY: the header matched, so the body came out of `write` for this.
+        let () = Self::ALIGNED;
+        #[expect(clippy::indexing_slicing, reason = "`open` rejects a map shorter than HEADER")]
+        let body = &self.map[HEADER..];
+        // SAFETY: HEADER prevents stale layout.
+        // a corrupt body is UB.
         unsafe { rkyv::access_unchecked(body) }
     }
 }
@@ -180,8 +185,26 @@ mod tests {
         }
     }
 
+    /// The pid keeps two concurrent `cargo test` runs off each other's files.
     fn path(name: &str) -> PathBuf {
-        std::env::temp_dir().join(format!("llsif-{name}.rkyv"))
+        let pid = std::process::id();
+        std::env::temp_dir().join(format!("llsif-{name}-{pid}.rkyv"))
+    }
+
+    /// Writes a good archive, corrupts it, and expects `open` to refuse.
+    fn rejected(name: &str, edit: impl FnOnce(&mut Vec<u8>)) {
+        let path = path(name);
+        write(&path, &built()).expect("write");
+        let mut bytes = std::fs::read(&path).expect("read back");
+        edit(&mut bytes);
+        std::fs::write(&path, &bytes).expect("rewrite");
+
+        // SAFETY: Test owns path.
+        match unsafe { Mapped::<CardDb>::open(&path) } {
+            Err(e) => assert_eq!(e.kind(), io::ErrorKind::InvalidData, "{name}"),
+            Ok(_) => panic!("`open` accepted a {name} archive"),
+        }
+        std::fs::remove_file(&path).expect("cleanup");
     }
 
     #[test]
@@ -196,21 +219,28 @@ mod tests {
         assert_eq!(body % 16, 0, "the header misaligned the body");
         // `CardDb` has no `Debug`, so this cannot be `assert_eq!`.
         assert!(mapped.root() == &db, "the archive is not the database it was built from");
+
+        drop(mapped);
+        std::fs::remove_file(&path).expect("cleanup");
     }
 
     #[test]
-    fn check_a_bad_header_is_rejected() {
-        let path = path("foreign");
-        write(&path, &built()).expect("write");
-        let mut bytes = std::fs::read(&path).expect("read back");
-        bytes[8] ^= 1; // the version, which is what a layout change moves
-        std::fs::write(&path, &bytes).expect("rewrite");
+    fn check_a_bad_version_is_rejected() {
+        rejected("wrong-version", |b| b[8] ^= 1); // what a layout change moves
+    }
 
-        // `Mapped` has no `Debug`, since `CardDb` has none either.
-        // SAFETY: this test owns the path. Its entire point is that `open` should reject it.
-        match unsafe { Mapped::<CardDb>::open(&path) } {
-            Err(e) => assert_eq!(e.kind(), io::ErrorKind::InvalidData),
-            Ok(_) => panic!("mapped an archive from another version"),
-        }
+    #[test]
+    fn check_a_bad_magic_is_rejected() {
+        rejected("foreign-kind", |b| b[0] ^= 1);
+    }
+
+    #[test]
+    fn check_a_file_shorter_than_the_header_is_rejected() {
+        rejected("stub", |b| b.truncate(8));
+    }
+
+    #[test]
+    fn check_a_headerless_body_is_rejected() {
+        rejected("no-body", |b| b.truncate(HEADER));
     }
 }
