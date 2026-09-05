@@ -1,8 +1,8 @@
 // So the goal is convert static data .json into an rkyv file.
 // But we need to load that in first with serde.
 //
-// DONE: cards.json
-// IN-PROGRESS: accessories.json
+// DONE: cards.json, accessories.json
+// TODO: sis.json, songs.json
 
 use std::collections::{BTreeMap, HashMap};
 

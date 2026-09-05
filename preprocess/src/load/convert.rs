@@ -193,6 +193,23 @@ pub fn character_set(
     Ok(CharacterSet(bits))
 }
 
+/// # Errors
+/// A name that is neither `"All"`, a key of the map, nor a valid member name.
+pub fn accessory_target(
+    name: &str,
+    map: &RawTargetMap,
+    roster: &Roster,
+) -> Result<CharacterSet, ErrorKind> {
+    if name == "All" {
+        return Ok(roster.all());
+    }
+    if map.contains_key(name) {
+        return character_set(name, map, roster);
+    }
+    let id = roster.id(name).ok_or_else(|| ErrorKind::Unknown(name.into()))?;
+    Ok(CharacterSet(1 << id.0))
+}
+
 #[cfg(test)]
 mod tests {
     use core::assert_matches;
@@ -270,6 +287,39 @@ mod tests {
         assert_eq!(centi(1e12), Err(ErrorKind::OutOfRange(1e12))); // past the u32 gate
 
         assert_matches!(rarity("SSSR"), Err(ErrorKind::Unknown(s)) if &*s == "SSSR");
+    }
+
+    /// Tests all targets and regular character name targets
+    #[test]
+    fn check_accessory_targetss() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/");
+        let read = |n: &str| std::fs::read(format!("{path}{n}")).expect("data file");
+        let accs = raw::parse_accessories(&read("accessories.json")).expect("schema");
+        let map = raw::parse_target_map(&read("year_group_target.json")).expect("schema");
+        let roster = Roster::build(cards().iter().map(|c| c.character.as_str()));
+
+        let all = accessory_target("All", &map, &roster).expect("All");
+        assert_eq!(all.0.count_ones() as usize, roster.len());
+        assert_eq!(all, roster.all());
+        let file = character_set("All", &map, &roster).expect("the map's own key");
+        assert_eq!(file.0.count_ones(), 39, "the file's key is what we are overriding");
+        assert_ne!(all, file);
+
+        let mut singletons = 0;
+        for a in accs.values() {
+            let Some(t) = a.skill.target() else { continue };
+            let set = accessory_target(t, &map, &roster).expect("accessory target");
+            if t != "All" {
+                // Character target should always name its own character.
+                assert_eq!(set.0.count_ones(), 1, "{t}");
+                assert!(set.contains(roster.id(t).expect("in roster")));
+                assert_matches!(character_set(t, &map, &roster), Err(ErrorKind::Unknown(_)));
+                singletons += 1;
+            }
+        }
+        assert_eq!(singletons, 30);
+        assert_matches!(accessory_target("A-RISE", &map, &roster), Err(ErrorKind::Unknown(s))
+            if &*s == "A-RISE");
     }
 
     #[test]

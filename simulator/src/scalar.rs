@@ -110,6 +110,15 @@ impl Roster {
     }
 
     #[must_use]
+    pub fn all(&self) -> CharacterSet {
+        let mut bits = 0_u128;
+        for i in 0..self.names.len() {
+            bits |= 1 << i;
+        }
+        CharacterSet(bits)
+    }
+
+    #[must_use]
     pub fn len(&self) -> usize {
         self.names.len()
     }
@@ -123,9 +132,9 @@ impl Roster {
 /// Smile/Pure/Cool indexed by [`Attribute`], so selecting the song attribute is
 /// an index rather than a branch.
 ///
-/// Max base stat is 8940; the mutable per-trial copy is wider, since runtime
-/// boosts with galleries and appeal boost can push well past `u16`.
-#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+/// Max base stat is 8940, but later on the mutable per-trial copy needs to be wider,
+//  since runtime boosts like appeal boost and the Gallery can push well past `u16`.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
 #[repr(transparent)]
 pub struct Stats(pub [u16; 3]);
 

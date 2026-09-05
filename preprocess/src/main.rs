@@ -1,6 +1,6 @@
-//! `cargo run -p preprocess` -- build the archive from `data/`.
+//! `cargo run -p preprocess` - converts the .json data into .rkyv
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use preprocess::Failed;
 use simulator::archive;
@@ -10,17 +10,26 @@ fn root() -> PathBuf {
 }
 
 #[expect(clippy::print_stdout, reason = "the output of a CLI")]
+fn report(path: &Path, what: &str, n: usize) -> Result<(), Failed> {
+    let bytes = std::fs::metadata(path)?.len();
+    // TIL canonicalize was a thing.
+    println!("{n} {what}, {bytes} bytes -> {}", path.canonicalize()?.display());
+    Ok(())
+}
+
 fn main() -> Result<(), Failed> {
     let root = root();
+    let data = root.join("data");
     let out = root.join("archive");
     std::fs::create_dir_all(&out)?;
 
-    let db = preprocess::cards(&root.join("data"))?;
+    let cards = preprocess::cards(&data)?;
     let path = out.join("cards.rkyv");
-    archive::write(&path, &db)?;
+    archive::write(&path, &cards)?;
+    report(&path, "cards", cards.len())?;
 
-    let bytes = std::fs::metadata(&path)?.len();
-    // TIL canonicalize was a thing.
-    println!("{} cards, {bytes} bytes -> {}", db.len(), path.canonicalize()?.display());
-    Ok(())
+    let accessories = preprocess::accessories(&data, &cards.roster)?;
+    let acc_path = out.join("accessories.rkyv");
+    archive::write(&acc_path, &accessories)?;
+    report(&acc_path, "accessories", accessories.len())
 }
