@@ -30,7 +30,9 @@ const HEADER: usize = 16;
 pub trait Kind {
     const MAGIC: [u8; 8];
     /// TODO: Kind of brittle but this reads a manually-bumped version number.
-    /// the `Card` one is in `card.rs`.
+    /// Used for `card.json`, `accessory.json`, `sis.json`.
+    /// Each one has an corresponding database and the VERSION would be
+    /// incremented when (if) the data itself changes.
     const VERSION: u32;
 }
 
@@ -150,8 +152,10 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
+    use crate::accessory::{AccessoryArena, AccessoryDb, StatArena};
     use crate::card::{Card, CardDb, CardMeta, LeaderSkill, LeaderTargets};
     use crate::scalar::{Attribute, CharacterId, Roster, Stats};
+    use crate::sis::SisDb;
     use crate::skill::{SkillArena, Targets};
 
     fn built() -> CardDb {
@@ -185,32 +189,64 @@ mod tests {
         }
     }
 
-    /// The pid keeps two concurrent `cargo test` runs off each other's files.
-    fn path(name: &str) -> PathBuf {
-        let pid = std::process::id();
-        std::env::temp_dir().join(format!("llsif-{name}-{pid}.rkyv"))
+    fn accessories() -> AccessoryDb {
+        AccessoryDb {
+            accessories: vec![],
+            meta: vec![],
+            skills: AccessoryArena::default(),
+            stats: StatArena::default(),
+            targets: Targets::default(),
+        }
     }
 
-    /// Writes a good archive, corrupts it, and expects `open` to refuse.
-    fn rejected(name: &str, edit: impl FnOnce(&mut Vec<u8>)) {
-        let path = path(name);
-        write(&path, &built()).expect("write");
+    fn sis() -> SisDb {
+        SisDb { sis: vec![], meta: vec![], targets: Targets::default() }
+    }
+
+    /// Magic is what keeps the different kinds off each other's files
+    /// pid is what keeps the two concurrent `cargo test` runs off them.
+    fn path<T>(name: &str) -> PathBuf
+    where
+        T: Kind,
+    {
+        let kind = str::from_utf8(&T::MAGIC).expect("magics are ASCII");
+        let pid = std::process::id();
+        std::env::temp_dir().join(format!("llsif-{name}-{kind}-{pid}.rkyv"))
+    }
+
+    /// Writes a good archive of one kind, corrupts it, and expects `open` to refuse.
+    fn refuses<T>(name: &str, value: &T, edit: impl FnOnce(&mut Vec<u8>))
+    where
+        T: Kind
+            + Archive
+            + for<'a> Serialize<HighSerializer<AlignedVec, ArenaHandle<'a>, rancor::Error>>,
+        T::Archived: Portable,
+    {
+        let path = path::<T>(name);
+        write(&path, value).expect("write");
         let mut bytes = std::fs::read(&path).expect("read back");
         edit(&mut bytes);
         std::fs::write(&path, &bytes).expect("rewrite");
 
+        let kind = str::from_utf8(&T::MAGIC).expect("magics are ASCII");
         // SAFETY: Test owns path.
-        match unsafe { Mapped::<CardDb>::open(&path) } {
-            Err(e) => assert_eq!(e.kind(), io::ErrorKind::InvalidData, "{name}"),
-            Ok(_) => panic!("`open` accepted a {name} archive"),
+        match unsafe { Mapped::<T>::open(&path) } {
+            Err(e) => assert_eq!(e.kind(), io::ErrorKind::InvalidData, "{kind} {name}"),
+            Ok(_) => panic!("`open` accepted a {name} {kind} archive"),
         }
         std::fs::remove_file(&path).expect("cleanup");
+    }
+
+    fn rejected(name: &str, edit: impl Fn(&mut Vec<u8>)) {
+        refuses(name, &built(), &edit);
+        refuses(name, &accessories(), &edit);
+        refuses(name, &sis(), &edit);
     }
 
     #[test]
     fn check_the_card_db_survives_the_archive() {
         let db = built();
-        let path = path("round-trip");
+        let path = path::<CardDb>("round-trip");
         write(&path, &db).expect("write");
 
         // SAFETY: `write` just produced this file and nothing else touches it.
@@ -242,5 +278,25 @@ mod tests {
     #[test]
     fn check_a_headerless_body_is_rejected() {
         rejected("no-body", |b| b.truncate(HEADER));
+    }
+
+    #[test]
+    fn check_the_kinds_do_not_share_a_magic() {
+        let mut magics = [CardDb::MAGIC, AccessoryDb::MAGIC, SisDb::MAGIC];
+        magics.sort_unstable();
+        assert!(magics.windows(2).all(|w| w[0] != w[1]), "two kinds share a magic");
+    }
+
+    #[test]
+    fn check_one_kind_does_not_open_as_another() {
+        let path = path::<SisDb>("cross-kind");
+        write(&path, &sis()).expect("write");
+
+        // SAFETY: Test owns path.
+        match unsafe { Mapped::<AccessoryDb>::open(&path) } {
+            Err(e) => assert_eq!(e.kind(), io::ErrorKind::InvalidData),
+            Ok(_) => panic!("`open` accepted a SIS archive as an accessory one"),
+        }
+        std::fs::remove_file(&path).expect("cleanup");
     }
 }

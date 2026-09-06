@@ -294,7 +294,8 @@ mod tests {
         assert_eq!(db.index(217), Some(AccessoryIdx(0)));
         assert_eq!(db.index(216), None);
 
-        let path = std::env::temp_dir().join("llsif-accessory-round-trip.rkyv");
+        let pid = std::process::id();
+        let path = std::env::temp_dir().join(format!("llsif-accessory-{pid}.rkyv"));
         write(&path, &db).expect("write");
         // SAFETY: `write` just produced this file and nothing else touches it.
         let mapped: Mapped<AccessoryDb> = unsafe { Mapped::open(&path) }.expect("open");
@@ -306,5 +307,8 @@ mod tests {
         assert_eq!(root.skills.payload(def, 8), (8000, 4000));
         assert_eq!(root.skills.chance(def, 8), 34);
         assert_eq!(root.stats.get(stats_id, 8), Stats([1, 2, 3]));
+
+        drop(mapped);
+        std::fs::remove_file(&path).expect("cleanup");
     }
 }
