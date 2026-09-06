@@ -303,6 +303,26 @@ mod tests {
         assert_eq!(db.skills.chance(def, 1), 9);
     }
 
+    /// It took me HOURS to track down info to confirm whether Spark was
+    /// 5 * value or threshold * value. Finally found a Chinese
+    /// site to settle the debate. It's threshold * value (which is what
+    /// I assumed when implementing accessory anyway).
+    //
+    // Source: https://lab.everisay.xyz/sif/list/accessories.php
+    #[test]
+    fn check_the_spark_factor_is_the_threshold() {
+        let db = built();
+        let idx = db.index(194).expect("acc 194");
+        let a = &db.accessories[idx.0 as usize];
+        let def = db.skills.def(a.skill).expect("in range");
+        assert_eq!(def.effect, SkillEffect::Spark);
+        assert_eq!(def.threshold, 10);
+        assert_eq!(db.skills.payload(def, 1), (20_000, 2300));
+        assert_eq!(db.skills.payload(def, 8), (95_000, 6000));
+        assert_eq!(db.skills.payload(def, 16), (123_000, 7800));
+        assert_eq!(db.skills.chance(def, 1), 5);
+    }
+
     #[test]
     fn check_every_accessory_round_trips_through_its_index() {
         let db = built();

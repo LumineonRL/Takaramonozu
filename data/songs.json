@@ -113965,7 +113965,7 @@
         ]
     },
     "Live_s1422.json": {
-        "title": "Bokura no LIVE Kimi to no LIFE",
+        "title": "Bokura no LIVE Kimi to no LIFE (Utamero)",
         "difficulty": "Hard",
         "group": "μ's",
         "attribute": "Smile",
@@ -114396,7 +114396,7 @@
         ]
     },
     "Live_s1466.json": {
-        "title": "Yujo No-Change",
+        "title": "Yujo No-Change (Utamero)",
         "difficulty": "Hard",
         "group": "μ's",
         "attribute": "Pure",
@@ -114844,7 +114844,7 @@
         ]
     },
     "Live_s1546.json": {
-        "title": "Snow Halation",
+        "title": "Snow Halation (Utamero)",
         "difficulty": "Hard",
         "group": "μ's",
         "attribute": "Cool",
@@ -115308,7 +115308,7 @@
         ]
     },
     "Live_s1740.json": {
-        "title": "Baby Maybe Koi no Button",
+        "title": "Baby Maybe Koi no Button (Utamero)",
         "difficulty": "Hard",
         "group": "μ's",
         "attribute": "Pure",
@@ -116777,7 +116777,7 @@
         ]
     },
     "Live_s1862.json": {
-        "title": "Wonderful Rush",
+        "title": "Wonderful Rush (Utamero)",
         "difficulty": "Hard",
         "group": "μ's",
         "attribute": "Cool",
@@ -238410,7 +238410,7 @@
         ]
     },
     "Live_s1423.json": {
-        "title": "Bokura no LIVE Kimi to no LIFE",
+        "title": "Bokura no LIVE Kimi to no LIFE (Utamero)",
         "difficulty": "Expert",
         "group": "μ's",
         "attribute": "Smile",
@@ -239143,7 +239143,7 @@
         ]
     },
     "Live_s1467.json": {
-        "title": "Yujo No-Change",
+        "title": "Yujo No-Change (Utamero)",
         "difficulty": "Expert",
         "group": "μ's",
         "attribute": "Pure",
@@ -239860,7 +239860,7 @@
         ]
     },
     "Live_s1052.json": {
-        "title": "Snow Halation",
+        "title": "Snow Halation (Swing)",
         "difficulty": "Expert",
         "group": "μ's",
         "attribute": "Cool",
@@ -240292,7 +240292,7 @@
         ]
     },
     "Live_s1547.json": {
-        "title": "Snow Halation",
+        "title": "Snow Halation (Utamero)",
         "difficulty": "Expert",
         "group": "μ's",
         "attribute": "Cool",
@@ -241020,7 +241020,7 @@
         ]
     },
     "Live_s1741.json": {
-        "title": "Baby Maybe Koi no Button",
+        "title": "Baby Maybe Koi no Button (Utamero)",
         "difficulty": "Expert",
         "group": "μ's",
         "attribute": "Pure",
@@ -243371,7 +243371,7 @@
         ]
     },
     "Live_s1863.json": {
-        "title": "Wonderful Rush",
+        "title": "Wonderful Rush (Utamero)",
         "difficulty": "Expert",
         "group": "μ's",
         "attribute": "Cool",
@@ -278004,7 +278004,7 @@
         ]
     },
     "Live_s1108.json": {
-        "title": "Angelic Angel",
+        "title": "Angelic Angel (Swing)",
         "difficulty": "Expert",
         "group": "μ's",
         "attribute": "Smile",
@@ -281944,7 +281944,7 @@
         ]
     },
     "Live_s1111.json": {
-        "title": "Kimino Kokorowa Kagayaiterukai?",
+        "title": "Kimino Kokorowa Kagayaiterukai? (Swing)",
         "difficulty": "Expert",
         "group": "Aqours",
         "attribute": "Pure",
@@ -317770,7 +317770,7 @@
         ]
     },
     "Live_s1053.json": {
-        "title": "Yuki wa Doko ni? Kimi no Mune ni!",
+        "title": "Yuki wa Doko ni? Kimi no Mune ni! (Swing)",
         "difficulty": "Expert",
         "group": "Aqours",
         "attribute": "Smile",
@@ -424409,7 +424409,7 @@
         ]
     },
     "Live_s1424.json": {
-        "title": "Bokura no LIVE Kimi to no LIFE",
+        "title": "Bokura no LIVE Kimi to no LIFE (Utamero)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
@@ -425634,7 +425634,7 @@
         ]
     },
     "Live_s1468.json": {
-        "title": "Yujo No-Change",
+        "title": "Yujo No-Change (Utamero)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -426124,7 +426124,7 @@
         ]
     },
     "Live_s1760.json": {
-        "title": "Yujo No-Change",
+        "title": "Yujo No-Change (Swing)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -427552,7 +427552,7 @@
         ]
     },
     "Live_s1557.json": {
-        "title": "Snow Halation",
+        "title": "Snow Halation (Swing)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Cool",
@@ -428355,8 +428355,8 @@
         ]
     },
     "Live_s20005.json": {
-        "title": "Snow Halation",
-        "difficulty": "Unknown",
+        "title": "Snow Halation (AC)",
+        "difficulty": "Master",
         "group": "μ's",
         "attribute": "Cool",
         "notes": [
@@ -428894,7 +428894,7 @@
         ]
     },
     "Live_s1548.json": {
-        "title": "Snow Halation",
+        "title": "Snow Halation (Utamero)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Cool",
@@ -430116,7 +430116,7 @@
         ]
     },
     "Live_s1742.json": {
-        "title": "Baby Maybe Koi no Button",
+        "title": "Baby Maybe Koi no Button (Utamero)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -433902,7 +433902,7 @@
         ]
     },
     "Live_s1864.json": {
-        "title": "Wonderful Rush",
+        "title": "Wonderful Rush (Utamero)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Cool",
@@ -437305,8 +437305,8 @@
         ]
     },
     "Live_s20001.json": {
-        "title": "Bokura wa Ima no Naka de",
-        "difficulty": "Unknown",
+        "title": "Bokura wa Ima no Naka de (AC)",
+        "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
         "notes": [
@@ -445831,7 +445831,7 @@
         ]
     },
     "Live_s1758.json": {
-        "title": "No Brand Girls",
+        "title": "No Brand Girls (Swing)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Cool",
@@ -448663,7 +448663,7 @@
         ]
     },
     "Live_s1632.json": {
-        "title": "Listen to My Heart!",
+        "title": "Listen to My Heart! (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -451371,7 +451371,7 @@
         ]
     },
     "Live_s1398.json": {
-        "title": "After School NAVIGATORS",
+        "title": "After School NAVIGATORS (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -453602,7 +453602,7 @@
         ]
     },
     "Live_s1481.json": {
-        "title": "Cutie Panther",
+        "title": "Cutie Panther (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
@@ -455737,7 +455737,7 @@
         ]
     },
     "Live_s1802.json": {
-        "title": "Pure Girls Project",
+        "title": "Pure Girls Project (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -460113,7 +460113,7 @@
         ]
     },
     "Live_s1597.json": {
-        "title": "Music S.T.A.R.T!!",
+        "title": "Music S.T.A.R.T!! (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
@@ -460775,8 +460775,8 @@
         ]
     },
     "Live_s20002.json": {
-        "title": "Music S.T.A.R.T!!",
-        "difficulty": "Unknown",
+        "title": "Music S.T.A.R.T!! (AC)",
+        "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
         "notes": [
@@ -462713,7 +462713,7 @@
         ]
     },
     "Live_s1768.json": {
-        "title": "LOVELESS WORLD",
+        "title": "LOVELESS WORLD (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Cool",
@@ -464909,7 +464909,7 @@
         ]
     },
     "Live_s1698.json": {
-        "title": "LONELIEST BABY",
+        "title": "LONELIEST BABY (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Cool",
@@ -467914,7 +467914,7 @@
         ]
     },
     "Live_s1491.json": {
-        "title": "Kodoku na Heaven",
+        "title": "Kodoku na Heaven (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -475140,7 +475140,7 @@
         ]
     },
     "Live_s1326.json": {
-        "title": "Yume no Tobira",
+        "title": "Yume no Tobira (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -475747,8 +475747,8 @@
         ]
     },
     "Live_s20003.json": {
-        "title": "Yume no Tobira",
-        "difficulty": "Unknown",
+        "title": "Yume no Tobira (AC)",
+        "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
         "notes": [
@@ -480314,7 +480314,7 @@
         ]
     },
     "Live_s1437.json": {
-        "title": "KiRa-KiRa Sensation!",
+        "title": "KiRa-KiRa Sensation! (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -483359,7 +483359,7 @@
         ]
     },
     "Live_s1743.json": {
-        "title": "Happy Maker!",
+        "title": "Happy Maker! (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
@@ -484728,7 +484728,7 @@
         ]
     },
     "Live_s1528.json": {
-        "title": "Aki no Anata no Sora Toku",
+        "title": "Aki no Anata no Sora Toku (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -486027,7 +486027,7 @@
         ]
     },
     "Live_s1753.json": {
-        "title": "Junai Lens",
+        "title": "Junai Lens (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Pure",
@@ -492914,7 +492914,7 @@
         ]
     },
     "Live_s1447.json": {
-        "title": "Watashitachi wa Mirai no Hana",
+        "title": "Watashitachi wa Mirai no Hana (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Cool",
@@ -495134,7 +495134,7 @@
         ]
     },
     "Live_s1812.json": {
-        "title": "Trouble Busters",
+        "title": "Trouble Busters (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
@@ -496664,8 +496664,8 @@
         ]
     },
     "Live_s20010.json": {
-        "title": "Angelic Angel",
-        "difficulty": "Unknown",
+        "title": "Angelic Angel (AC)",
+        "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
         "notes": [
@@ -500282,8 +500282,8 @@
         ]
     },
     "Live_s20006.json": {
-        "title": "Bokutachi wa Hitotsu no Hikari",
-        "difficulty": "Unknown",
+        "title": "Bokutachi wa Hitotsu no Hikari (AC)",
+        "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
         "notes": [
@@ -505950,7 +505950,7 @@
         ]
     },
     "Live_s1383.json": {
-        "title": "WAO-WAO Powerful Day!",
+        "title": "WAO-WAO Powerful Day! (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
@@ -507992,7 +507992,7 @@
         ]
     },
     "Live_s1825.json": {
-        "title": "Step! ZERO to ONE",
+        "title": "Step! ZERO to ONE (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
@@ -513066,7 +513066,7 @@
         ]
     },
     "Live_s1575.json": {
-        "title": "Super LOVE = Super LIVE!",
+        "title": "Super LOVE = Super LIVE! (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Cool",
@@ -515284,8 +515284,8 @@
         ]
     },
     "Live_s20012.json": {
-        "title": "MOMENT RING",
-        "difficulty": "Unknown",
+        "title": "MOMENT RING (AC)",
+        "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
         "notes": [
@@ -517690,7 +517690,7 @@
         ]
     },
     "Live_s1570.json": {
-        "title": "Puwa Puwa-O!",
+        "title": "Puwa Puwa-O! (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
@@ -519219,8 +519219,8 @@
         ]
     },
     "Live_s20008.json": {
-        "title": "Koini Naritai AQUARIUM",
-        "difficulty": "Unknown",
+        "title": "Koini Naritai AQUARIUM (AC)",
+        "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
         "notes": [
@@ -523773,7 +523773,7 @@
         ]
     },
     "Live_s1382.json": {
-        "title": "Genki Zenkai DAY! DAY! DAY!",
+        "title": "Genki Zenkai DAY! DAY! DAY! (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
@@ -525920,7 +525920,7 @@
         ]
     },
     "Live_s1592.json": {
-        "title": "Torikoriko PLEASE!!",
+        "title": "Torikoriko PLEASE!! (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Pure",
@@ -527992,7 +527992,7 @@
         ]
     },
     "Live_s1332.json": {
-        "title": "PSYCHIC FIRE",
+        "title": "PSYCHIC FIRE (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
@@ -528703,8 +528703,8 @@
         ]
     },
     "Live_s20004.json": {
-        "title": "PSYCHIC FIRE",
-        "difficulty": "Unknown",
+        "title": "PSYCHIC FIRE (AC)",
+        "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
         "notes": [
@@ -530918,7 +530918,7 @@
         ]
     },
     "Live_s1482.json": {
-        "title": "Strawberry Trapper",
+        "title": "Strawberry Trapper (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
@@ -531542,8 +531542,8 @@
         ]
     },
     "Live_s20015.json": {
-        "title": "Strawberry Trapper",
-        "difficulty": "Unknown",
+        "title": "Strawberry Trapper (AC)",
+        "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
         "notes": [
@@ -534650,7 +534650,7 @@
         ]
     },
     "Live_s1559.json": {
-        "title": "Aozora Jumping Heart",
+        "title": "Aozora Jumping Heart (No Swing)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
@@ -535280,8 +535280,8 @@
         ]
     },
     "Live_s20007.json": {
-        "title": "Aozora Jumping Heart",
-        "difficulty": "Unknown",
+        "title": "Aozora Jumping Heart (AC)",
+        "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
         "notes": [
@@ -537138,7 +537138,7 @@
         ]
     },
     "Live_s1761.json": {
-        "title": "Yume Kataruyori Yume Utaou",
+        "title": "Yume Kataruyori Yume Utaou (Swing)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Pure",
@@ -539760,7 +539760,7 @@
         ]
     },
     "Live_s1523.json": {
-        "title": "Hello, Hoshiwo Kazoete",
+        "title": "Hello, Hoshiwo Kazoete (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
@@ -540256,8 +540256,8 @@
         ]
     },
     "Live_s20014.json": {
-        "title": "Hello, Hoshiwo Kazoete",
-        "difficulty": "Unknown",
+        "title": "Hello, Hoshiwo Kazoete (AC)",
+        "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
         "notes": [
@@ -541809,7 +541809,7 @@
         ]
     },
     "Live_s1425.json": {
-        "title": "?←HEARTBEAT",
+        "title": "?←HEARTBEAT (5 Lane)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Cool",
@@ -543761,7 +543761,7 @@
         ]
     },
     "Live_s1533.json": {
-        "title": "Omoiyo Hitotsuninare",
+        "title": "Omoiyo Hitotsuninare (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
@@ -545145,7 +545145,7 @@
         ]
     },
     "Live_s1456.json": {
-        "title": "MIRAI TICKET",
+        "title": "MIRAI TICKET (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
@@ -548192,8 +548192,8 @@
         ]
     },
     "Live_s20009.json": {
-        "title": "Jingle Bells ga Tomaranai",
-        "difficulty": "Unknown",
+        "title": "Jingle Bells ga Tomaranai (AC)",
+        "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Pure",
         "notes": [
@@ -550201,7 +550201,7 @@
         ]
     },
     "Live_s1505.json": {
-        "title": "Waku-Waku-Week!",
+        "title": "Waku-Waku-Week! (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
@@ -555038,7 +555038,7 @@
         ]
     },
     "Live_s1393.json": {
-        "title": "G Senjono Cinderella",
+        "title": "G Senjono Cinderella (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Pure",
@@ -558688,7 +558688,7 @@
         ]
     },
     "Live_s1405.json": {
-        "title": "HAPPY PARTY TRAIN",
+        "title": "HAPPY PARTY TRAIN (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
@@ -559237,8 +559237,8 @@
         ]
     },
     "Live_s20013.json": {
-        "title": "HAPPY PARTY TRAIN",
-        "difficulty": "Unknown",
+        "title": "HAPPY PARTY TRAIN (AC)",
+        "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
         "notes": [
@@ -564947,7 +564947,7 @@
         ]
     },
     "Live_s1334.json": {
-        "title": "Kinmirai Happy End",
+        "title": "Kinmirai Happy End (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
@@ -566960,7 +566960,7 @@
         ]
     },
     "Live_s1416.json": {
-        "title": "KOWAREYASUKI",
+        "title": "KOWAREYASUKI (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
@@ -568086,7 +568086,7 @@
         ]
     },
     "Live_s1759.json": {
-        "title": "SKY JOURNEY",
+        "title": "SKY JOURNEY (Swing)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
@@ -570874,8 +570874,8 @@
         ]
     },
     "Live_s20011.json": {
-        "title": "Mirai no Bokura wa Shitteru yo",
-        "difficulty": "Unknown",
+        "title": "Mirai no Bokura wa Shitteru yo (AC)",
+        "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Pure",
         "notes": [
@@ -572825,7 +572825,7 @@
         ]
     },
     "Live_s1518.json": {
-        "title": "MY Mai☆TONIGHT",
+        "title": "MY Mai☆TONIGHT (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
@@ -574688,7 +574688,7 @@
         ]
     },
     "Live_s1607.json": {
-        "title": "MIRACLE WAVE",
+        "title": "MIRACLE WAVE (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
@@ -577469,7 +577469,7 @@
         ]
     },
     "Live_s1327.json": {
-        "title": "WATER BLUE NEW WORLD",
+        "title": "WATER BLUE NEW WORLD (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
@@ -582837,7 +582837,7 @@
         ]
     },
     "Live_s1431.json": {
-        "title": "Beginner's Sailing",
+        "title": "Beginner's Sailing (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Pure",
@@ -593431,7 +593431,7 @@
         ]
     },
     "Live_s1773.json": {
-        "title": "Hajimari Road",
+        "title": "Hajimari Road (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
@@ -595410,7 +595410,7 @@
         ]
     },
     "Live_s1693.json": {
-        "title": "LONELY TUNING",
+        "title": "LONELY TUNING (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
@@ -605481,7 +605481,7 @@
         ]
     },
     "Live_s1569.json": {
-        "title": "Deep Resonance",
+        "title": "Deep Resonance (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Cool",
@@ -608772,7 +608772,7 @@
         ]
     },
     "Live_s1767.json": {
-        "title": "New Romantic Sailors",
+        "title": "New Romantic Sailors (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
@@ -611750,7 +611750,7 @@
         ]
     },
     "Live_s1558.json": {
-        "title": "A song for You! You? You!!",
+        "title": "A song for You! You? You!! (No Swing)",
         "difficulty": "Master",
         "group": "μ's",
         "attribute": "Smile",
@@ -613355,7 +613355,7 @@
         ]
     },
     "Live_s1803.json": {
-        "title": "Dance with Minotaurus",
+        "title": "Dance with Minotaurus (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Pure",
@@ -647019,7 +647019,7 @@
         ]
     },
     "Live_s1752.json": {
-        "title": "Kimetayo Hand in Hand",
+        "title": "Kimetayo Hand in Hand (5 Lane)",
         "difficulty": "Master",
         "group": "Aqours",
         "attribute": "Smile",
