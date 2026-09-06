@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use simulator::accessory::AccessoryDb;
 use simulator::archive::{self, Mapped};
 use simulator::card::CardDb;
+use simulator::sis::SisDb;
 
 fn data() -> PathBuf {
     PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../data"))
@@ -37,5 +38,20 @@ fn check_accessories_survive_the_archive() {
 
     // SAFETY: `write` literally just produced this file and nothing else touches it.
     let mapped: Mapped<AccessoryDb> = unsafe { Mapped::open(&path) }.expect("open");
+    assert!(mapped.root() == &db, "the archive is not the database it was built from");
+}
+
+#[test]
+fn check_sis_survive_the_archive() {
+    let cards = preprocess::cards(&data()).unwrap_or_else(|e| panic!("corpus is valid: {e}"));
+    let db =
+        preprocess::sis(&data(), &cards.roster).unwrap_or_else(|e| panic!("corpus is valid: {e}"));
+    assert_eq!(db.len(), 546);
+
+    let path = std::env::temp_dir().join("llsif-sis-corpus-round-trip.rkyv");
+    archive::write(&path, &db).expect("write");
+
+    // SAFETY: `write` literally just produced this file and nothing else touches it.
+    let mapped: Mapped<SisDb> = unsafe { Mapped::open(&path) }.expect("open");
     assert!(mapped.root() == &db, "the archive is not the database it was built from");
 }

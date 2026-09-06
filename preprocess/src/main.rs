@@ -31,5 +31,10 @@ fn main() -> Result<(), Failed> {
     let accessories = preprocess::accessories(&data, &cards.roster)?;
     let acc_path = out.join("accessories.rkyv");
     archive::write(&acc_path, &accessories)?;
-    report(&acc_path, "accessories", accessories.len())
+    report(&acc_path, "accessories", accessories.len())?;
+
+    let sis = preprocess::sis(&data, &cards.roster)?;
+    let sis_path = out.join("sis.rkyv");
+    archive::write(&sis_path, &sis)?;
+    report(&sis_path, "SIS", sis.len())
 }

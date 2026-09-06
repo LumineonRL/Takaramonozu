@@ -88,7 +88,7 @@ impl Table {
                     None => 0,
                 },
                 match duration {
-                    Some(d) => convert::millis(d).at(card_id, "duration")?,
+                    Some(d) => convert::ms(d).at(card_id, "duration")?,
                     None => 0,
                 },
             ));

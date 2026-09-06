@@ -113,7 +113,7 @@ fn key(
     for (&v, &d) in eff.values.iter().zip(&eff.durations) {
         payload.push((
             value(effect, threshold, v).at(acc_id, "values")?,
-            convert::millis(d).at(acc_id, "durations")?,
+            convert::ms(d).at(acc_id, "durations")?,
         ));
     }
 

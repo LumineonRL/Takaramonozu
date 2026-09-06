@@ -2,7 +2,8 @@
 
 use core::fmt;
 
-use simulator::scalar::{Attribute, Centi, CharacterSet, Ms, Pct, Rarity, Roster};
+use simulator::scalar::{Attribute, Centi, CharacterSet, Milli, Ms, Pct, Rarity, Roster};
+use simulator::sis::SisEffect;
 use simulator::skill::{SkillEffect, TriggerType};
 
 use crate::load::raw::RawTargetMap;
@@ -107,6 +108,15 @@ closed_set!(effect -> SkillEffect {
     "Spark" => SkillEffect::Spark,
 });
 
+closed_set!(sis_effect -> SisEffect {
+    "self flat boost" => SisEffect::SelfFlat,
+    "self percent boost" => SisEffect::SelfPercent,
+    "all percent boost" => SisEffect::AllPercent,
+    "charm" => SisEffect::Charm,
+    "heal" => SisEffect::Heal,
+    "trick" => SisEffect::Trick,
+});
+
 closed_set!(trigger -> TriggerType {
     "Rhythm Icons" => TriggerType::RhythmIcons,
     "Perfects" => TriggerType::Perfects,
@@ -162,7 +172,17 @@ pub fn pct(value: f64) -> Result<Pct, ErrorKind> {
 /// Seconds with one decimal, for durations: `4.5 -> 4500`.
 /// # Errors
 /// More than three decimal places, or longer than 65.535 s.
-pub fn millis(value: f64) -> Result<Ms, ErrorKind> {
+pub fn ms(value: f64) -> Result<Ms, ErrorKind> {
+    scaled(value, 1000.0)
+}
+
+/// Thousandths, for the SIS `value` column: `0.015 -> 15` or `1400.0 -> 1400000`.
+/// Basically it's the same factor as [`ms`] onto a different width,
+/// which is why the two are named for their types rather than the scale they share.
+///
+/// # Errors
+/// More than three decimal places, or past `Milli`.
+pub fn milli(value: f64) -> Result<Milli, ErrorKind> {
     scaled(value, 1000.0)
 }
 
@@ -206,6 +226,14 @@ pub fn accessory_target(
     if map.contains_key(name) {
         return character_set(name, map, roster);
     }
+    singleton(name, roster)
+}
+
+/// One character as a one-bit set.
+///
+/// # Errors
+/// Invalid character name.
+pub fn singleton(name: &str, roster: &Roster) -> Result<CharacterSet, ErrorKind> {
     let id = roster.id(name).ok_or_else(|| ErrorKind::Unknown(name.into()))?;
     Ok(CharacterSet(1 << id.0))
 }
@@ -254,7 +282,7 @@ mod tests {
                 centi(*v).expect("value");
             }
             for v in s.duration.iter().flatten() {
-                millis(*v).expect("duration");
+                ms(*v).expect("duration");
             }
             for v in s.threshold.iter().flatten() {
                 threshold(*v).expect("threshold");
@@ -278,11 +306,13 @@ mod tests {
     fn check_reject_impossible_values() {
         assert_eq!(pct(0.56), Ok(56)); // the float that is not 56 exactly
         assert_eq!(pct(0.935), Err(ErrorKind::NotFixedPoint(0.935)));
-        assert_eq!(millis(0.05), Ok(50));
-        assert_eq!(millis(0.0005), Err(ErrorKind::NotFixedPoint(0.0005)));
+        assert_eq!(ms(0.05), Ok(50));
+        assert_eq!(ms(0.0005), Err(ErrorKind::NotFixedPoint(0.0005)));
+        assert_eq!(milli(0.015), Ok(15)); // the third decimal `Centi` cannot hold
+        assert_eq!(milli(1400.0), Ok(1_400_000));
         assert_eq!(centi(148_240.0), Ok(14_824_000));
         assert_eq!(pct(3.0), Err(ErrorKind::OutOfRange(3.0))); // 300 past `Pct`
-        assert_eq!(millis(99.0), Err(ErrorKind::OutOfRange(99.0))); // 99 s past `Ms`
+        assert_eq!(ms(99.0), Err(ErrorKind::OutOfRange(99.0))); // 99 s past `Ms`
         assert_eq!(centi(-1.0), Err(ErrorKind::OutOfRange(-1.0)));
         assert_eq!(centi(1e12), Err(ErrorKind::OutOfRange(1e12))); // past the u32 gate
 

@@ -1,8 +1,8 @@
 // So the goal is convert static data .json into an rkyv file.
 // But we need to load that in first with serde.
 //
-// DONE: cards.json, accessories.json
-// TODO: sis.json, songs.json
+// DONE: cards.json, accessories.json, sis.json
+// TODO: songs.json
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -181,6 +181,34 @@ impl RawAccessorySkill {
 
 pub type RawAccessories = BTreeMap<u16, RawAccessory>;
 
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct RawSis {
+    pub id: u16,
+    pub name: String,
+    pub effect: String,
+    pub slots: u8,
+    pub attribute: String,
+    pub group: String,
+    pub equip_restriction: String,
+    pub target: String,
+    pub value: f64,
+}
+
+impl RawSis {
+    /// `None` on everything not a Nonet.
+    #[must_use]
+    pub fn group(&self) -> Option<&str> {
+        Some(self.group.as_str()).filter(|s| !s.is_empty())
+    }
+
+    /// `None` on everything without a restriction.
+    #[must_use]
+    pub fn restriction(&self) -> Option<&str> {
+        Some(self.equip_restriction.as_str()).filter(|s| !s.is_empty())
+    }
+}
+
 /// `additional_leader_skill_map.json` maps a `leader_extra_target` name to the
 /// character names it corresponds to.
 pub type RawTargetMap = HashMap<String, Vec<String>>;
@@ -200,6 +228,12 @@ pub fn parse_target_map(bytes: &[u8]) -> serde_json::Result<RawTargetMap> {
 /// # Errors
 /// Any deviation from [`RawUAccessory`].
 pub fn parse_accessories(bytes: &[u8]) -> serde_json::Result<RawAccessories> {
+    serde_json::from_slice(bytes)
+}
+
+/// # Errors
+/// Any deviation from [`RawSis`].
+pub fn parse_sis(bytes: &[u8]) -> serde_json::Result<Vec<RawSis>> {
     serde_json::from_slice(bytes)
 }
 
@@ -364,6 +398,20 @@ mod tests {
             assert!(!spark || matches!(s.trigger.values[0], 5 | 7 | 10), "accessory {id} tier");
         }
         assert_eq!(accs.values().filter(|a| a.skill.effect.effect == "Spark").count(), 23);
+    }
+
+    /// The redundancy is the whole reason `target` does not reach the domain
+    /// type, so it is checked against the file rather than assumed.
+    #[test]
+    fn parses_every_sis_with_dense_ids_and_a_redundant_target() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/sis.json");
+        let sis = parse_sis(&std::fs::read(path).expect("sis.json")).expect("schema");
+        let ids: Vec<u16> = sis.iter().map(|s| s.id).collect();
+        assert_eq!(ids, (1..=546).collect::<Vec<u16>>());
+        for s in &sis {
+            assert!(matches!(s.target.as_str(), "all" | "self"), "sis {} target", s.id);
+            assert_eq!(s.target == "all", s.effect == "all percent boost", "sis {}", s.id);
+        }
     }
 
     #[test]

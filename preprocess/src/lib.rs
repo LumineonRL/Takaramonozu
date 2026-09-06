@@ -8,6 +8,7 @@ use std::path::Path;
 use simulator::accessory::AccessoryDb;
 use simulator::card::CardDb;
 use simulator::scalar::Roster;
+use simulator::sis::SisDb;
 
 use crate::load::{accessory, card, raw};
 
@@ -35,4 +36,19 @@ pub fn accessories(dir: &Path, roster: &Roster) -> Result<AccessoryDb, Failed> {
     let raw_accs = raw::parse_accessories(&std::fs::read(dir.join("accessories.json"))?)?;
     let year_group = raw::parse_target_map(&std::fs::read(dir.join("year_group_target.json"))?)?;
     Ok(accessory::build(&raw_accs, &year_group, roster)?)
+}
+
+/// Reads `sis.json` out of `dir` and builds against the card roster.
+///
+/// years for year-based SIS (e.g. "Second years")
+/// groups for Nonet.
+///
+/// # Errors
+/// A missing or unreadable file, a schema change serde rejects, or a restriction
+/// that resolves against neither its map nor the roster.
+pub fn sis(dir: &Path, roster: &Roster) -> Result<SisDb, Failed> {
+    let raw_sis = raw::parse_sis(&std::fs::read(dir.join("sis.json"))?)?;
+    let years = raw::parse_target_map(&std::fs::read(dir.join("year_group_mapping.json"))?)?;
+    let groups = raw::parse_target_map(&std::fs::read(dir.join("group_member_map.json"))?)?;
+    Ok(load::sis::build(&raw_sis, &years, &groups, roster)?)
 }
