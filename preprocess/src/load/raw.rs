@@ -1,8 +1,5 @@
 // So the goal is convert static data .json into an rkyv file.
 // But we need to load that in first with serde.
-//
-// DONE: cards.json, accessories.json, sis.json
-// TODO: songs.json
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -209,6 +206,35 @@ impl RawSis {
     }
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct RawSong {
+    pub title: String,
+    pub difficulty: String,
+    pub group: String,
+    pub attribute: String,
+    pub notes: Vec<RawNote>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct RawNote {
+    pub start_time: f64,
+    pub end_time: f64,
+    pub position: u8,
+    pub is_star: bool,
+    pub is_swing: bool,
+}
+
+impl RawSong {
+    #[must_use]
+    pub fn group(&self) -> Option<&str> {
+        Some(self.group.as_str()).filter(|s| !s.is_empty())
+    }
+}
+
+pub type RawSongs = BTreeMap<String, RawSong>;
+
 /// `additional_leader_skill_map.json` maps a `leader_extra_target` name to the
 /// character names it corresponds to.
 pub type RawTargetMap = HashMap<String, Vec<String>>;
@@ -243,6 +269,12 @@ pub fn parse_unique_leaders(bytes: &[u8]) -> serde_json::Result<Vec<RawUniqueLea
     serde_json::from_slice(bytes)
 }
 
+/// # Errors
+/// Any deviation from [`RawSong`].
+pub fn parse_songs(bytes: &[u8]) -> serde_json::Result<RawSongs> {
+    serde_json::from_slice(bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -262,6 +294,12 @@ mod tests {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/accessories.json");
         let bytes = std::fs::read(path).expect("accessories.json");
         parse_accessories(&bytes).expect("schema")
+    }
+
+    fn songs() -> RawSongs {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../data/songs.json");
+        let bytes = std::fs::read(path).expect("songs.json");
+        parse_songs(&bytes).expect("schema")
     }
 
     #[test]
@@ -412,6 +450,26 @@ mod tests {
             assert!(matches!(s.target.as_str(), "all" | "self"), "sis {} target", s.id);
             assert_eq!(s.target == "all", s.effect == "all percent boost", "sis {}", s.id);
         }
+    }
+
+    #[test]
+    fn parses_every_chart_with_a_unique_identity() {
+        let songs = songs();
+        assert_eq!(songs.len(), 1912);
+
+        let mut pairs: Vec<(&str, &str)> = Vec::with_capacity(songs.len());
+        let mut per_title: HashMap<&str, (&str, &str)> = HashMap::new();
+        for (key, s) in &songs {
+            pairs.push((&s.title, &s.difficulty));
+            let carried = (s.group.as_str(), s.attribute.as_str());
+            let first = per_title.entry(&s.title).or_insert(carried);
+            assert_eq!(*first, carried, "{key} disagrees with another chart of its song");
+        }
+        assert_eq!(per_title.len(), 473);
+        pairs.sort_unstable();
+        let unique = pairs.len();
+        pairs.dedup();
+        assert_eq!(pairs.len(), unique, "(title, difficulty) is the chart identity");
     }
 
     #[test]

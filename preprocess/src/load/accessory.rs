@@ -11,7 +11,7 @@ use simulator::accessory::{
 use simulator::scalar::{Centi, Ms, Pct, Roster, Stats};
 use simulator::skill::{SkillEffect, TRIGGER_ROWS, TargetId, Targets};
 
-use crate::load::convert::{self, At, ErrorKind, LoadError};
+use crate::load::convert::{self, At, Culprit, ErrorKind, LoadError};
 use crate::load::raw::{RawAccessories, RawAccessory, RawTargetMap};
 
 /// Used when iterating over the nested skill values. base skill level is 1..=8 here
@@ -82,26 +82,26 @@ fn key(
         || eff.durations.len() != rows
         || eff.values.len() != rows
     {
-        return Err(ErrorKind::Invariant).at(acc_id, "rows");
+        return Err(ErrorKind::Invariant).at(Culprit::Accessory(acc_id), "rows");
     }
     if !flat_past_base(&trig.chances) {
-        return Err(ErrorKind::Invariant).at(acc_id, "trigger.chances");
+        return Err(ErrorKind::Invariant).at(Culprit::Accessory(acc_id), "trigger.chances");
     }
 
     // Only relevant for the Spark encore counter. This value never
     // changes, so can be a little lazy with extracting it.
     let threshold = trig.values.first().copied().unwrap_or_default();
     if trig.values.iter().any(|v| *v != threshold) {
-        return Err(ErrorKind::Invariant).at(acc_id, "trigger.values");
+        return Err(ErrorKind::Invariant).at(Culprit::Accessory(acc_id), "trigger.values");
     }
 
-    let effect = convert::effect(&eff.effect).at(acc_id, "type")?;
+    let effect = convert::effect(&eff.effect).at(Culprit::Accessory(acc_id), "type")?;
     let target = a
         .skill
         .target()
         .map(|t| targets.intern(t, || convert::accessory_target(t, map, roster)))
         .transpose()
-        .at(acc_id, "target")?;
+        .at(Culprit::Accessory(acc_id), "target")?;
 
     // Accessory chances are already percents unlike what's in the card files.
     let mut chances = [0; ROWS];
@@ -112,8 +112,8 @@ fn key(
     let mut payload = Vec::with_capacity(rows);
     for (&v, &d) in eff.values.iter().zip(&eff.durations) {
         payload.push((
-            value(effect, threshold, v).at(acc_id, "values")?,
-            convert::ms(d).at(acc_id, "durations")?,
+            value(effect, threshold, v).at(Culprit::Accessory(acc_id), "values")?,
+            convert::ms(d).at(Culprit::Accessory(acc_id), "durations")?,
         ));
     }
 
@@ -149,7 +149,7 @@ fn value(effect: SkillEffect, threshold: u8, raw: u32) -> Result<Centi, ErrorKin
 
 fn stat_table(acc_id: u16, a: &RawAccessory) -> Result<StatTable, LoadError> {
     if !flat_past_base(&a.stats) {
-        return Err(ErrorKind::Invariant).at(acc_id, "stats");
+        return Err(ErrorKind::Invariant).at(Culprit::Accessory(acc_id), "stats");
     }
     let mut table = [Stats::default(); STAT_ROWS as usize];
     for (out, &row) in table.iter_mut().zip(&a.stats) {
@@ -166,7 +166,7 @@ fn card_id(acc_id: u16, a: &RawAccessory) -> Result<Option<u16>, LoadError> {
         .parse::<u16>()
         .ok()
         .ok_or_else(|| ErrorKind::Unknown(s.into()))
-        .at(acc_id, "card_id");
+        .at(Culprit::Accessory(acc_id), "card_id");
     Ok(Some(id?))
 }
 
@@ -350,7 +350,7 @@ mod tests {
         let mut raw = accessories();
         raw.get_mut(&217).expect("acc 217").stats[ROWS][0] += 1;
         let err = rejected(&raw, "a stat table past row 8 is never read");
-        assert_matches!(err, LoadError { card_id: Some(217), field: "stats", .. });
+        assert_matches!(err, LoadError { culprit: Culprit::Accessory(217), field: "stats", .. });
     }
 
     #[test]

@@ -5,15 +5,31 @@ use core::fmt;
 use simulator::scalar::{Attribute, Centi, CharacterSet, Milli, Ms, Pct, Rarity, Roster};
 use simulator::sis::SisEffect;
 use simulator::skill::{SkillEffect, TriggerType};
+use simulator::song::{Difficulty, Time};
 
 use crate::load::raw::RawTargetMap;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct LoadError {
-    /// `None` for larger failures that no single card would own.
-    pub card_id: Option<u16>,
+    pub culprit: Culprit,
     pub field: &'static str,
     pub kind: ErrorKind,
+}
+
+/// Which record is to blame. Used for Error messages.
+/// card/acc/sis are just ids, song charts are the composite (title, diff)
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Culprit {
+    Card(u16),
+    Accessory(u16),
+    Sis(u16),
+    Chart(Box<str>),
+}
+
+impl From<&str> for Culprit {
+    fn from(key: &str) -> Self {
+        Self::Chart(key.into())
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -33,8 +49,11 @@ pub enum ErrorKind {
 
 impl fmt::Display for LoadError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(id) = self.card_id {
-            write!(f, "card {id}, ")?;
+        match &self.culprit {
+            Culprit::Card(id) => write!(f, "card {id}, ")?,
+            Culprit::Accessory(id) => write!(f, "accessory {id}, ")?,
+            Culprit::Sis(id) => write!(f, "SIS {id}, ")?,
+            Culprit::Chart(key) => write!(f, "chart {key}, ")?,
         }
         write!(f, "field `{}`: ", self.field)?;
         match &self.kind {
@@ -54,12 +73,12 @@ impl core::error::Error for LoadError {}
 pub trait At<T> {
     /// # Errors
     /// The one being annotated, if there is one.
-    fn at(self, card_id: u16, field: &'static str) -> Result<T, LoadError>;
+    fn at(self, culprit: impl Into<Culprit>, field: &'static str) -> Result<T, LoadError>;
 }
 
 impl<T> At<T> for Result<T, ErrorKind> {
-    fn at(self, card_id: u16, field: &'static str) -> Result<T, LoadError> {
-        self.map_err(|kind| LoadError { card_id: Some(card_id), field, kind })
+    fn at(self, culprit: impl Into<Culprit>, field: &'static str) -> Result<T, LoadError> {
+        self.map_err(|kind| LoadError { culprit: culprit.into(), field, kind })
     }
 }
 
@@ -115,6 +134,14 @@ closed_set!(sis_effect -> SisEffect {
     "charm" => SisEffect::Charm,
     "heal" => SisEffect::Heal,
     "trick" => SisEffect::Trick,
+});
+
+closed_set!(difficulty -> Difficulty {
+    "Easy" => Difficulty::Easy,
+    "Normal" => Difficulty::Normal,
+    "Hard" => Difficulty::Hard,
+    "Expert" => Difficulty::Expert,
+    "Master" => Difficulty::Master,
 });
 
 closed_set!(trigger -> TriggerType {
@@ -184,6 +211,13 @@ pub fn ms(value: f64) -> Result<Ms, ErrorKind> {
 /// More than three decimal places, or past `Milli`.
 pub fn milli(value: f64) -> Result<Milli, ErrorKind> {
     scaled(value, 1000.0)
+}
+
+/// # Errors
+/// More than three decimal places, or past whatever the max f64 is I don't feel
+/// like looking it up.
+pub fn time(value: f64) -> Result<Time, ErrorKind> {
+    scaled::<u32>(value, 1000.0).map(Time)
 }
 
 /// # Errors
@@ -313,6 +347,10 @@ mod tests {
         assert_eq!(centi(148_240.0), Ok(14_824_000));
         assert_eq!(pct(3.0), Err(ErrorKind::OutOfRange(3.0))); // 300 past `Pct`
         assert_eq!(ms(99.0), Err(ErrorKind::OutOfRange(99.0))); // 99 s past `Ms`
+
+        // Longest song in the game
+        assert_eq!(time(174.718), Ok(Time(174_718)));
+        assert_eq!(ms(174.718), Err(ErrorKind::OutOfRange(174.718)));
         assert_eq!(centi(-1.0), Err(ErrorKind::OutOfRange(-1.0)));
         assert_eq!(centi(1e12), Err(ErrorKind::OutOfRange(1e12))); // past the u32 gate
 
@@ -354,11 +392,11 @@ mod tests {
 
     #[test]
     fn check_errors_carry_the_card_and_field() {
-        let err = pct(0.935).at(66, "chance").expect_err("not fixed point");
-        assert_matches!(err, LoadError { card_id: Some(66), field: "chance", .. });
+        let err = pct(0.935).at(Culprit::Card(66), "chance").expect_err("not fixed point");
+        assert_matches!(err, LoadError { culprit: Culprit::Card(66), field: "chance", .. });
         assert_eq!(err.to_string(), "card 66, field `chance`: 0.935 is not exact in this unit");
 
-        let wide = pct(3.0).at(66, "chance").expect_err("out of range");
+        let wide = pct(3.0).at(Culprit::Card(66), "chance").expect_err("out of range");
         assert_eq!(wide.to_string(), "card 66, field `chance`: 3 does not fit this field");
     }
 }

@@ -9,6 +9,7 @@ use simulator::accessory::AccessoryDb;
 use simulator::card::CardDb;
 use simulator::scalar::Roster;
 use simulator::sis::SisDb;
+use simulator::song::SongDb;
 
 use crate::load::{accessory, card, raw};
 
@@ -51,4 +52,18 @@ pub fn sis(dir: &Path, roster: &Roster) -> Result<SisDb, Failed> {
     let years = raw::parse_target_map(&std::fs::read(dir.join("year_group_mapping.json"))?)?;
     let groups = raw::parse_target_map(&std::fs::read(dir.join("group_member_map.json"))?)?;
     Ok(load::sis::build(&raw_sis, &years, &groups, roster)?)
+}
+
+/// Reads `songs.json` out of `dir` and builds against the card roster.
+///
+/// `additional_leader_skill_map` has each of the group -> member sets.
+///
+/// # Errors
+/// A missing or unreadable file, a schema change serde rejects, or a chart that
+/// contradicts what's possible.
+pub fn songs(dir: &Path, roster: &Roster) -> Result<SongDb, Failed> {
+    let raw_songs = raw::parse_songs(&std::fs::read(dir.join("songs.json"))?)?;
+    let groups =
+        raw::parse_target_map(&std::fs::read(dir.join("additional_leader_skill_map.json"))?)?;
+    Ok(load::song::build(&raw_songs, &groups, roster)?)
 }

@@ -4,7 +4,7 @@ use simulator::scalar::{Attribute, Milli, Roster};
 use simulator::sis::{Sis, SisDb, SisEffect, SisMeta};
 use simulator::skill::{TargetId, Targets};
 
-use crate::load::convert::{self, At, ErrorKind, LoadError};
+use crate::load::convert::{self, At, Culprit, ErrorKind, LoadError};
 use crate::load::raw::{RawSis, RawTargetMap};
 
 const YEARS: [&str; 3] = ["1st years", "2nd years", "3rd years"];
@@ -35,27 +35,27 @@ pub fn build(
     let mut meta: Vec<SisMeta> = Vec::with_capacity(order.len());
     for s in order {
         if meta.last().is_some_and(|m| m.sis_id == s.id) {
-            return Err(ErrorKind::Invariant).at(s.id, "id");
+            return Err(ErrorKind::Invariant).at(Culprit::Sis(s.id), "id");
         }
-        let effect = convert::sis_effect(&s.effect).at(s.id, "effect")?;
-        let attribute = convert::attribute(&s.attribute).at(s.id, "attribute")?;
+        let effect = convert::sis_effect(&s.effect).at(Culprit::Sis(s.id), "effect")?;
+        let attribute = convert::attribute(&s.attribute).at(Culprit::Sis(s.id), "attribute")?;
         if (s.target == "all") != (effect == SisEffect::AllPercent) {
-            return Err(ErrorKind::Invariant).at(s.id, "target");
+            return Err(ErrorKind::Invariant).at(Culprit::Sis(s.id), "target");
         }
         if !(1..=6).contains(&s.slots) {
-            return Err(ErrorKind::Invariant).at(s.id, "slots");
+            return Err(ErrorKind::Invariant).at(Culprit::Sis(s.id), "slots");
         }
         let group = s
             .group()
             .map(|g| targets.intern(g, || convert::character_set(g, groups, roster)))
             .transpose()
-            .at(s.id, "group")?;
+            .at(Culprit::Sis(s.id), "group")?;
 
         sis.push(Sis::new(
             effect,
             attribute,
             s.slots,
-            value(effect, s.value).at(s.id, "value")?,
+            value(effect, s.value).at(Culprit::Sis(s.id), "value")?,
             restriction(s, effect, attribute, &mut targets, years, roster)?,
             group,
         ));
@@ -97,7 +97,7 @@ fn restriction(
         return if own {
             Ok(None)
         } else {
-            Err(ErrorKind::Invariant).at(s.id, "equip_restriction")
+            Err(ErrorKind::Invariant).at(Culprit::Sis(s.id), "equip_restriction")
         };
     }
     let id = if YEARS.contains(&name) {
@@ -105,7 +105,7 @@ fn restriction(
     } else {
         targets.intern(name, || convert::singleton(name, roster))
     };
-    Ok(Some(id.at(s.id, "equip_restriction")?))
+    Ok(Some(id.at(Culprit::Sis(s.id), "equip_restriction")?))
 }
 
 #[cfg(test)]
@@ -256,7 +256,7 @@ mod tests {
         let mut raw = sis();
         raw[0].target = "all".to_owned();
         let err = rejected(&raw, "`target` is only redundant while it agrees");
-        assert_matches!(err, LoadError { card_id: Some(1), field: "target", .. });
+        assert_matches!(err, LoadError { culprit: Culprit::Sis(1), field: "target", .. });
     }
 
     #[test]

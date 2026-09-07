@@ -3,7 +3,7 @@
 use simulator::card::{Card, CardDb, CardMeta};
 use simulator::scalar::{Roster, Stats};
 
-use crate::load::convert::{self, At, ErrorKind, LoadError};
+use crate::load::convert::{self, At, Culprit, ErrorKind, LoadError};
 use crate::load::raw::{RawCard, RawStats, RawTargetMap};
 use crate::load::{leader, skill};
 
@@ -39,7 +39,7 @@ pub fn build(
     let mut meta: Vec<CardMeta> = Vec::with_capacity(order.len());
     for c in order {
         if meta.last().is_some_and(|m| m.card_id == c.card_id) {
-            return Err(ErrorKind::Invariant).at(c.card_id, "card_id");
+            return Err(ErrorKind::Invariant).at(Culprit::Card(c.card_id), "card_id");
         }
         cards.push(Card {
             stats: [stats(&c.stats.unidolized), stats(&c.stats.idolized)],
@@ -47,7 +47,8 @@ pub fn build(
             leader: leaders.insert(c.card_id, &c.leader_skill, leader_map, &roster)?,
             #[expect(clippy::expect_used, reason = "the roster is built from these characters")]
             character: roster.id(&c.character).expect("names of the characters"),
-            attribute: convert::attribute(&c.attribute).at(c.card_id, "attribute")?,
+            attribute: convert::attribute(&c.attribute)
+                .at(Culprit::Card(c.card_id), "attribute")?,
         });
         meta.push(self::meta(c)?);
     }
@@ -69,7 +70,7 @@ fn stats(s: &RawStats) -> Stats {
 
 #[expect(clippy::indexing_slicing, reason = "`Rarity` has exactly the 5 rows used")]
 fn meta(c: &RawCard) -> Result<CardMeta, LoadError> {
-    let rarity = convert::rarity(&c.rarity).at(c.card_id, "rarity")?;
+    let rarity = convert::rarity(&c.rarity).at(Culprit::Card(c.card_id), "rarity")?;
     let (u, i) = (&c.stats.unidolized, &c.stats.idolized);
 
     // Pre-idolized non-promo is a fix of `is_promo`. The tldr for this is that I scraped the
@@ -78,15 +79,15 @@ fn meta(c: &RawCard) -> Result<CardMeta, LoadError> {
     // a mark I manually added to denote what's *actually* a promo vs what's a card that just came
     // pre-idolized.
     if c.is_preidolized_non_promo && !c.is_promo {
-        return Err(ErrorKind::Invariant).at(c.card_id, "is_preidolized_non_promo");
+        return Err(ErrorKind::Invariant).at(Culprit::Card(c.card_id), "is_preidolized_non_promo");
     }
     let promo = c.is_promo && !c.is_preidolized_non_promo;
     if [u.sis_base, u.sis_max, i.sis_base, i.sis_max] != SIS[rarity as usize][usize::from(promo)] {
-        return Err(ErrorKind::Invariant).at(c.card_id, "sis_max");
+        return Err(ErrorKind::Invariant).at(Culprit::Card(c.card_id), "sis_max");
     }
     // promos are pre-idolized.
     if promo && stats(u) != stats(i) {
-        return Err(ErrorKind::Invariant).at(c.card_id, "stats");
+        return Err(ErrorKind::Invariant).at(Culprit::Card(c.card_id), "stats");
     }
 
     Ok(CardMeta {
@@ -208,7 +209,7 @@ mod tests {
         let c = cards.iter_mut().find(|c| c.card_id == 66).expect("card 66");
         c.stats.idolized.sis_max += 1;
         let err = rejected(&cards, "the layout no longer matches the card's rarity");
-        assert_matches!(err, LoadError { card_id: Some(66), field: "sis_max", .. });
+        assert_matches!(err, LoadError { culprit: Culprit::Card(66), field: "sis_max", .. });
     }
 
     #[test]
@@ -230,6 +231,6 @@ mod tests {
         c.stats.idolized.smile += 530;
         let id = c.card_id;
         let err = rejected(&cards, "a promo can not idolize again");
-        assert_matches!(err, LoadError { card_id: Some(got), field: "stats", .. } if got == id);
+        assert_matches!(err, LoadError { culprit: Culprit::Card(got), field: "stats", .. } if got == id);
     }
 }

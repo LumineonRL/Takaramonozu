@@ -5,3 +5,4 @@ pub mod leader;
 pub mod raw;
 pub mod sis;
 pub mod skill;
+pub mod song;

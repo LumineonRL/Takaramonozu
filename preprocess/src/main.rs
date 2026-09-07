@@ -36,5 +36,10 @@ fn main() -> Result<(), Failed> {
     let sis = preprocess::sis(&data, &cards.roster)?;
     let sis_path = out.join("sis.rkyv");
     archive::write(&sis_path, &sis)?;
-    report(&sis_path, "SIS", sis.len())
+    report(&sis_path, "SIS", sis.len())?;
+
+    let songs = preprocess::songs(&data, &cards.roster)?;
+    let song_path = out.join("songs.rkyv");
+    archive::write(&song_path, &songs)?;
+    report(&song_path, "charts", songs.len())
 }

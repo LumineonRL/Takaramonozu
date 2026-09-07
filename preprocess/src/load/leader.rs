@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use simulator::card::{LeaderExtra, LeaderId, LeaderSkill, LeaderTargets};
 use simulator::scalar::{Attribute, Roster};
 
-use crate::load::convert::{self, At, ErrorKind, LoadError};
+use crate::load::convert::{self, At, Culprit, ErrorKind, LoadError};
 use crate::load::raw::{RawLeader, RawTargetMap};
 
 /// A bit of a hacky way to represent no leader skill by applying
@@ -54,15 +54,19 @@ impl Table {
         let Some(attribute) = raw.leader_attribute.as_deref() else {
             return Ok(LeaderId(0));
         };
-        let attribute = convert::attribute(attribute).at(card_id, "leader_attribute")?;
+        let attribute =
+            convert::attribute(attribute).at(Culprit::Card(card_id), "leader_attribute")?;
         let secondary = raw
             .leader_secondary_attribute
             .as_deref()
             .map(convert::attribute)
             .transpose()
-            .at(card_id, "leader_secondary_attribute")?;
-        let value = raw.leader_value.ok_or(ErrorKind::Missing).at(card_id, "leader_value")?;
-        let value = convert::pct(value).at(card_id, "leader_value")?;
+            .at(Culprit::Card(card_id), "leader_secondary_attribute")?;
+        let value = raw
+            .leader_value
+            .ok_or(ErrorKind::Missing)
+            .at(Culprit::Card(card_id), "leader_value")?;
+        let value = convert::pct(value).at(Culprit::Card(card_id), "leader_value")?;
 
         let extra = self.extra(card_id, raw, map, roster)?;
         let skill = LeaderSkill { attribute, secondary, value, extra };
@@ -100,17 +104,18 @@ impl Table {
                 || e.leader_extra_target.is_some()
                 || e.leader_extra_value.is_some()
             {
-                return Err(ErrorKind::Missing).at(card_id, "extra");
+                return Err(ErrorKind::Missing).at(Culprit::Card(card_id), "extra");
             }
             return Ok(None);
         };
         Ok(Some(LeaderExtra {
-            attribute: convert::attribute(attribute).at(card_id, "leader_extra_attribute")?,
+            attribute: convert::attribute(attribute)
+                .at(Culprit::Card(card_id), "leader_extra_attribute")?,
             target: self
                 .targets
                 .intern(target, || convert::character_set(target, map, roster))
-                .at(card_id, "leader_extra_target")?,
-            value: convert::pct(value).at(card_id, "leader_extra_value")?,
+                .at(Culprit::Card(card_id), "leader_extra_target")?,
+            value: convert::pct(value).at(Culprit::Card(card_id), "leader_extra_value")?,
         }))
     }
 }

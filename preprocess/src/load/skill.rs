@@ -9,7 +9,7 @@ use simulator::skill::{
     SkillArena, SkillEffect, SkillId, TRIGGER_ROWS, TargetId, Targets, Trigger, TriggerType,
 };
 
-use crate::load::convert::{self, At, ErrorKind, LoadError};
+use crate::load::convert::{self, At, Culprit, ErrorKind, LoadError};
 use crate::load::raw::{RawSkill, RawTargetMap};
 
 /// The number of rows a card's trigger half occupies (aka the first 8).
@@ -47,13 +47,14 @@ impl Table {
         if !raw.is_present() {
             return Ok(None);
         }
-        let effect = convert::effect(&raw.effect).at(card_id, "type")?;
-        let trigger_type = convert::trigger(&raw.activation).at(card_id, "activation")?;
+        let effect = convert::effect(&raw.effect).at(Culprit::Card(card_id), "type")?;
+        let trigger_type =
+            convert::trigger(&raw.activation).at(Culprit::Card(card_id), "activation")?;
         let target = raw
             .target()
             .map(|t| self.targets.intern(t, || convert::character_set(t, map, roster)))
             .transpose()
-            .at(card_id, "target")?;
+            .at(Culprit::Card(card_id), "target")?;
 
         let rows = raw.value.len();
         if rows < ROWS
@@ -61,7 +62,7 @@ impl Table {
             || raw.chance.len() != rows
             || raw.duration.len() != rows
         {
-            return Err(ErrorKind::Invariant).at(card_id, "rows");
+            return Err(ErrorKind::Invariant).at(Culprit::Card(card_id), "rows");
         }
 
         let mut triggers = [Trigger::default(); ROWS];
@@ -71,11 +72,11 @@ impl Table {
             // and the five Year Group ones fire on a set cover a counter cannot
             // express, so nothing sensible goes here.
             out.threshold = match (threshold, trigger_type) {
-                (Some(t), _) => convert::threshold(t).at(card_id, "threshold")?,
+                (Some(t), _) => convert::threshold(t).at(Culprit::Card(card_id), "threshold")?,
                 (None, TriggerType::YearGroup) => 0,
                 (None, _) => 1,
             };
-            out.chance = convert::pct(chance).at(card_id, "chance")?;
+            out.chance = convert::pct(chance).at(Culprit::Card(card_id), "chance")?;
         }
 
         // Perfect Lock, Total Trick, Sync and Encore carry no value.
@@ -84,11 +85,11 @@ impl Table {
         for (&value, &duration) in raw.value.iter().zip(&raw.duration) {
             payload.push((
                 match value {
-                    Some(v) => convert::centi(v).at(card_id, "value")?,
+                    Some(v) => convert::centi(v).at(Culprit::Card(card_id), "value")?,
                     None => 0,
                 },
                 match duration {
-                    Some(d) => convert::ms(d).at(card_id, "duration")?,
+                    Some(d) => convert::ms(d).at(Culprit::Card(card_id), "duration")?,
                     None => 0,
                 },
             ));
