@@ -30,7 +30,7 @@ const HEADER: usize = 16;
 pub trait Kind {
     const MAGIC: [u8; 8];
     /// TODO: Kind of brittle but this reads a manually-bumped version number.
-    /// Used for `card.json`, `accessory.json`, `sis.json`.
+    /// Used for `card.json`, `accessory.json`, `sis.json`, `songs.json`.
     /// Each one has an corresponding database and the VERSION would be
     /// incremented when (if) the data itself changes.
     const VERSION: u32;
@@ -157,6 +157,7 @@ mod tests {
     use crate::scalar::{Attribute, CharacterId, Roster, Stats};
     use crate::sis::SisDb;
     use crate::skill::{SkillArena, Targets};
+    use crate::song::{ChartArena, SongDb};
 
     fn built() -> CardDb {
         CardDb {
@@ -203,6 +204,14 @@ mod tests {
         SisDb { sis: vec![], meta: vec![], targets: Targets::default() }
     }
 
+    fn songs() -> SongDb {
+        SongDb {
+            songs: vec![],
+            charts: ChartArena::default(),
+            groups: Targets::default(),
+        }
+    }
+
     /// Magic is what keeps the different kinds off each other's files
     /// pid is what keeps the two concurrent `cargo test` runs off them.
     fn path<T>(name: &str) -> PathBuf
@@ -241,6 +250,7 @@ mod tests {
         refuses(name, &built(), &edit);
         refuses(name, &accessories(), &edit);
         refuses(name, &sis(), &edit);
+        refuses(name, &songs(), &edit);
     }
 
     #[test]
@@ -282,7 +292,7 @@ mod tests {
 
     #[test]
     fn check_the_kinds_do_not_share_a_magic() {
-        let mut magics = [CardDb::MAGIC, AccessoryDb::MAGIC, SisDb::MAGIC];
+        let mut magics = [CardDb::MAGIC, AccessoryDb::MAGIC, SisDb::MAGIC, SongDb::MAGIC];
         magics.sort_unstable();
         assert!(magics.windows(2).all(|w| w[0] != w[1]), "two kinds share a magic");
     }

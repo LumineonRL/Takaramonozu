@@ -4,3 +4,4 @@ pub mod card;
 pub mod scalar;
 pub mod sis;
 pub mod skill;
+pub mod song;
