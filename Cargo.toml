@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["preprocess", "simulator"]
+members = ["deck", "preprocess", "simulator"]
 
 [workspace.package]
 version = "0.1.0"
