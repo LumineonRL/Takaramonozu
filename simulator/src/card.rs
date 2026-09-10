@@ -1,7 +1,7 @@
 use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::archive::{Kind, portable};
-use crate::scalar::{Attribute, CharacterId, CharacterSet, Pct, Rarity, Roster, Stats};
+use crate::scalar::{Attribute, CharacterId, CharacterSet, Form, Pct, Rarity, Roster, Stats};
 use crate::skill::{self, SkillArena, SkillId};
 
 /// card index needed for team building to pair accessory to a card
@@ -45,6 +45,15 @@ pub struct Card {
     pub leader: LeaderId,
     pub character: CharacterId,
     pub attribute: Attribute,
+}
+
+impl Card {
+    #[inline]
+    #[must_use]
+    #[expect(clippy::indexing_slicing, reason = "You're either idolized or you're not.")]
+    pub const fn stats(&self, form: Form) -> Stats {
+        self.stats[form as usize]
+    }
 }
 
 /// Information about a card that matters for users adding cards to their Deck
