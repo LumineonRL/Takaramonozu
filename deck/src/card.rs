@@ -1,10 +1,11 @@
 //! Every card a user owns, their skill levels, their memory gallery,
 //! their level cap (if an idolized UR)
 
+use core::fmt;
 use std::io;
 use std::path::Path;
 
-use serde::de::{Deserializer, Error as _};
+use serde::de::{Deserializer, Error as _, SeqAccess, Visitor};
 use serde::{Deserialize, Serialize, Serializer};
 
 use simulator::card::CardDb;
@@ -15,6 +16,7 @@ use crate::level_cap::{self, LevelCaps};
 /// This essentially determines the search space I really should make this
 /// number smaller but it needs to be at least somewhat realistic
 pub const MAX_CARDS: usize = 300;
+const MAX_ROWS: usize = u16::MAX as usize;
 
 /// Real talk I have no idea what the Gallery actually capped out at
 /// by EoS. TODO: What is the max possible gallery.
@@ -107,7 +109,8 @@ impl<'de> Deserialize<'de> for Gallery {
         D: Deserializer<'de>,
     {
         let values = <[u32; 3]>::deserialize(deserializer)?;
-        Self::new(values).ok_or_else(|| D::Error::custom(format!("gallery bonus past {MAX_GALLERY}")))
+        Self::new(values)
+            .ok_or_else(|| D::Error::custom(format!("gallery bonus past {MAX_GALLERY}")))
     }
 }
 
@@ -252,10 +255,17 @@ pub struct Rejected {
     pub problems: Vec<Problem>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Repaired {
+    pub row: usize,
+    pub id: EntryId,
+    pub repairs: Repairs,
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Loaded {
     pub deck: Deck,
-    pub repaired: Vec<(EntryId, Repairs)>,
+    pub repaired: Vec<Repaired>,
     pub rejected: Vec<Rejected>,
 }
 
@@ -266,12 +276,43 @@ where
     s.collect_seq(entries.iter().flatten())
 }
 
+fn rows<'de, D>(d: D) -> Result<Vec<Option<DeckEntry>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct Rows;
+
+    impl<'de> Visitor<'de> for Rows {
+        type Value = Vec<Option<DeckEntry>>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            write!(formatter, "at most {MAX_ROWS} deck entries")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut out = Vec::with_capacity(seq.size_hint().unwrap_or(0).min(MAX_CARDS));
+            while let Some(entry) = seq.next_element()? {
+                if out.len() == MAX_ROWS {
+                    return Err(A::Error::custom(format!("past {MAX_ROWS} deck entries")));
+                }
+                out.push(entry);
+            }
+            Ok(out)
+        }
+    }
+
+    d.deserialize_seq(Rows)
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Deck {
     pub name: String,
     #[serde(default)]
     pub gallery: Gallery,
-    #[serde(serialize_with = "compact")]
+    #[serde(serialize_with = "compact", deserialize_with = "rows")]
     entries: Vec<Option<DeckEntry>>,
 }
 
@@ -345,7 +386,9 @@ impl Deck {
             match entry.vet(cards) {
                 // Capacity is the file's problem
                 Ok((entry, repairs)) => match deck.insert(entry) {
-                    Some(id) if !repairs.is_empty() => repaired.push((id, repairs)),
+                    Some(id) if !repairs.is_empty() => {
+                        repaired.push(Repaired { row, id, repairs });
+                    }
                     Some(_) => {}
                     None => {
                         rejected.push(Rejected { row, entry, problems: vec![Problem::Full] });
@@ -423,8 +466,8 @@ impl Deck {
 #[cfg(test)]
 mod tests {
     use super::{
-        Deck, DeckEntry, EntryId, Gallery, MAX_CARDS, MAX_GALLERY, MAX_SKILL_LEVEL, Problem,
-        Repair, Repairs,
+        Deck, DeckEntry, EntryId, Gallery, MAX_CARDS, MAX_GALLERY, MAX_SKILL_LEVEL,
+        Problem, Repair, Repaired, Repairs,
     };
     use crate::level_cap::{self, tests::corpus, tests::meta};
     use core::num::NonZeroU16;
@@ -553,12 +596,16 @@ mod tests {
         assert_eq!(loaded.deck.get(id).map(DeckEntry::card_id), Some(2));
         assert_eq!(
             loaded.repaired,
-            vec![(id, {
-                let mut r = Repairs::default();
-                r.insert(Repair::Idolized);
-                r.insert(Repair::SkillLevel);
-                r
-            })]
+            vec![Repaired {
+                row: 2,
+                id,
+                repairs: {
+                    let mut r = Repairs::default();
+                    r.insert(Repair::Idolized);
+                    r.insert(Repair::SkillLevel);
+                    r
+                }
+            }]
         );
     }
 
@@ -567,7 +614,9 @@ mod tests {
         let json = format!(r#"{{"name":"d","gallery":[0,{},0],"entries":[]}}"#, MAX_GALLERY + 1);
         match Deck::parse(json.as_bytes(), &cards()) {
             Err(e) => assert_eq!(e.kind(), std::io::ErrorKind::InvalidData),
-            Ok(_) => panic!("`parse` accepted a gallery serde should not have built you absolute buffoon"),
+            Ok(_) => panic!(
+                "`parse` accepted a gallery serde should not have built you absolute buffoon"
+            ),
         }
     }
 
