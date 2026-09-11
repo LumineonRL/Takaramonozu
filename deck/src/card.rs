@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use simulator::card::CardDb;
 use simulator::scalar::{Attribute, Form, Rarity};
 
-use crate::level_cap::LevelCaps;
+use crate::level_cap::{self, LevelCaps};
 
 /// This essentially determines the search space I really should make this
 /// number smaller but it needs to be at least somewhat realistic
@@ -21,15 +21,72 @@ this exception than to just put backticks around EoS like clippy wanted, but
 I need to stand my ground. EoS does not need backticks. It is not an item."
 )]
 pub const MAX_GALLERY: u32 = 50_000;
+pub const MIN_SKILL_LEVEL: u8 = 1;
+pub const MAX_SKILL_LEVEL: u8 = 8;
 
 const fn default_skill_level() -> u8 {
-    1
+    MIN_SKILL_LEVEL
 }
 
 /// You may be wondering where every non-UR and non-idolized level caps are.
 /// Simple - They don't matter :) Only idolized URs can have cap increases.
 const fn default_idolized_ur_level_cap() -> u16 {
-    100
+    level_cap::MIN_LEVEL
+}
+
+/// I hate the name `Problem` but suck at naming error variants so shrug.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Problem {
+    UnknownCard,
+    SkillLevel,
+    SisSlots,
+    CapLevel,
+    Full,
+}
+
+/// I hate this name too. This really just like, defaults if the
+/// user enters an invalid value. Like, if a user tries to add an
+/// unidolized promo card, it "repairs" it by making it idolized.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Repair {
+    Idolized,
+    CapLevel,
+    SkillLevel,
+}
+
+impl Repair {
+    const fn bit(self) -> u8 {
+        match self {
+            Self::Idolized => 1,
+            Self::CapLevel => 2,
+            Self::SkillLevel => 4,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+#[repr(transparent)]
+pub struct Repairs(u8);
+
+impl Repairs {
+    #[must_use]
+    pub const fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+
+    #[must_use]
+    pub const fn contains(self, repair: Repair) -> bool {
+        self.0 & repair.bit() != 0
+    }
+
+    fn insert(&mut self, repair: Repair) {
+        self.0 |= repair.bit();
+    }
+}
+
+#[expect(clippy::indexing_slicing, reason = "`Form` has two variants.")]
+const fn per_form(pair: [u8; 2], form: Form) -> u8 {
+    pair[form as usize]
 }
 
 /// If you were not around when this mechanic was added and have no idea what it does,
@@ -87,7 +144,6 @@ pub struct DeckEntry {
 }
 
 impl DeckEntry {
-    #[cfg_attr(not(test), expect(dead_code, reason = "TODO"))]
     pub(crate) const fn new(
         card_id: u16,
         idolized: bool,
@@ -126,6 +182,52 @@ impl DeckEntry {
     pub const fn cap_level(self) -> u16 {
         self.cap_level
     }
+
+    /// # Errors
+    /// Every rule the entry breaks.
+    pub fn vet(mut self, cards: &CardDb) -> Result<(Self, Repairs), Vec<Problem>> {
+        let i = cards.index(self.card_id).map(|idx| usize::from(idx.0));
+        let Some((card, meta)) = i.and_then(|i| cards.cards.get(i).zip(cards.meta.get(i))) else {
+            return Err(vec![Problem::UnknownCard]);
+        };
+        let mut repairs = Repairs::default();
+        let mut problems = Vec::new();
+
+        if !self.idolized && meta.is_promo {
+            self.idolized = true;
+            repairs.insert(Repair::Idolized);
+        }
+
+        let skilled = card.skill.is_some();
+        if !skilled && self.skill_level != MIN_SKILL_LEVEL {
+            self.skill_level = MIN_SKILL_LEVEL;
+            repairs.insert(Repair::SkillLevel);
+        }
+        if skilled && !(MIN_SKILL_LEVEL..=MAX_SKILL_LEVEL).contains(&self.skill_level) {
+            problems.push(Problem::SkillLevel);
+        }
+
+        let expandable = meta.rarity == Rarity::UR && self.idolized;
+        if !expandable && self.cap_level != level_cap::MIN_LEVEL {
+            self.cap_level = level_cap::MIN_LEVEL;
+            repairs.insert(Repair::CapLevel);
+        }
+        if expandable && !level_cap::in_table(self.cap_level) {
+            problems.push(Problem::CapLevel);
+        }
+
+        let form = self.form();
+        let slots = per_form(meta.sis_base, form)..=per_form(meta.sis_max, form);
+        if !slots.contains(&self.sis_slots) {
+            problems.push(Problem::SisSlots);
+        }
+
+        if problems.is_empty() {
+            Ok((self, repairs))
+        } else {
+            Err(problems)
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -162,7 +264,27 @@ impl Deck {
         self.entries.get(id.index()).copied().flatten()
     }
 
-    pub fn insert(&mut self, entry: DeckEntry) -> Option<EntryId> {
+    /// # Errors
+    /// A rule break or an already full deck.
+    pub fn add(
+        &mut self,
+        cards: &CardDb,
+        card_id: u16,
+        idolized: bool,
+        skill_level: u8,
+        sis_slots: u8,
+        cap_level: u16,
+    ) -> Result<(EntryId, Repairs), Vec<Problem>> {
+        if self.is_full() {
+            return Err(vec![Problem::Full]);
+        }
+        let entry = DeckEntry::new(card_id, idolized, skill_level, sis_slots, cap_level);
+        let (entry, repairs) = entry.vet(cards)?;
+        let id = self.insert(entry).ok_or_else(|| vec![Problem::Full])?;
+        Ok((id, repairs))
+    }
+
+    pub(crate) fn insert(&mut self, entry: DeckEntry) -> Option<EntryId> {
         if self.is_full() {
             return None;
         }
@@ -200,8 +322,6 @@ impl Deck {
         let entry = self.get(id)?;
         let i = cards.index(entry.card_id())?.0 as usize;
         let (card, meta) = (cards.cards.get(i)?, cards.meta.get(i)?);
-
-        // Only an idolized UR can go past its cap.
         let expandable = meta.rarity == Rarity::UR && entry.form() == Form::Idolized;
         let bonus = if expandable {
             caps.bonus(entry.cap_level(), meta)?
@@ -217,11 +337,15 @@ impl Deck {
 
 #[cfg(test)]
 mod tests {
-    use super::{Deck, DeckEntry, EntryId, Gallery, MAX_CARDS, MAX_GALLERY};
-    use crate::level_cap::tests::{corpus, meta};
+    use super::{
+        Deck, DeckEntry, EntryId, Gallery, MAX_CARDS, MAX_GALLERY, MAX_SKILL_LEVEL, Problem,
+        Repair, Repairs,
+    };
+    use crate::level_cap::{self, tests::corpus, tests::meta};
+    use core::num::NonZeroU16;
     use simulator::card::{Card, CardDb, LeaderId, LeaderSkill, LeaderTargets};
     use simulator::scalar::{Attribute, CharacterId, Form, Rarity, Roster, Stats};
-    use simulator::skill::{SkillArena, Targets};
+    use simulator::skill::{SkillArena, SkillId, Targets};
 
     fn entry(card_id: u16) -> DeckEntry {
         DeckEntry::new(card_id, true, 8, 8, 500)
@@ -235,8 +359,9 @@ mod tests {
             character: CharacterId(0),
             attribute: Attribute::Smile,
         };
+        let skilled = Card { skill: Some(SkillId(NonZeroU16::new(1).unwrap())), ..card };
         CardDb {
-            cards: vec![card, card],
+            cards: vec![skilled, card],
             meta: vec![meta(1, false), meta(2, true)],
             skills: SkillArena::default(),
             skill_targets: Targets::default(),
@@ -343,6 +468,66 @@ mod tests {
         let ur = d.insert(entry(1)).unwrap();
         db.meta[0].rarity = Rarity::SSR;
         assert_eq!(d.base_stats(ur, &db, &caps), Some([1021, 2, 315]));
+    }
+
+    #[test]
+    fn check_an_unknown_card_breaks() {
+        let (db, mut d) = (cards(), deck());
+        assert_eq!(d.add(&db, 3, true, 99, 99, 999), Err(vec![Problem::UnknownCard]));
+        assert!(d.is_empty());
+    }
+
+    #[test]
+    fn check_every_bad_field() {
+        let (db, mut d) = (cards(), deck());
+        let bad = d.add(&db, 1, true, MAX_SKILL_LEVEL + 1, 9, level_cap::MAX_LEVEL + 1);
+        assert_eq!(bad, Err(vec![Problem::SkillLevel, Problem::CapLevel, Problem::SisSlots]));
+        assert!(d.is_empty());
+    }
+
+    #[test]
+    fn check_the_cap_bounds() {
+        let (db, caps, mut d) = (cards(), corpus(), deck());
+        let over = d.add(&db, 1, true, 8, 8, level_cap::MAX_LEVEL + 1);
+        assert_eq!(over, Err(vec![Problem::CapLevel]));
+
+        let (id, repairs) = d.add(&db, 1, true, 8, 8, level_cap::MAX_LEVEL).unwrap();
+        assert_eq!(repairs, Repairs::default());
+        assert!(d.base_stats(id, &db, &caps).is_some());
+    }
+
+    #[test]
+    fn check_a_pre_idolized_skillless_card_is_repaired() {
+        let (db, mut d) = (cards(), deck());
+        let (id, repairs) = d.add(&db, 2, false, 5, 8, level_cap::MAX_LEVEL).unwrap();
+
+        assert!(repairs.contains(Repair::Idolized));
+        assert!(repairs.contains(Repair::SkillLevel));
+        assert!(!repairs.contains(Repair::CapLevel));
+
+        let e = d.get(id).unwrap();
+        assert_eq!(e.form(), Form::Idolized);
+        assert_eq!(e.skill_level(), 1);
+        assert_eq!(e.cap_level(), level_cap::MAX_LEVEL);
+    }
+
+    #[test]
+    fn check_a_cap_is_useless_for_non_urs() {
+        let (db, mut d) = (cards(), deck());
+        let (id, repairs) = d.add(&db, 1, false, 8, 4, level_cap::MAX_LEVEL).unwrap();
+
+        assert!(repairs.contains(Repair::CapLevel));
+        assert!(!repairs.contains(Repair::Idolized));
+        assert_eq!(d.get(id).unwrap().cap_level(), level_cap::MIN_LEVEL);
+    }
+
+    #[test]
+    fn check_a_full_deck_says_so() {
+        let (db, mut d) = (cards(), deck());
+        for _ in 0..MAX_CARDS {
+            d.insert(entry(1)).unwrap();
+        }
+        assert_eq!(d.add(&db, 1, true, 99, 99, 999), Err(vec![Problem::Full]));
     }
 
     #[test]

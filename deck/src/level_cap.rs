@@ -7,9 +7,14 @@ use std::path::Path;
 use serde::Deserialize;
 use simulator::card::CardMeta;
 
-const MIN_LEVEL: u16 = 100;
-const MAX_LEVEL: u16 = 500;
+pub const MIN_LEVEL: u16 = 100;
+pub const MAX_LEVEL: u16 = 500;
 const LEVELS: usize = 401;
+
+#[must_use]
+pub const fn in_table(cap_level: u16) -> bool {
+    MIN_LEVEL <= cap_level && cap_level <= MAX_LEVEL
+}
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
