@@ -22,3 +22,7 @@ target
 
 # The preprocessor writes here
 archive
+
+# Scratch pad
+deck/src/main.rs
+data/user_data
