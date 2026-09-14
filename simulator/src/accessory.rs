@@ -1,8 +1,8 @@
 use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::archive::{Kind, portable};
-use crate::scalar::{Centi, Ms, Pct, Stats};
-use crate::skill::{self, SkillEffect, TRIGGER_ROWS, TargetId};
+use crate::scalar::{Centi, CharacterId, Ms, Pct, Stats};
+use crate::skill::{self, MAX_BASE_LEVEL, SkillEffect, TRIGGER_ROWS, TargetId};
 
 pub const STAT_ROWS: u8 = 8;
 
@@ -32,7 +32,22 @@ pub struct Accessory {
 pub struct AccessoryMeta {
     pub acc_id: u16,
     pub card_id: Option<u16>,
+    pub character: Option<CharacterId>,
     pub name: Box<str>,
+}
+
+impl AccessoryMeta {
+    /// Did you know that accessories tied to a specific `card_id` can
+    /// actually be equipped on any `Card` of that `Character` if the
+    /// `Accessory` is max level? Because I sure as hell didn't until
+    /// a few hours ago!
+    #[must_use]
+    pub fn equips(&self, level: u8, card_id: u16, character: CharacterId) -> bool {
+        let Some(restricted_to) = self.card_id else {
+            return true;
+        };
+        restricted_to == card_id || (level >= MAX_BASE_LEVEL && self.character == Some(character))
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -200,7 +215,7 @@ pub struct AccessoryDb {
 
 impl Kind for AccessoryDb {
     const MAGIC: [u8; 8] = *b"LLSIFADB";
-    const VERSION: u32 = 1;
+    const VERSION: u32 = 2;
 }
 
 impl AccessoryDb {
@@ -253,6 +268,34 @@ mod tests {
     }
 
     #[test]
+    fn check_character_equip() {
+        let (honoka, eli) = (CharacterId(3), CharacterId(4));
+        let restricted = AccessoryMeta {
+            acc_id: 1,
+            card_id: Some(165),
+            character: Some(honoka),
+            name: "UR Pink Ice Cream Diary".into(),
+        };
+        let free = AccessoryMeta {
+            acc_id: 19,
+            card_id: None,
+            character: None,
+            name: "UR Amethyst".into(),
+        };
+
+        for level in 1..=MAX_BASE_LEVEL {
+            assert!(restricted.equips(level, 165, honoka), "its own card, level {level}");
+            assert!(free.equips(level, 165, honoka), "unrestricted, level {level}");
+            assert!(free.equips(level, 900, eli), "unrestricted, level {level}");
+        }
+        for level in 1..MAX_BASE_LEVEL {
+            assert!(!restricted.equips(level, 900, honoka), "her other card, level {level}");
+        }
+        assert!(restricted.equips(MAX_BASE_LEVEL, 900, honoka), "her other card, maxed");
+        assert!(!restricted.equips(MAX_BASE_LEVEL, 900, eli), "never off-character");
+    }
+
+    #[test]
     fn check_table_saturates() {
         // Checking that a +16 Amplify on top of level 8 must land in and not past the acc's bounds.
         let mut arena = AccessoryArena::default();
@@ -285,6 +328,7 @@ mod tests {
             meta: vec![AccessoryMeta {
                 acc_id: 217,
                 card_id: Some(3859),
+                character: Some(CharacterId(7)),
                 name: "UR Guren Type Special".into(),
             }],
             skills,

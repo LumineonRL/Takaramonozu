@@ -32,11 +32,11 @@ pub fn cards(dir: &Path) -> Result<CardDb, Failed> {
 ///
 /// # Errors
 /// A missing or unreadable file, a schema change serde rejects, or an accessory
-/// column that contradicts the shape the stored rows assume.
-pub fn accessories(dir: &Path, roster: &Roster) -> Result<AccessoryDb, Failed> {
+/// column that contradicts the shape the stored rows assume, or a missing char name.
+pub fn accessories(dir: &Path, cards: &CardDb) -> Result<AccessoryDb, Failed> {
     let raw_accs = raw::parse_accessories(&std::fs::read(dir.join("accessories.json"))?)?;
     let year_group = raw::parse_target_map(&std::fs::read(dir.join("year_group_target.json"))?)?;
-    Ok(accessory::build(&raw_accs, &year_group, roster)?)
+    Ok(accessory::build(&raw_accs, &year_group, cards)?)
 }
 
 /// Reads `sis.json` out of `dir` and builds against the card roster.

@@ -1,5 +1,5 @@
 pub const MIN_LEVEL: u8 = 1;
-pub const MAX_LEVEL: u8 = 8;
+pub const MAX_LEVEL: u8 = simulator::skill::MAX_BASE_LEVEL;
 
 #[must_use]
 pub const fn in_range(skill_level: u8) -> bool {

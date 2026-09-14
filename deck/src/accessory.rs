@@ -110,7 +110,7 @@ mod tests {
     use simulator::accessory::{
         Accessory, AccessoryArena, AccessoryDb, AccessoryMeta, STAT_ROWS, StatArena,
     };
-    use simulator::scalar::Stats;
+    use simulator::scalar::{CharacterId, Stats};
     use simulator::skill::{self, SkillEffect};
 
     /// Two accessories, ids 7 and 9, whose stat tables differ per level so a
@@ -137,8 +137,18 @@ mod tests {
                 Accessory { skill, stats: second },
             ],
             meta: vec![
-                AccessoryMeta { acc_id: 7, card_id: None, name: "N Jam Note".into() },
-                AccessoryMeta { acc_id: 9, card_id: Some(3859), name: "UR Guren".into() },
+                AccessoryMeta {
+                    acc_id: 7,
+                    card_id: None,
+                    character: None,
+                    name: "N Jam".into(),
+                },
+                AccessoryMeta {
+                    acc_id: 9,
+                    card_id: Some(3859),
+                    character: Some(CharacterId(7)),
+                    name: "UR Guren".into(),
+                },
             ],
             skills,
             stats,

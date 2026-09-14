@@ -8,7 +8,8 @@ use simulator::accessory::{
     Accessory, AccessoryArena, AccessoryDb, AccessoryMeta, AccessorySkillId, STAT_ROWS, StatArena,
     StatsId,
 };
-use simulator::scalar::{Centi, Ms, Pct, Roster, Stats};
+use simulator::card::CardDb;
+use simulator::scalar::{Centi, CharacterId, Ms, Pct, Roster, Stats};
 use simulator::skill::{SkillEffect, TRIGGER_ROWS, TargetId, Targets};
 
 use crate::load::convert::{self, At, Culprit, ErrorKind, LoadError};
@@ -35,7 +36,7 @@ struct Key {
 pub fn build(
     raw: &RawAccessories,
     map: &RawTargetMap,
-    roster: &Roster,
+    cards: &CardDb,
 ) -> Result<AccessoryDb, LoadError> {
     let mut skills = AccessoryArena::default();
     let mut stats = StatArena::default();
@@ -46,7 +47,7 @@ pub fn build(
     let mut meta = Vec::with_capacity(raw.len());
 
     for (&acc_id, a) in raw {
-        let key = self::key(acc_id, a, &mut targets, map, roster)?;
+        let key = self::key(acc_id, a, &mut targets, map, &cards.roster)?;
         let skill = if let Some(&id) = seen.get(&key) {
             id
         } else {
@@ -56,12 +57,9 @@ pub fn build(
         };
         let table = stat_table(acc_id, a)?;
         let id = *tables.entry(table).or_insert_with(|| stats.push(&table));
+        let (card_id, character) = restriction(acc_id, a, cards)?;
         accessories.push(Accessory { skill, stats: id });
-        meta.push(AccessoryMeta {
-            acc_id,
-            card_id: card_id(acc_id, a)?,
-            name: a.name.as_str().into(),
-        });
+        meta.push(AccessoryMeta { acc_id, card_id, character, name: a.name.as_str().into() });
     }
 
     Ok(AccessoryDb { accessories, meta, skills, stats, targets })
@@ -158,16 +156,39 @@ fn stat_table(acc_id: u16, a: &RawAccessory) -> Result<StatTable, LoadError> {
     Ok(table)
 }
 
-fn card_id(acc_id: u16, a: &RawAccessory) -> Result<Option<u16>, LoadError> {
+fn restriction(
+    acc_id: u16,
+    a: &RawAccessory,
+    cards: &CardDb,
+) -> Result<(Option<u16>, Option<CharacterId>), LoadError> {
     let Some(s) = a.card_id() else {
-        return Ok(None);
+        return match a.character() {
+            None => Ok((None, None)),
+            Some(_) => Err(ErrorKind::Invariant).at(Culprit::Accessory(acc_id), "character"),
+        };
     };
-    let id = s
+    let unknown = || ErrorKind::Unknown(s.into());
+    let card_id = s
         .parse::<u16>()
         .ok()
-        .ok_or_else(|| ErrorKind::Unknown(s.into()))
-        .at(Culprit::Accessory(acc_id), "card_id");
-    Ok(Some(id?))
+        .ok_or_else(unknown)
+        .at(Culprit::Accessory(acc_id), "card_id")?;
+    let idx = cards
+        .index(card_id)
+        .ok_or_else(unknown)
+        .at(Culprit::Accessory(acc_id), "card_id")?;
+    let character = cards
+        .cards
+        .get(idx.0 as usize)
+        .ok_or_else(unknown)
+        .at(Culprit::Accessory(acc_id), "card_id")?
+        .character;
+
+    let named = a.character().and_then(|n| cards.roster.id(n));
+    if named != Some(character) {
+        return Err(ErrorKind::Invariant).at(Culprit::Accessory(acc_id), "character");
+    }
+    Ok((Some(card_id), Some(character)))
 }
 
 /// For skill levels past the 8 base levels
@@ -184,6 +205,7 @@ where
 #[cfg(test)]
 mod tests {
     use core::assert_matches;
+    use std::sync::OnceLock;
 
     use simulator::accessory::{AccessoryRows, StatRows};
 
@@ -203,19 +225,24 @@ mod tests {
         raw::parse_target_map(&read("year_group_target.json")).expect("schema")
     }
 
-    fn roster() -> Roster {
-        let cards: Vec<RawCard> = raw::parse(&read("cards.json")).expect("schema");
-        Roster::build(cards.iter().map(|c| c.character.as_str()))
+    fn cards() -> &'static CardDb {
+        static CARDS: OnceLock<CardDb> = OnceLock::new();
+        CARDS.get_or_init(|| {
+            let raw: Vec<RawCard> = raw::parse(&read("cards.json")).expect("schema");
+            let leaders =
+                raw::parse_target_map(&read("additional_leader_skill_map.json")).expect("schema");
+            crate::load::card::build(&raw, &leaders, &map()).expect("card list is valid")
+        })
     }
 
     fn built() -> AccessoryDb {
-        build(&accessories(), &map(), &roster())
+        build(&accessories(), &map(), cards())
             .unwrap_or_else(|e| panic!("Accessory file is valid: {e}"))
     }
 
     /// [`AccessoryDb`] has no `Debug`, so `expect_err` is unavailable.
     fn rejected(raw: &RawAccessories, why: &str) -> LoadError {
-        match build(raw, &map(), &roster()) {
+        match build(raw, &map(), cards()) {
             Err(e) => e,
             Ok(_) => panic!("built anyway: {why}"),
         }

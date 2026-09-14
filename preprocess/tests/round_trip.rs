@@ -30,8 +30,8 @@ fn check_cards_survive_the_archive() {
 #[test]
 fn check_accessories_survive_the_archive() {
     let cards = preprocess::cards(&data()).unwrap_or_else(|e| panic!("corpus is valid: {e}"));
-    let db = preprocess::accessories(&data(), &cards.roster)
-        .unwrap_or_else(|e| panic!("corpus is valid: {e}"));
+    let db =
+        preprocess::accessories(&data(), &cards).unwrap_or_else(|e| panic!("corpus is valid: {e}"));
     assert_eq!(db.len(), 549);
 
     let path = std::env::temp_dir().join("llsif-accessory-corpus-round-trip.rkyv");

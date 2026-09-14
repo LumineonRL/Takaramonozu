@@ -28,7 +28,7 @@ fn main() -> Result<(), Failed> {
     archive::write(&path, &cards)?;
     report(&path, "cards", cards.len())?;
 
-    let accessories = preprocess::accessories(&data, &cards.roster)?;
+    let accessories = preprocess::accessories(&data, &cards)?;
     let acc_path = out.join("accessories.rkyv");
     archive::write(&acc_path, &accessories)?;
     report(&acc_path, "accessories", accessories.len())?;

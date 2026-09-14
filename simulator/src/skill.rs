@@ -159,7 +159,11 @@ impl Targets {
     }
 }
 
-pub const TRIGGER_ROWS: u8 = 8;
+pub const MAX_BASE_LEVEL: u8 = 8;
+
+/// Amp doesn't modify threshold/chance, only value/duration.
+/// See: `Payload` for the value/duration.
+pub const TRIGGER_ROWS: u8 = MAX_BASE_LEVEL;
 
 #[derive(Archive, Serialize, Deserialize)]
 #[rkyv(compare(PartialEq))]
