@@ -173,6 +173,7 @@ mod tests {
                 rarity: crate::scalar::Rarity::UR,
                 sis_base: [4, 4],
                 sis_max: [4, 8],
+                hp: [5, 6],
                 display_name: "Initial Honoka".into(),
                 is_promo: false,
                 is_preidolized_non_promo: false,

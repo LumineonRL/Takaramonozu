@@ -34,6 +34,7 @@ pub struct RawStats {
     pub smile: u16,
     pub pure: u16,
     pub cool: u16,
+    pub hp: u8,
     pub sis_base: u8,
     pub sis_max: u8,
     // Image is a TODO item for the eventual frontend, but has

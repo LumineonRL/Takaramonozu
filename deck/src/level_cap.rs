@@ -91,6 +91,7 @@ pub(crate) mod tests {
             rarity: Rarity::UR,
             sis_base: [4, 4],
             sis_max: [4, 8],
+            hp: [5, 6],
             display_name: "testy mctest".into(),
             is_promo: promo,
             is_preidolized_non_promo: false,

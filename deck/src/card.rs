@@ -1,6 +1,8 @@
 //! Every card a user owns, their skill levels, their memory gallery,
 //! their level cap (if an idolized UR)
 
+use core::num::NonZeroU8;
+
 use serde::de::{Deserializer, Error as _};
 use serde::{Deserialize, Serialize};
 
@@ -108,6 +110,8 @@ pub struct DeckEntry {
     /// base stats + idolization status.
     #[serde(default = "default_idolized_ur_level_cap")]
     cap_level: u16,
+    #[serde(skip)]
+    hp: Option<NonZeroU8>,
 }
 
 impl DeckEntry {
@@ -118,7 +122,14 @@ impl DeckEntry {
         sis_slots: u8,
         cap_level: u16,
     ) -> Self {
-        Self { card_id, idolized, skill_level, sis_slots, cap_level }
+        Self {
+            card_id,
+            idolized,
+            skill_level,
+            sis_slots,
+            cap_level,
+            hp: None,
+        }
     }
 
     #[must_use]
@@ -148,6 +159,11 @@ impl DeckEntry {
     #[must_use]
     pub const fn cap_level(self) -> u16 {
         self.cap_level
+    }
+
+    #[must_use]
+    pub const fn hp(self) -> Option<NonZeroU8> {
+        self.hp
     }
 }
 
@@ -190,6 +206,7 @@ impl Entry for DeckEntry {
         }
 
         let form = self.form();
+        self.hp = NonZeroU8::new(per_form(meta.hp, form));
         let slots = per_form(meta.sis_base, form)..=per_form(meta.sis_max, form);
         if !slots.contains(&self.sis_slots) {
             problems.push(Problem::SisSlots);
@@ -273,7 +290,7 @@ mod tests {
     use crate::level_cap::{self, tests::corpus, tests::meta};
     use crate::manager::{EntryId, Manager, Repaired, Repairs};
     use crate::skill_level;
-    use core::num::NonZeroU16;
+    use core::num::{NonZeroU8, NonZeroU16};
     use simulator::card::{Card, CardDb, LeaderId, LeaderSkill, LeaderTargets};
     use simulator::scalar::{Attribute, CharacterId, Form, Rarity, Roster, Stats};
     use simulator::skill::{SkillArena, SkillId, Targets};
@@ -508,6 +525,27 @@ mod tests {
             d.slots_mut().insert(entry(1)).unwrap();
         }
         assert_eq!(d.add(&db, 1, true, 99, 99, 999), Err(vec![Problem::Full]));
+    }
+
+    #[test]
+    fn check_hp_derived() {
+        assert_eq!(size_of::<DeckEntry>(), 8);
+    }
+
+    #[test]
+    fn check_hp_follows_the_idolization() {
+        let (db, mut d) = (cards(), deck());
+
+        // Not pre-idolized
+        let (un, _) = d.add(&db, 1, false, 8, 4, 100).unwrap();
+        let (id, _) = d.add(&db, 1, true, 8, 8, 500).unwrap();
+        assert_eq!(d.get(un).and_then(DeckEntry::hp).map(NonZeroU8::get), Some(5));
+        assert_eq!(d.get(id).and_then(DeckEntry::hp).map(NonZeroU8::get), Some(6));
+
+        // Pre-idolized
+        let (promo, repairs) = d.add(&db, 2, false, 1, 8, 100).unwrap();
+        assert!(repairs.contains(Repair::Idolized));
+        assert_eq!(d.get(promo).and_then(DeckEntry::hp).map(NonZeroU8::get), Some(6));
     }
 
     #[test]

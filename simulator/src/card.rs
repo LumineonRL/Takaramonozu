@@ -66,6 +66,7 @@ pub struct CardMeta {
     /// u8 because max is 8. length 2 for unidolized and idolized.
     pub sis_base: [u8; 2],
     pub sis_max: [u8; 2],
+    pub hp: [u8; 2],
     /// Cosmetic
     pub display_name: Box<str>,
     /// `is_promo` indicates what schoido.lu called a promo
@@ -162,7 +163,7 @@ pub struct CardDb {
 
 impl Kind for CardDb {
     const MAGIC: [u8; 8] = *b"LLSIFCDB";
-    const VERSION: u32 = 1;
+    const VERSION: u32 = 2;
 }
 
 impl CardDb {

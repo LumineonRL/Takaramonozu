@@ -86,7 +86,7 @@ fn meta(c: &RawCard) -> Result<CardMeta, LoadError> {
         return Err(ErrorKind::Invariant).at(Culprit::Card(c.card_id), "sis_max");
     }
     // promos are pre-idolized.
-    if promo && stats(u) != stats(i) {
+    if promo && (stats(u) != stats(i) || u.hp != i.hp) {
         return Err(ErrorKind::Invariant).at(Culprit::Card(c.card_id), "stats");
     }
 
@@ -95,6 +95,7 @@ fn meta(c: &RawCard) -> Result<CardMeta, LoadError> {
         rarity,
         sis_base: [u.sis_base, i.sis_base],
         sis_max: [u.sis_max, i.sis_max],
+        hp: [u.hp, i.hp],
         display_name: c.display_name.as_str().into(),
         is_promo: c.is_promo,
         is_preidolized_non_promo: c.is_preidolized_non_promo,
@@ -178,6 +179,7 @@ mod tests {
             let meta = &db.meta[idx.0 as usize];
             assert_eq!(meta.card_id, c.card_id);
             assert_eq!(&*meta.display_name, c.display_name);
+            assert_eq!(meta.hp, [c.stats.unidolized.hp, c.stats.idolized.hp]);
             let card = &db.cards[idx.0 as usize];
             assert_eq!(card.stats[1], stats(&c.stats.idolized));
             assert_eq!(db.roster.name(card.character), Some(c.character.as_str()));
