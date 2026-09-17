@@ -285,7 +285,7 @@ impl Deck {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::{Deck, DeckEntry, Gallery, MAX_CARDS, MAX_GALLERY, Problem, Repair};
     use crate::level_cap::{self, tests::corpus, tests::meta};
     use crate::manager::{EntryId, Manager, Repaired, Repairs};
@@ -299,7 +299,7 @@ mod tests {
         DeckEntry::new(card_id, true, 8, 8, 500)
     }
 
-    fn cards() -> CardDb {
+    pub(crate) fn cards() -> CardDb {
         let card = Card {
             stats: [Stats([1, 2, 3]), Stats([1021, 2, 315])],
             skill: None,

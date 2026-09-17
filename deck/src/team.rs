@@ -185,3 +185,137 @@ impl Team {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Context, Problem, Team};
+    use crate::accessory::{Accessories, tests::accessories};
+    use crate::card::{Deck, Gallery, tests::cards};
+    use crate::manager::EntryId;
+    use crate::sis::{SisInventory, tests::sis};
+    use simulator::accessory::AccessoryDb;
+    use simulator::card::CardDb;
+    use simulator::sis::SisDb;
+
+    struct Fixture {
+        cards: CardDb,
+        acc_db: AccessoryDb,
+        sis_db: SisDb,
+        deck: Deck,
+        accessories: Accessories,
+        inventory: SisInventory,
+    }
+
+    fn fixture() -> Fixture {
+        Fixture {
+            cards: cards(),
+            acc_db: accessories(),
+            sis_db: sis(),
+            deck: Deck::new("d".to_owned(), Gallery::default()),
+            accessories: Accessories::new("a".to_owned()),
+            inventory: SisInventory::new("s".to_owned()),
+        }
+    }
+
+    impl Fixture {
+        fn ctx(&self) -> Context<'_> {
+            Context {
+                deck: &self.deck,
+                accessories: &self.accessories,
+                inventory: &self.inventory,
+                cards: &self.cards,
+                acc_db: &self.acc_db,
+                sis_db: &self.sis_db,
+            }
+        }
+
+        fn card(&mut self, idolized: bool, slots: u8) -> EntryId {
+            self.deck.add(&self.cards, 1, idolized, 1, slots, 100).unwrap().0
+        }
+
+        fn owns(&mut self, sis_id: u16) -> EntryId {
+            self.inventory.add(&self.sis_db, sis_id).unwrap().0
+        }
+
+        fn acc(&mut self, acc_id: u16) -> EntryId {
+            self.accessories.add(&self.acc_db, acc_id, 1).unwrap().0
+        }
+    }
+
+    #[test]
+    fn check_add_card_to_lanes() {
+        let mut f = fixture();
+        let (first, second) = (f.card(true, 8), f.card(true, 8));
+        let mut team = Team::default();
+
+        team.equip_card(0, first, f.ctx()).unwrap();
+        assert_eq!(team.equip_card(1, first, f.ctx()), Err(Problem::InUse));
+        team.equip_card(1, second, f.ctx()).unwrap();
+        assert_eq!(team.lanes().count(), 2);
+    }
+
+    #[test]
+    fn check_a_card_to_lanes_uniqueness() {
+        let mut f = fixture();
+        let (a, b) = (f.card(true, 8), f.card(true, 8));
+        let (first, second) = (f.owns(7), f.owns(7));
+        let mut team = Team::default();
+        team.equip_card(0, a, f.ctx()).unwrap();
+        team.equip_card(1, b, f.ctx()).unwrap();
+
+        team.equip_sis(0, first, f.ctx()).unwrap();
+        assert_eq!(team.equip_sis(1, first, f.ctx()), Err(Problem::InUse));
+        assert_eq!(team.equip_sis(0, second, f.ctx()), Err(Problem::Duplicate));
+        team.equip_sis(1, second, f.ctx()).unwrap();
+    }
+
+    #[test]
+    fn check_capacity() {
+        let mut f = fixture();
+        let small = f.card(false, 4);
+        let (big, kiss) = (f.owns(9), f.owns(7));
+        let mut team = Team::default();
+        team.equip_card(0, small, f.ctx()).unwrap();
+
+        team.equip_sis(0, big, f.ctx()).unwrap();
+        assert_eq!(team.slot(0).unwrap().slots_used(f.ctx()), 4);
+        assert_eq!(team.equip_sis(0, kiss, f.ctx()), Err(Problem::NoRoom));
+
+        team.unequip_sis(0, big).unwrap();
+        team.equip_sis(0, kiss, f.ctx()).unwrap();
+        assert_eq!(team.slot(0).unwrap().slots_used(f.ctx()), 1);
+    }
+
+    #[test]
+    fn check_accessory() {
+        let mut f = fixture();
+        let (a, b) = (f.card(true, 8), f.card(true, 8));
+        let (loose, locked) = (f.acc(7), f.acc(9));
+        let mut team = Team::default();
+        team.equip_card(0, a, f.ctx()).unwrap();
+        team.equip_card(1, b, f.ctx()).unwrap();
+
+        team.equip_accessory(0, loose, f.ctx()).unwrap();
+        assert_eq!(team.equip_accessory(1, loose, f.ctx()), Err(Problem::InUse));
+        assert_eq!(team.equip_accessory(1, locked, f.ctx()), Err(Problem::Restricted));
+    }
+
+    #[test]
+    fn check_cards_goes_to_lane() {
+        let mut f = fixture();
+        let (a, b) = (f.card(true, 8), f.card(true, 8));
+        let (acc, kiss) = (f.acc(7), f.owns(7));
+        let mut team = Team::default();
+        team.equip_card(0, a, f.ctx()).unwrap();
+        team.equip_accessory(0, acc, f.ctx()).unwrap();
+        team.equip_sis(0, kiss, f.ctx()).unwrap();
+
+        team.equip_card(0, b, f.ctx()).unwrap();
+        let slot = team.slot(0).unwrap();
+        assert_eq!(slot.accessory(), None);
+        assert_eq!(slot.sis().count(), 0);
+
+        team.equip_accessory(0, acc, f.ctx()).unwrap();
+        team.equip_sis(0, kiss, f.ctx()).unwrap();
+    }
+}

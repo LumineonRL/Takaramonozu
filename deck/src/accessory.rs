@@ -103,7 +103,7 @@ impl Accessories {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::{Accessories, AccessoryEntry, MAX_ACCESSORIES, Problem};
     use crate::manager::{EntryId, Manager};
     use crate::skill_level;
@@ -115,7 +115,7 @@ mod tests {
 
     /// Two accessories, ids 7 and 9, whose stat tables differ per level so a
     /// skill level is visible in the answer.
-    fn accessories() -> AccessoryDb {
+    pub(crate) fn accessories() -> AccessoryDb {
         let mut skills = AccessoryArena::default();
         let skill = skills.push(SkillEffect::Encore, None, 0, &[3; 8], &[(0, 0)]);
         let mut stats = StatArena::default();

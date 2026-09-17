@@ -87,7 +87,7 @@ impl SisInventory {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::{MAX_SIS, Problem, SisEntry, SisInventory};
     use crate::manager::{EntryId, Manager};
     use simulator::scalar::Attribute;
@@ -96,7 +96,7 @@ mod tests {
 
     /// Ids 7 and 9, so 8 is a hole to miss on, and two effects so a lookup can
     /// tell them apart.
-    fn sis() -> SisDb {
+    pub(crate) fn sis() -> SisDb {
         SisDb {
             sis: vec![
                 Sis::new(SisEffect::SelfFlat, Attribute::Smile, 1, 200_000, None, None),
