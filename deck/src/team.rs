@@ -1,8 +1,8 @@
 //! A slot for each lane + a guest
 
 use simulator::accessory::AccessoryDb;
-use simulator::card::{CardDb, LeaderId};
-use simulator::sis::SisDb;
+use simulator::card::{Card, CardDb, LeaderId};
+use simulator::sis::{Sis, SisDb, SisEffect};
 
 use crate::accessory::Accessories;
 use crate::card::{Deck, DeckEntry};
@@ -20,8 +20,10 @@ pub const MAX_SIS_PER_CARD: usize = 5;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Problem {
-    // Not a valid lane.
+    /// Past lane 9.
     NoLane,
+    /// A lane with no card
+    Empty,
     /// Already equipped elsewhere on this team.
     InUse,
     /// A card holds at most one of a given SIS.
@@ -43,13 +45,33 @@ pub struct Context<'a> {
     pub sis_db: &'a SisDb,
 }
 
-impl Context<'_> {
-    fn equips(self, acc: EntryId, card: EntryId) -> Option<bool> {
-        let acc = self.accessories.get(acc)?;
-        let meta = self.acc_db.meta.get(usize::from(self.acc_db.index(acc.acc_id())?.0))?;
-        let card_id = self.deck.get(card)?.card_id();
-        let wearer = self.cards.cards.get(usize::from(self.cards.index(card_id)?.0))?;
-        Some(meta.equips(acc.skill_level(), card_id, wearer.character))
+impl<'a> Context<'a> {
+    fn equipped_by(self, entry: EntryId) -> Option<(u16, &'a Card)> {
+        let card_id = self.deck.get(entry)?.card_id();
+        let card = self.cards.cards.get(usize::from(self.cards.index(card_id)?.0))?;
+        Some((card_id, card))
+    }
+
+    fn accessory_equips(self, acc: EntryId, card_id: u16, equipped_by: &Card) -> Option<bool> {
+        let owned = self.accessories.get(acc)?;
+        let meta = self.acc_db.meta.get(usize::from(self.acc_db.index(owned.acc_id())?.0))?;
+        Some(meta.equips(owned.skill_level(), card_id, equipped_by.character))
+    }
+
+    /// # Errors
+    /// Equipping a SIS that it shouldn't be able to do so I guess
+    /// it would need to be something outside of `sis.rkyv`.
+    fn sis_equips(self, sis: Sis, equipped_by: &Card) -> Result<bool, Problem> {
+        if matches!(sis.effect, SisEffect::Charm | SisEffect::Heal) {
+            return Ok(sis.attribute == equipped_by.attribute);
+        }
+        match sis.restriction {
+            None => Ok(true),
+            Some(t) => {
+                let set = self.sis_db.targets.set(t).ok_or(Problem::Unknown)?;
+                Ok(set.contains(equipped_by.character))
+            }
+        }
     }
 }
 
@@ -92,6 +114,11 @@ impl TeamSlot {
     pub fn capacity(self, ctx: Context) -> u8 {
         ctx.deck.get(self.card).map_or(0, DeckEntry::sis_slots)
     }
+
+    #[must_use]
+    pub fn room(self, ctx: Context) -> u8 {
+        self.capacity(ctx).saturating_sub(self.slots_used(ctx))
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -133,66 +160,176 @@ impl Team {
         self.slots.get_mut(lane).ok_or(Problem::NoLane)
     }
 
+    fn occupied(&self, lane: usize) -> Result<TeamSlot, Problem> {
+        self.slots.get(lane).copied().ok_or(Problem::NoLane)?.ok_or(Problem::Empty)
+    }
+
     /// # Errors
-    /// A card not in the deck, a card already in another lane.
-    pub fn equip_card(&mut self, lane: usize, card: EntryId, ctx: Context) -> Result<(), Problem> {
+    /// Not a valid lane, a card not in the deck, or already in another lane.
+    pub fn can_equip_card(&self, lane: usize, card: EntryId, ctx: Context) -> Result<(), Problem> {
+        self.slots.get(lane).ok_or(Problem::NoLane)?;
         if ctx.deck.get(card).is_none() {
             return Err(Problem::Unknown);
         }
         if self.lanes().any(|(l, s)| l != lane && s.card == card) {
             return Err(Problem::InUse);
         }
+        Ok(())
+    }
+
+    /// # Errors
+    /// Not a lane, an empty one, an unowned accessory, one already worn in
+    ///*another lane, you get the point.
+    pub fn can_equip_accessory(
+        &self,
+        lane: usize,
+        acc: EntryId,
+        ctx: Context,
+    ) -> Result<(), Problem> {
+        let slot = self.occupied(lane)?;
+        let equipped_by = ctx.equipped_by(slot.card).ok_or(Problem::Unknown)?;
+        self.accessory_fits(lane, acc, ctx, equipped_by)
+    }
+
+    fn accessory_fits(
+        &self,
+        lane: usize,
+        acc: EntryId,
+        ctx: Context,
+        equipped_by: (u16, &Card),
+    ) -> Result<(), Problem> {
+        if self.lanes().any(|(l, s)| l != lane && s.accessory == Some(acc)) {
+            return Err(Problem::InUse);
+        }
+        if ctx
+            .accessory_equips(acc, equipped_by.0, equipped_by.1)
+            .ok_or(Problem::Unknown)?
+        {
+            Ok(())
+        } else {
+            Err(Problem::Restricted)
+        }
+    }
+
+    /// # Errors
+    /// Not a lane, an empty one, an unowned SIS, a copy already equipped
+    /// elsewhere, a second of the same SIS on one card, one this card may not
+    /// wear, or no capacity left. Yeah SIS has a lot of rules.
+    pub fn can_equip_sis(&self, lane: usize, sis: EntryId, ctx: Context) -> Result<(), Problem> {
+        let slot = self.occupied(lane)?;
+        let (_, equipped_by) = ctx.equipped_by(slot.card).ok_or(Problem::Unknown)?;
+        self.sis_fits(slot, sis, ctx, equipped_by, slot.room(ctx))
+    }
+
+    fn sis_fits(
+        &self,
+        slot: TeamSlot,
+        sis: EntryId,
+        ctx: Context,
+        equipped_by: &Card,
+        room: u8,
+    ) -> Result<(), Problem> {
+        let added = ctx.inventory.sis(sis, ctx.sis_db).ok_or(Problem::Unknown)?;
+        if self.lanes().any(|(_, s)| s.sis().any(|held| held == sis)) {
+            return Err(Problem::InUse);
+        }
+        let kind = ctx.inventory.get(sis).map(SisEntry::sis_id);
+        if slot.sis().any(|held| ctx.inventory.get(held).map(SisEntry::sis_id) == kind) {
+            return Err(Problem::Duplicate);
+        }
+        if !ctx.sis_equips(added, equipped_by)? {
+            return Err(Problem::Restricted);
+        }
+        if added.slots > room {
+            return Err(Problem::NoRoom);
+        }
+        Ok(())
+    }
+
+    /// # Errors
+    /// As [`Team::can_equip_card`].
+    pub fn equip_card(&mut self, lane: usize, card: EntryId, ctx: Context) -> Result<(), Problem> {
+        self.can_equip_card(lane, card, ctx)?;
         *self.at(lane)? = Some(TeamSlot::new(card));
         Ok(())
     }
 
     /// # Errors
-    /// Empty lane, unowned accessory, one already worn in another lane,
-    /// or invalid on this card.
+    /// As [`Team::can_equip_accessory`].
     pub fn equip_accessory(
         &mut self,
         lane: usize,
         acc: EntryId,
         ctx: Context,
     ) -> Result<(), Problem> {
-        let mut slot = self.slot(lane).ok_or(Problem::NoLane)?;
-        if self.lanes().any(|(_, s)| s.accessory == Some(acc)) {
-            return Err(Problem::InUse);
-        }
-        if !ctx.equips(acc, slot.card).ok_or(Problem::Unknown)? {
-            return Err(Problem::Restricted);
-        }
+        self.can_equip_accessory(lane, acc, ctx)?;
+        let mut slot = self.occupied(lane)?;
         slot.accessory = Some(acc);
         *self.at(lane)? = Some(slot);
         Ok(())
     }
 
     /// # Errors
-    /// Empty lane, unowned SIS, copy already equipped elsewhere, a
-    /// second of the same SIS on one card, or no capacity left.
+    /// As [`Team::can_equip_sis`].
     pub fn equip_sis(&mut self, lane: usize, sis: EntryId, ctx: Context) -> Result<(), Problem> {
-        let mut slot = self.slot(lane).ok_or(Problem::NoLane)?;
-        let added = ctx.inventory.sis(sis, ctx.sis_db).ok_or(Problem::Unknown)?;
-        if self.lanes().any(|(_, s)| s.sis().any(|held| held == sis)) {
-            return Err(Problem::InUse);
-        }
-        let kind = |e: EntryId| ctx.inventory.get(e).map(SisEntry::sis_id);
-        if slot.sis().any(|held| kind(held) == kind(sis)) {
-            return Err(Problem::Duplicate);
-        }
-        if slot.slots_used(ctx).saturating_add(added.slots) > slot.capacity(ctx) {
-            return Err(Problem::NoRoom);
-        }
+        self.can_equip_sis(lane, sis, ctx)?;
+        let mut slot = self.occupied(lane)?;
         *slot.sis.iter_mut().find(|s| s.is_none()).ok_or(Problem::NoRoom)? = Some(sis);
         *self.at(lane)? = Some(slot);
         Ok(())
     }
 
+    pub fn card_choices<'t>(
+        &'t self,
+        lane: usize,
+        ctx: Context<'t>,
+    ) -> impl Iterator<Item = EntryId> + 't {
+        ctx.deck
+            .entries()
+            .filter(move |&(id, _)| self.can_equip_card(lane, id, ctx).is_ok())
+            .map(|(id, _)| id)
+    }
+
+    pub fn accessory_choices<'t>(
+        &'t self,
+        lane: usize,
+        ctx: Context<'t>,
+    ) -> impl Iterator<Item = EntryId> + 't {
+        let equipped_by = self.occupied(lane).ok().and_then(|s| ctx.equipped_by(s.card));
+        ctx.accessories.entries().filter_map(move |(id, _)| {
+            self.accessory_fits(lane, id, ctx, equipped_by?).ok().map(|()| id)
+        })
+    }
+
+    pub fn sis_choices<'t>(
+        &'t self,
+        lane: usize,
+        ctx: Context<'t>,
+    ) -> impl Iterator<Item = EntryId> + 't {
+        let lane = self.occupied(lane).ok().and_then(|s| {
+            let (_, equipped_by) = ctx.equipped_by(s.card)?;
+            Some((s, equipped_by, s.room(ctx)))
+        });
+        ctx.inventory.entries().filter_map(move |(id, _)| {
+            let (slot, equipped_by, room) = lane?;
+            self.sis_fits(slot, id, ctx, equipped_by, room).ok().map(|()| id)
+        })
+    }
+
     /// # Errors
-    /// Empty lane, or a SIS this card is not holding.
+    /// Not a lane, an empty one, or a SIS this card doesn't have equipped..
     pub fn unequip_sis(&mut self, lane: usize, sis: EntryId) -> Result<(), Problem> {
-        let mut slot = self.slot(lane).ok_or(Problem::NoLane)?;
+        let mut slot = self.occupied(lane)?;
         *slot.sis.iter_mut().find(|s| **s == Some(sis)).ok_or(Problem::Unknown)? = None;
+        *self.at(lane)? = Some(slot);
+        Ok(())
+    }
+
+    /// # Errors
+    /// Not a lane, an empty one, or a card without an acc.
+    pub fn unequip_accessory(&mut self, lane: usize) -> Result<(), Problem> {
+        let mut slot = self.occupied(lane)?;
+        slot.accessory.take().ok_or(Problem::Unknown)?;
         *self.at(lane)? = Some(slot);
         Ok(())
     }
@@ -207,10 +344,10 @@ impl Team {
 
 #[cfg(test)]
 mod tests {
-    use super::{Context, Problem, Team};
+    use super::{Context, LANES, Problem, Team};
     use crate::accessory::{Accessories, tests::accessories};
     use crate::card::{Deck, Gallery, tests::cards};
-    use crate::manager::EntryId;
+    use crate::manager::{EntryId, Manager};
     use crate::sis::{SisInventory, tests::sis};
     use simulator::accessory::AccessoryDb;
     use simulator::card::{CardDb, LeaderId};
@@ -317,6 +454,70 @@ mod tests {
         team.equip_accessory(0, loose, f.ctx()).unwrap();
         assert_eq!(team.equip_accessory(1, loose, f.ctx()), Err(Problem::InUse));
         assert_eq!(team.equip_accessory(1, locked, f.ctx()), Err(Problem::Restricted));
+
+        // Re-equipping what this lane already wears is a no-op, not `InUse`.
+        team.equip_accessory(0, loose, f.ctx()).unwrap();
+        assert_eq!(team.slot(0).unwrap().accessory(), Some(loose));
+    }
+
+    #[test]
+    fn check_unequip_accessory() {
+        let mut f = fixture();
+        let (a, b) = (f.card(true, 8), f.card(true, 8));
+        let (loose, kiss) = (f.acc(7), f.owns(7));
+        let mut team = Team::default();
+        team.equip_card(0, a, f.ctx()).unwrap();
+        team.equip_card(1, b, f.ctx()).unwrap();
+        team.equip_accessory(0, loose, f.ctx()).unwrap();
+        team.equip_sis(0, kiss, f.ctx()).unwrap();
+
+        team.unequip_accessory(0).unwrap();
+        let slot = team.slot(0).unwrap();
+        assert_eq!(slot.accessory(), None);
+        assert_eq!(slot.sis().count(), 1, "card and its SIS stay");
+
+        assert_eq!(team.unequip_accessory(0), Err(Problem::Unknown), "nothing equipped");
+        team.equip_accessory(1, loose, f.ctx()).unwrap();
+    }
+
+    #[test]
+    fn check_sis_equip_restriction() {
+        let mut f = fixture();
+        let card = f.card(true, 8);
+        let mut team = Team::default();
+        team.equip_card(0, card, f.ctx()).unwrap();
+
+        let (mine, theirs) = (f.owns(11), f.owns(13));
+        team.equip_sis(0, mine, f.ctx()).unwrap();
+        assert_eq!(team.equip_sis(0, theirs, f.ctx()), Err(Problem::Restricted));
+
+        // Charm/Heal's restriction is an attribute. Like everything else is a character set.
+        let (smile, cool) = (f.owns(15), f.owns(17));
+        assert_eq!(team.equip_sis(0, cool, f.ctx()), Err(Problem::Restricted));
+        team.equip_sis(0, smile, f.ctx()).unwrap();
+        assert_eq!(team.slot(0).unwrap().sis().count(), 2);
+    }
+
+    #[test]
+    fn check_equipment_character_mask() {
+        let mut f = fixture();
+        let card = f.card(true, 8);
+        let owned: Vec<EntryId> = [7, 9, 11, 13, 15, 17].map(|id| f.owns(id)).into();
+        let mut team = Team::default();
+
+        // Nothing can be equipped in a lane with no card,
+        assert_eq!(team.sis_choices(0, f.ctx()).count(), 0);
+        assert_eq!(team.accessory_choices(0, f.ctx()).count(), 0);
+
+        team.equip_card(0, card, f.ctx()).unwrap();
+        let legal: Vec<EntryId> = team.sis_choices(0, f.ctx()).collect();
+        assert_eq!(legal.len(), 4, "13 is another char's, 17 another attribute's");
+        assert!(!legal.contains(&owned[3]));
+        assert!(!legal.contains(&owned[5]));
+
+        for (id, _) in f.inventory.entries() {
+            assert_eq!(team.can_equip_sis(0, id, f.ctx()).is_ok(), legal.contains(&id));
+        }
     }
 
     #[test]

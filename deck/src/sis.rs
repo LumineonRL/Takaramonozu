@@ -90,23 +90,33 @@ impl SisInventory {
 pub(crate) mod tests {
     use super::{MAX_SIS, Problem, SisEntry, SisInventory};
     use crate::manager::{EntryId, Manager};
-    use simulator::scalar::Attribute;
+    use simulator::scalar::{Attribute, CharacterSet};
     use simulator::sis::{Sis, SisDb, SisEffect, SisMeta};
     use simulator::skill;
 
-    /// Ids 7 and 9, so 8 is a hole to miss on, and two effects so a lookup can
-    /// tell them apart.
     pub(crate) fn sis() -> SisDb {
+        let mut targets = skill::Targets::default();
+        let mine = targets.intern("Sonoda Umi", || Ok::<_, ()>(CharacterSet(0b1))).unwrap();
+        let theirs = targets.intern("Nishikino Maki", || Ok::<_, ()>(CharacterSet(0b10))).unwrap();
+
         SisDb {
             sis: vec![
                 Sis::new(SisEffect::SelfFlat, Attribute::Smile, 1, 200_000, None, None),
                 Sis::new(SisEffect::SelfPercent, Attribute::Cool, 4, 290, None, None),
+                Sis::new(SisEffect::SelfPercent, Attribute::Smile, 2, 130, Some(mine), None),
+                Sis::new(SisEffect::SelfPercent, Attribute::Smile, 2, 130, Some(theirs), None),
+                Sis::new(SisEffect::Charm, Attribute::Smile, 4, 2500, None, None),
+                Sis::new(SisEffect::Charm, Attribute::Cool, 4, 2500, None, None),
             ],
             meta: vec![
                 SisMeta { sis_id: 7, name: "Smile Kiss".into() },
-                SisMeta { sis_id: 9, name: "Cool Charm".into() },
+                SisMeta { sis_id: 9, name: "Cool Veil".into() },
+                SisMeta { sis_id: 11, name: "Smile Petit (Umi)".into() },
+                SisMeta { sis_id: 13, name: "Smile Petit (Maki)".into() },
+                SisMeta { sis_id: 15, name: "Smile Charm".into() },
+                SisMeta { sis_id: 17, name: "Cool Charm".into() },
             ],
-            targets: skill::Targets::default(),
+            targets,
         }
     }
 
