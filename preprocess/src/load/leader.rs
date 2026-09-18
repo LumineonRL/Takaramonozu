@@ -1,6 +1,6 @@
 //! Most cards have a leader skill, but there's only a few hundred (312)
-//! meaingfully unique ones. The main purpose of this module is to extract
-//! the unique (leader, extra) skill tuples.
+//! meaingfully unique ones. The main purpose of this module is to extract a
+//! card's leader skill to one of them.
 
 use std::collections::HashMap;
 
@@ -8,7 +8,7 @@ use simulator::card::{LeaderExtra, LeaderId, LeaderSkill, LeaderTargets};
 use simulator::scalar::{Attribute, Roster};
 
 use crate::load::convert::{self, At, Culprit, ErrorKind, LoadError};
-use crate::load::raw::{RawLeader, RawTargetMap};
+use crate::load::raw::{RawLeader, RawTargetMap, RawUniqueLeader};
 
 /// A bit of a hacky way to represent no leader skill by applying
 /// a boost of 0%
@@ -26,70 +26,104 @@ pub struct Table {
     seen: HashMap<LeaderSkill, LeaderId>,
 }
 
-impl Default for Table {
-    fn default() -> Self {
-        Self {
-            by_id: vec![IDENTITY],
-            targets: LeaderTargets::default(),
-            seen: HashMap::from([(IDENTITY, LeaderId(0))]),
-        }
-    }
-}
-
 impl Table {
+    /// # Errors
+    /// I'm so tired of writing error docs pedantic clippy
+    /// was a mistake. It errors if the id is bad, in
+    /// the exact same way that every other Trait in this
+    /// codebase does!
+    pub fn seeded(
+        unique: &[RawUniqueLeader],
+        map: &RawTargetMap,
+        roster: &Roster,
+    ) -> Result<Self, LoadError> {
+        let mut table = Self {
+            by_id: Vec::with_capacity(unique.len()),
+            targets: LeaderTargets::default(),
+            seen: HashMap::with_capacity(unique.len()),
+        };
+        for (i, u) in unique.iter().enumerate() {
+            let who = Culprit::Leader(u.leader_skill_id);
+            let id = table.next_id(&who)?;
+            if usize::from(u.leader_skill_id) != i.saturating_add(1) {
+                return Err(ErrorKind::Invariant).at(&who, "leader_skill_id");
+            }
+            let skill = table.convert(&who, &u.to_leader(), map, roster)?;
+            if (id == LeaderId(0)) != (skill == IDENTITY) {
+                return Err(ErrorKind::Invariant).at(&who, "leader_attribute");
+            }
+            if table.seen.insert(skill, id).is_some() {
+                return Err(ErrorKind::Invariant).at(&who, "extra");
+            }
+            table.by_id.push(skill);
+        }
+        Ok(table)
+    }
+
+    /// # Errors
+    /// Past 65535 leader skills, which is what a [`LeaderId`] holds. There are
+    /// 313.
+    fn next_id(&self, who: &Culprit) -> Result<LeaderId, LoadError> {
+        u16::try_from(self.by_id.len())
+            .map(LeaderId)
+            .map_err(|_ignored| ErrorKind::Invariant)
+            .at(who, "leader_skill_id")
+    }
+
+    /// The card's leader skill, as a row of the seeded table.
+    ///
     /// # Errors
     /// 1) An attribute or target string outside of its set
     /// 2) a non-exact percentage value
     /// 3) An incomplete / half-filled in leader skill
-    ///
-    /// # Panics
-    /// More than 65535 distinct leader skills. There are only 313 :).
-    pub fn insert(
+    /// 4) a skill that `unique_leader_skills.json` does not carry
+    pub fn resolve(
         &mut self,
         card_id: u16,
         raw: &RawLeader,
         map: &RawTargetMap,
         roster: &Roster,
     ) -> Result<LeaderId, LoadError> {
-        let Some(attribute) = raw.leader_attribute.as_deref() else {
+        if raw.leader_attribute.is_none() {
             return Ok(LeaderId(0));
+        }
+        let who = Culprit::Card(card_id);
+        let skill = self.convert(&who, raw, map, roster)?;
+        self.seen
+            .get(&skill)
+            .copied()
+            .ok_or(ErrorKind::Invariant)
+            .at(&who, "leader_skill")
+    }
+
+    fn convert(
+        &mut self,
+        who: &Culprit,
+        raw: &RawLeader,
+        map: &RawTargetMap,
+        roster: &Roster,
+    ) -> Result<LeaderSkill, LoadError> {
+        let Some(attribute) = raw.leader_attribute.as_deref() else {
+            return Ok(IDENTITY);
         };
-        let attribute =
-            convert::attribute(attribute).at(Culprit::Card(card_id), "leader_attribute")?;
+        let attribute = convert::attribute(attribute).at(who, "leader_attribute")?;
         let secondary = raw
             .leader_secondary_attribute
             .as_deref()
             .map(convert::attribute)
             .transpose()
-            .at(Culprit::Card(card_id), "leader_secondary_attribute")?;
-        let value = raw
-            .leader_value
-            .ok_or(ErrorKind::Missing)
-            .at(Culprit::Card(card_id), "leader_value")?;
-        let value = convert::pct(value).at(Culprit::Card(card_id), "leader_value")?;
+            .at(who, "leader_secondary_attribute")?;
+        let value = raw.leader_value.ok_or(ErrorKind::Missing).at(who, "leader_value")?;
+        let value = convert::pct(value).at(who, "leader_value")?;
 
-        let extra = self.extra(card_id, raw, map, roster)?;
-        let skill = LeaderSkill { attribute, secondary, value, extra };
-
-        if let Some(&id) = self.seen.get(&skill) {
-            return Ok(id);
-        }
-        #[expect(
-            clippy::expect_used,
-            clippy::unwrap_in_result,
-            reason = "capacity bound, documented above"
-        )]
-        let slot = u16::try_from(self.by_id.len()).expect("leader table fits u16");
-        let id = LeaderId(slot);
-        self.by_id.push(skill);
-        self.seen.insert(skill, id);
-        Ok(id)
+        let extra = self.extra(who, raw, map, roster)?;
+        Ok(LeaderSkill { attribute, secondary, value, extra })
     }
 
     /// Extra is all-or-nothing
     fn extra(
         &mut self,
-        card_id: u16,
+        who: &Culprit,
         raw: &RawLeader,
         map: &RawTargetMap,
         roster: &Roster,
@@ -104,18 +138,17 @@ impl Table {
                 || e.leader_extra_target.is_some()
                 || e.leader_extra_value.is_some()
             {
-                return Err(ErrorKind::Missing).at(Culprit::Card(card_id), "extra");
+                return Err(ErrorKind::Missing).at(who, "extra");
             }
             return Ok(None);
         };
         Ok(Some(LeaderExtra {
-            attribute: convert::attribute(attribute)
-                .at(Culprit::Card(card_id), "leader_extra_attribute")?,
+            attribute: convert::attribute(attribute).at(who, "leader_extra_attribute")?,
             target: self
                 .targets
                 .intern(target, || convert::character_set(target, map, roster))
-                .at(Culprit::Card(card_id), "leader_extra_target")?,
-            value: convert::pct(value).at(Culprit::Card(card_id), "leader_extra_value")?,
+                .at(who, "leader_extra_target")?,
+            value: convert::pct(value).at(who, "leader_extra_value")?,
         }))
     }
 }
@@ -148,11 +181,11 @@ mod tests {
         let cards = cards();
         let roster = Roster::build(cards.iter().map(|c| c.character.as_str()));
         let map = map();
-        let mut table = Table::default();
+        let mut table = Table::seeded(&unique(), &map, &roster).expect("seed");
         let ids = cards
             .iter()
             .map(|c| {
-                let id = table.insert(c.card_id, &c.leader_skill, &map, &roster);
+                let id = table.resolve(c.card_id, &c.leader_skill, &map, &roster);
                 (c.card_id, id.expect("convert"))
             })
             .collect();
@@ -177,19 +210,51 @@ mod tests {
         );
     }
 
-    /// I might need to remove this one later if we want custom cards in the future
-    /// but for a snapshot of where SIF was when it shut down, I'm putting this to
-    /// make sure that file stays static.
     #[test]
-    fn check_unique_leader_skills_json_adds_nothing() {
-        let (mut table, roster, _) = built();
-        let map = map();
+    fn check_leader_ids_are_the_upstream_ids() {
+        let (table, _, ids) = built();
         let file = unique();
-        assert_eq!(file.len(), 313);
-        for u in &file {
-            table.insert(u.leader_skill_id, &u.to_leader(), &map, &roster).expect("convert");
+        assert_eq!(table.by_id.len(), file.len());
+        for (i, u) in file.iter().enumerate() {
+            assert_eq!(usize::from(u.leader_skill_id), i + 1, "row {i} is not dense");
+            let got = table.by_id[i];
+            let Some(attribute) = u.leader_attribute.as_deref() else {
+                assert_eq!(got, IDENTITY, "row {i}");
+                continue;
+            };
+            assert_eq!(got.attribute, convert::attribute(attribute).expect("attribute"), "row {i}");
+            assert_eq!(
+                got.value,
+                convert::pct(u.leader_value.expect("value")).expect("value"),
+                "row {i}"
+            );
+            assert_eq!(
+                got.extra.map(|e| e.value),
+                u.extra.leader_extra_value.map(|v| convert::pct(v).expect("extra value")),
+                "row {i}"
+            );
         }
-        assert_eq!(table.by_id.len(), 313, "the corpus and the reference file disagree");
+        assert!(
+            ids.iter().all(|(_, id)| usize::from(id.0) < file.len()),
+            "a card resolved past the file"
+        );
+    }
+
+    /// I might need to remove this one later if we want custom cards in the future
+    /// but for a snapshot of where SIF was when it shut down, this is what keeps
+    /// that file static: the corpus may not hold a leader skill it does not list.
+    #[test]
+    fn check_a_leader_skill_outside_the_file_is_rejected() {
+        let roster = Roster::build(cards().iter().map(|c| c.character.as_str()));
+        let map = map();
+        let mut file = unique();
+        let dropped = file.pop().expect("313 rows").to_leader();
+        let mut table = Table::seeded(&file, &map, &roster).expect("seed");
+
+        let err = table.resolve(66, &dropped, &map, &roster).expect_err("not in the file");
+        assert_eq!(err.culprit, Culprit::Card(66));
+        assert_eq!(err.field, "leader_skill");
+        assert_eq!(err.kind, ErrorKind::Invariant);
     }
 
     /// Dedupe can merge identical leader skills and nothing else.

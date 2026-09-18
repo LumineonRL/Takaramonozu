@@ -4,7 +4,7 @@ use simulator::card::{Card, CardDb, CardMeta};
 use simulator::scalar::{Roster, Stats};
 
 use crate::load::convert::{self, At, Culprit, ErrorKind, LoadError};
-use crate::load::raw::{RawCard, RawStats, RawTargetMap};
+use crate::load::raw::{RawCard, RawStats, RawTargetMap, RawUniqueLeader};
 use crate::load::{leader, skill};
 
 // unidolized min, unidolized max, idolized min, idolized max.
@@ -25,6 +25,7 @@ const SIS: [[[u8; 4]; 2]; 5] = [
 #[expect(clippy::panic_in_result_fn, reason = "capacity bound, documented above")]
 pub fn build(
     raw: &[RawCard],
+    unique_leaders: &[RawUniqueLeader],
     leader_map: &RawTargetMap,
     year_group: &RawTargetMap,
 ) -> Result<CardDb, LoadError> {
@@ -34,7 +35,7 @@ pub fn build(
     assert!(u16::try_from(order.len()).is_ok(), "{} cards do not fit a CardIdx", order.len());
 
     let mut skills = skill::Table::default();
-    let mut leaders = leader::Table::default();
+    let mut leaders = leader::Table::seeded(unique_leaders, leader_map, &roster)?;
     let mut cards = Vec::with_capacity(order.len());
     let mut meta: Vec<CardMeta> = Vec::with_capacity(order.len());
     for c in order {
@@ -44,7 +45,7 @@ pub fn build(
         cards.push(Card {
             stats: [stats(&c.stats.unidolized), stats(&c.stats.idolized)],
             skill: skills.insert(c.card_id, &c.skill, year_group, &roster)?,
-            leader: leaders.insert(c.card_id, &c.leader_skill, leader_map, &roster)?,
+            leader: leaders.resolve(c.card_id, &c.leader_skill, leader_map, &roster)?,
             #[expect(clippy::expect_used, reason = "the roster is built from these characters")]
             character: roster.id(&c.character).expect("names of the characters"),
             attribute: convert::attribute(&c.attribute)
@@ -131,13 +132,18 @@ mod tests {
         raw::parse_target_map(&read("year_group_target.json")).expect("schema")
     }
 
+    fn unique() -> Vec<RawUniqueLeader> {
+        raw::parse_unique_leaders(&read("unique_leader_skills.json")).expect("schema")
+    }
+
     fn built() -> CardDb {
-        build(&cards(), &map(), &year_group()).unwrap_or_else(|e| panic!("corpus is valid: {e}"))
+        build(&cards(), &unique(), &map(), &year_group())
+            .unwrap_or_else(|e| panic!("corpus is valid: {e}"))
     }
 
     /// [`CardDb`] has no `Debug`, so `expect_err` is unavailable.
     fn rejected(cards: &[RawCard], why: &str) -> LoadError {
-        match build(cards, &map(), &year_group()) {
+        match build(cards, &unique(), &map(), &year_group()) {
             Err(e) => e,
             Ok(_) => panic!("built anyway: {why}"),
         }
@@ -162,7 +168,8 @@ mod tests {
 
         let mut shuffled = cards();
         shuffled.reverse();
-        let other = build(&shuffled, &map(), &year_group()).unwrap_or_else(|e| panic!("{e}"));
+        let other =
+            build(&shuffled, &unique(), &map(), &year_group()).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(db.cards, other.cards);
         assert_eq!(db.meta, other.meta);
         assert_eq!(db.skill_targets, other.skill_targets);

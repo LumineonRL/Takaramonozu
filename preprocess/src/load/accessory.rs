@@ -229,9 +229,11 @@ mod tests {
         static CARDS: OnceLock<CardDb> = OnceLock::new();
         CARDS.get_or_init(|| {
             let raw: Vec<RawCard> = raw::parse(&read("cards.json")).expect("schema");
+            let unique =
+                raw::parse_unique_leaders(&read("unique_leader_skills.json")).expect("schema");
             let leaders =
                 raw::parse_target_map(&read("additional_leader_skill_map.json")).expect("schema");
-            crate::load::card::build(&raw, &leaders, &map()).expect("card list is valid")
+            crate::load::card::build(&raw, &unique, &leaders, &map()).expect("card list is valid")
         })
     }
 

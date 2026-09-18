@@ -1,7 +1,7 @@
 //! A slot for each lane + a guest
 
 use simulator::accessory::AccessoryDb;
-use simulator::card::CardDb;
+use simulator::card::{CardDb, LeaderId};
 use simulator::sis::SisDb;
 
 use crate::accessory::Accessories;
@@ -97,13 +97,32 @@ impl TeamSlot {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub struct Team {
     slots: [Option<TeamSlot>; LANES],
-    pub guest: Option<u16>,
+    guest: Option<LeaderId>,
 }
 
 impl Team {
     #[must_use]
     pub fn slot(&self, lane: usize) -> Option<TeamSlot> {
         self.slots.get(lane).copied().flatten()
+    }
+
+    #[must_use]
+    pub const fn guest(&self) -> Option<LeaderId> {
+        self.guest
+    }
+
+    /// # Errors
+    /// An id past the leader table.
+    pub fn set_guest(&mut self, guest: LeaderId, ctx: Context) -> Result<(), Problem> {
+        if ctx.cards.leaders.get(usize::from(guest.0)).is_none() {
+            return Err(Problem::Unknown);
+        }
+        self.guest = Some(guest);
+        Ok(())
+    }
+
+    pub const fn clear_guest(&mut self) {
+        self.guest = None;
     }
 
     pub fn lanes(&self) -> impl Iterator<Item = (usize, TeamSlot)> {
@@ -194,7 +213,7 @@ mod tests {
     use crate::manager::EntryId;
     use crate::sis::{SisInventory, tests::sis};
     use simulator::accessory::AccessoryDb;
-    use simulator::card::CardDb;
+    use simulator::card::{CardDb, LeaderId};
     use simulator::sis::SisDb;
 
     struct Fixture {
@@ -298,6 +317,32 @@ mod tests {
         team.equip_accessory(0, loose, f.ctx()).unwrap();
         assert_eq!(team.equip_accessory(1, loose, f.ctx()), Err(Problem::InUse));
         assert_eq!(team.equip_accessory(1, locked, f.ctx()), Err(Problem::Restricted));
+    }
+
+    #[test]
+    fn check_guest_is_a_leader_skill() {
+        let f = fixture();
+        let mut team = Team::default();
+        assert_eq!(team.guest(), None);
+
+        let last = LeaderId(u16::try_from(f.cards.leaders.len() - 1).unwrap());
+        team.set_guest(last, f.ctx()).unwrap();
+        assert_eq!(team.guest(), Some(last));
+
+        let past = LeaderId(u16::try_from(f.cards.leaders.len()).unwrap());
+        assert_eq!(team.set_guest(past, f.ctx()), Err(Problem::Unknown));
+        assert_eq!(team.guest(), Some(last), "rejected guest");
+
+        team.clear_guest();
+        assert_eq!(team.guest(), None);
+    }
+
+    #[test]
+    fn check_no_leader_skill_guest() {
+        let f = fixture();
+        let mut team = Team::default();
+        team.set_guest(LeaderId(0), f.ctx()).unwrap();
+        assert_eq!(team.guest(), Some(LeaderId(0)));
     }
 
     #[test]

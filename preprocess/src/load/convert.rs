@@ -24,11 +24,18 @@ pub enum Culprit {
     Accessory(u16),
     Sis(u16),
     Chart(Box<str>),
+    Leader(u16),
 }
 
 impl From<&str> for Culprit {
     fn from(key: &str) -> Self {
         Self::Chart(key.into())
+    }
+}
+
+impl From<&Self> for Culprit {
+    fn from(culprit: &Self) -> Self {
+        culprit.clone()
     }
 }
 
@@ -54,6 +61,7 @@ impl fmt::Display for LoadError {
             Culprit::Accessory(id) => write!(f, "accessory {id}, ")?,
             Culprit::Sis(id) => write!(f, "SIS {id}, ")?,
             Culprit::Chart(key) => write!(f, "chart {key}, ")?,
+            Culprit::Leader(id) => write!(f, "leader skill {id}, ")?,
         }
         write!(f, "field `{}`: ", self.field)?;
         match &self.kind {
@@ -398,5 +406,20 @@ mod tests {
 
         let wide = pct(3.0).at(Culprit::Card(66), "chance").expect_err("out of range");
         assert_eq!(wide.to_string(), "card 66, field `chance`: 3 does not fit this field");
+    }
+
+    #[test]
+    fn check_each_table_names_itself() {
+        let named = |culprit: Culprit| {
+            Err::<(), _>(ErrorKind::Invariant)
+                .at(culprit, "f")
+                .expect_err("always")
+                .to_string()
+        };
+        assert!(named(Culprit::Card(217)).starts_with("card 217, "));
+        assert!(named(Culprit::Accessory(217)).starts_with("accessory 217, "));
+        assert!(named(Culprit::Sis(217)).starts_with("SIS 217, "));
+        assert!(named(Culprit::Leader(217)).starts_with("leader skill 217, "));
+        assert!(named("Live_s0607".into()).starts_with("chart Live_s0607, "));
     }
 }

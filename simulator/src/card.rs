@@ -163,7 +163,7 @@ pub struct CardDb {
 
 impl Kind for CardDb {
     const MAGIC: [u8; 8] = *b"LLSIFCDB";
-    const VERSION: u32 = 2;
+    const VERSION: u32 = 3;
 }
 
 impl CardDb {
