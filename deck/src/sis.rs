@@ -98,6 +98,7 @@ pub(crate) mod tests {
         let mut targets = skill::Targets::default();
         let mine = targets.intern("Sonoda Umi", || Ok::<_, ()>(CharacterSet(0b1))).unwrap();
         let theirs = targets.intern("Nishikino Maki", || Ok::<_, ()>(CharacterSet(0b10))).unwrap();
+        let nine = targets.intern("Nonet", || Ok::<_, ()>(CharacterSet(0b1_1111_1111))).unwrap();
 
         SisDb {
             sis: vec![
@@ -107,6 +108,8 @@ pub(crate) mod tests {
                 Sis::new(SisEffect::SelfPercent, Attribute::Smile, 2, 130, Some(theirs), None),
                 Sis::new(SisEffect::Charm, Attribute::Smile, 4, 2500, None, None),
                 Sis::new(SisEffect::Charm, Attribute::Cool, 4, 2500, None, None),
+                Sis::new(SisEffect::AllPercent, Attribute::Smile, 2, 15, None, None),
+                Sis::new(SisEffect::AllPercent, Attribute::Smile, 2, 42, None, Some(nine)),
             ],
             meta: vec![
                 SisMeta { sis_id: 7, name: "Smile Kiss".into() },
@@ -115,6 +118,8 @@ pub(crate) mod tests {
                 SisMeta { sis_id: 13, name: "Smile Petit (Maki)".into() },
                 SisMeta { sis_id: 15, name: "Smile Charm".into() },
                 SisMeta { sis_id: 17, name: "Cool Charm".into() },
+                SisMeta { sis_id: 19, name: "Smile Aura".into() },
+                SisMeta { sis_id: 21, name: "Smile Nonet".into() },
             ],
             targets,
         }

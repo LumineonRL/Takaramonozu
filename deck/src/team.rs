@@ -46,6 +46,11 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
+    #[must_use]
+    pub fn card(self, entry: EntryId) -> Option<&'a Card> {
+        self.equipped_by(entry).map(|(_, card)| card)
+    }
+
     fn equipped_by(self, entry: EntryId) -> Option<(u16, &'a Card)> {
         let card_id = self.deck.get(entry)?.card_id();
         let card = self.cards.cards.get(usize::from(self.cards.index(card_id)?.0))?;
@@ -344,7 +349,7 @@ impl Team {
 
 #[cfg(test)]
 mod tests {
-    use super::{Context, LANES, Problem, Team};
+    use super::{Context, Problem, Team};
     use crate::accessory::{Accessories, tests::accessories};
     use crate::card::{Deck, Gallery, tests::cards};
     use crate::manager::{EntryId, Manager};

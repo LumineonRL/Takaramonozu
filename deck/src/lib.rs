@@ -1,5 +1,6 @@
 pub mod accessory;
 pub mod card;
+pub mod compile;
 pub mod level_cap;
 pub mod manager;
 pub mod sis;
