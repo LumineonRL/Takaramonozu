@@ -1,4 +1,10 @@
 //! The stat calculation pipeline for a Team.
+//!
+//! Special thanks to none other than me from 10 years ago, coming in clutch
+//! with a spreadsheet I built to calculate team stats, as it helped present me
+//! fix a bug in the calculation order.
+//! See https://docs.google.com/spreadsheets/d/1ecVUlSYMU5oBAvSbhgmbUjPlJZTklf2OF6_s3MY4dTM
+//! for a historic relic of just how long I've been wanting to "solve" SIF.
 
 use core::num::NonZeroU8;
 
@@ -56,7 +62,7 @@ pub fn heart_bonus(max_hp: u8) -> u16 {
 /// Oh, another assumption. We're only modeling GREAT/PERFECT taps, no misses
 /// or anything that will cost stamina, so no modeling the mechanic where you
 /// lose partial overheal gauge.
-#[expect(clippy::doc_markdown, reason="Are we really doing this again, Clippy?")]
+#[expect(clippy::doc_markdown, reason = "Are we really doing this again, Clippy?")]
 #[must_use]
 pub fn max_hearts(per_heart: u16) -> u16 {
     if per_heart == 0 {
@@ -103,11 +109,15 @@ pub struct Compiled {
     pub characters: CharacterSet,
 }
 
-/// Slot-specific self-flat boost SIS + tea,=wode all percent bnoost SIS.
+/// Oh apparently you add everything together here.
 #[derive(Clone, Copy, Default)]
 struct Sums {
+    /// Self-percent SIS
     percent: [u32; 3],
+    /// Self-flat SIS
     flat: [u32; 3],
+    /// Raw card stat
+    base: [u32; 3],
 }
 
 #[must_use]
@@ -134,6 +144,7 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps) -> Compiled {
 
         // Base stats from cards and accs
         dst.stats = base;
+        lane_sums.base = base;
         if let Some(acc) = slot.accessory().and_then(|a| ctx.accessories.stats(a, ctx.acc_db)) {
             for (s, a) in dst.stats.iter_mut().zip(acc.0) {
                 *s = s.saturating_add(u32::from(a));
@@ -208,10 +219,12 @@ fn nonet(team: &Team, ctx: Context, team_mask: CharacterSet, all: &mut [u32; 3])
     }
 }
 
-/// slot self percent boost SIS -> slot self flat boost SIS -> team percent boost SIS
+/// team-wide percent SIS multiplies by the base stat, before accessory and
+/// gets added right along with the flat SIS.
 fn pipeline(stats: &mut [u32; 3], all: [u32; 3], sums: &Sums) {
-    for (((s, a), p), f) in stats.iter_mut().zip(all).zip(sums.percent).zip(sums.flat) {
-        *s = boost(boost(*s, a), p).saturating_add(f);
+    let lanes = stats.iter_mut().zip(all).zip(sums.percent).zip(sums.flat).zip(sums.base);
+    for ((((s, a), p), f), b) in lanes {
+        *s = boost(*s, p).saturating_add(f).saturating_add(portion(b, a));
     }
 }
 
@@ -231,14 +244,19 @@ fn leader(
     }
 }
 
-/// `ceil(stat * (1 + sum/1000))`.
+/// `ceil(stat * sum/1000)`
 #[expect(
     clippy::arithmetic_side_effects,
     reason = "I don't think it's possible to get anywhere close to the bound. Okay yeah I did the math
     u32 is a very big number"
 )]
+const fn portion(stat: u32, sum: Milli) -> u32 {
+    (stat * sum).div_ceil(1000)
+}
+
+/// `ceil(stat * (1 + sum/1000))`.
 const fn boost(stat: u32, sum: Milli) -> u32 {
-    (stat * (1000 + sum)).div_ceil(1000)
+    stat.saturating_add(portion(stat, sum))
 }
 
 /// `ceil(stat * pct/100)`
@@ -360,6 +378,49 @@ mod tests {
         team.equip_sis(0, aura, f.ctx()).unwrap();
 
         assert_eq!(f.run(&team).slots[0].stats[0], 3);
+    }
+
+    #[test]
+    fn check_stat_pipeline_for_real_this_time() {
+        let mut f = fixture();
+        let card = f.card(1, true, 8); // idolized, 1021 Smile
+        let (petit, aura) = (f.owns(11), f.owns(19)); // 13% self, 1.5% team
+        let mut team = Team::default();
+        team.equip_card(0, card, f.ctx()).unwrap();
+        team.equip_sis(0, aura, f.ctx()).unwrap();
+        assert_eq!(f.run(&team).slots[0].stats[0], 1021 + 16, "ceil(1021 * .015)");
+
+        team.equip_sis(0, petit, f.ctx()).unwrap();
+        assert_eq!(
+            f.run(&team).slots[0].stats[0],
+            1154 + 16,
+            "ceil(1021 * 1.13) + ceil(1021 * .015), and not ceil(ceil(1021 * 1.015) * 1.13)"
+        );
+    }
+
+    #[test]
+    fn check_stat_pipeline_with_acc() {
+        let mut f = fixture();
+        let (worn, bare) = (f.card(1, true, 8), f.card(1, true, 8));
+        let acc = f.accessories.add(&f.acc_db, 7, 8).unwrap().0;
+        let (mine, theirs) = (f.owns(19), f.owns(19)); // 1.5% team each, so 3%
+        let mut team = Team::default();
+        team.equip_card(0, worn, f.ctx()).unwrap();
+        team.equip_card(1, bare, f.ctx()).unwrap();
+        team.equip_accessory(0, acc, f.ctx()).unwrap();
+        team.equip_sis(0, mine, f.ctx()).unwrap();
+        team.equip_sis(1, theirs, f.ctx()).unwrap();
+
+        let stats = f.accessories.stats(acc, &f.acc_db).unwrap().0[0];
+        assert_eq!(stats, 17, "the fixture's level-8 accessory, which the margin depends on");
+
+        let out = f.run(&team);
+        assert_eq!(out.slots[1].stats[0], 1021 + 31, "ceil(1021 * .03), no accessory in play");
+        assert_eq!(
+            out.slots[0].stats[0],
+            1021 + 17 + 31,
+            "the 3% is ceil(1021 * .03) = 31 off the bare card, not ceil(1038 * .03) = 32"
+        );
     }
 
     #[test]
