@@ -3,7 +3,7 @@
 //! Special thanks to none other than me from 10 years ago, coming in clutch
 //! with a spreadsheet I built to calculate team stats, as it helped present me
 //! fix a bug in the calculation order.
-//! See https://docs.google.com/spreadsheets/d/1ecVUlSYMU5oBAvSbhgmbUjPlJZTklf2OF6_s3MY4dTM
+//! See <https://docs.google.com/spreadsheets/d/1ecVUlSYMU5oBAvSbhgmbUjPlJZTklf2OF6_s3MY4dTM>
 //! for a historic relic of just how long I've been wanting to "solve" SIF.
 
 use core::num::NonZeroU8;
@@ -107,6 +107,16 @@ pub struct Compiled {
     pub per_heart: u16,
     pub max_hearts: u16,
     pub characters: CharacterSet,
+}
+
+impl Compiled {
+    /// TODO: Be able to calculate PPN for each lane given attribute/group bonus
+    /// TODO: Be able to recalculate PPN based on attribute changes (appeal boost,
+    /// sync, Trick SIS)
+    #[must_use]
+    pub const fn strength(&self, attribute: Attribute) -> u32 {
+        pick(self.totals, attribute)
+    }
 }
 
 /// Oh apparently you add everything together here.
@@ -291,18 +301,16 @@ fn bit(c: CharacterId) -> u128 {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        Compiled, HEART_BONUS, MAX_TABLE_HP, MIN_TABLE_HP, Slot, compile, heart_bonus, max_hearts,
-    };
+    use super::{Compiled, MAX_TABLE_HP, MIN_TABLE_HP, compile, heart_bonus, max_hearts};
     use crate::accessory::{Accessories, tests::accessories};
     use crate::card::{Deck, Gallery, tests::cards};
-    use crate::level_cap::{LevelCaps, tests::corpus, tests::meta};
+    use crate::level_cap::{LevelCaps, tests::corpus};
     use crate::manager::EntryId;
     use crate::sis::{SisInventory, tests::sis};
     use crate::team::{CENTER, Context, Team};
     use simulator::accessory::AccessoryDb;
-    use simulator::card::{Card, CardDb, LeaderId, LeaderSkill};
-    use simulator::scalar::{Attribute, CharacterId, Stats};
+    use simulator::card::{CardDb, LeaderId, LeaderSkill};
+    use simulator::scalar::Attribute;
     use simulator::sis::SisDb;
 
     struct Fixture {
@@ -350,21 +358,6 @@ mod tests {
         fn owns(&mut self, sis_id: u16) -> EntryId {
             self.inventory.add(&self.sis_db, sis_id).unwrap().0
         }
-    }
-
-    fn nine_characters() -> CardDb {
-        let mut db = cards();
-        db.cards = (0..9)
-            .map(|i| Card {
-                stats: [Stats([100, 0, 0]); 2],
-                skill: None,
-                leader: LeaderId(0),
-                character: CharacterId(i),
-                attribute: Attribute::Smile,
-            })
-            .collect();
-        db.meta = (1..=9).map(|id| meta(id, false)).collect();
-        db
     }
 
     #[test]
