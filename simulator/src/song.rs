@@ -1,8 +1,8 @@
 use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::archive::{Kind, portable};
-use crate::scalar::Attribute;
-use crate::skill::{self, TargetId};
+use crate::scalar::{Attribute, CharacterSet};
+use crate::skill::{self, TargetId, Targets};
 
 pub const LANES: usize = 9;
 
@@ -124,6 +124,28 @@ pub struct Song {
     pub title: Box<str>,
     pub group: Option<TargetId>,
     pub attribute: Attribute,
+}
+
+/// For checking if the song's attribute/group matches each card's on a team.
+/// I originally figured that the simulator would own bonuses like this and that this file would only
+/// deal with the data representation and I personally still don't like this approach but my tests
+/// show that it's much more performant to have the song itself own it and only modify the masks at trial start,
+/// at least from what I tried.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Matching {
+    pub attribute: Attribute,
+    pub group: Option<CharacterSet>,
+}
+
+impl Matching {
+    #[must_use]
+    pub fn new(attribute: Attribute, group: Option<TargetId>, groups: &Targets) -> Option<Self> {
+        let group = match group {
+            None => None,
+            Some(id) => Some(groups.set(id)?),
+        };
+        Some(Self { attribute, group })
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -260,7 +282,7 @@ pub struct SongDb {
 impl Kind for SongDb {
     /// `LLSIFSDB` is the SIS database, so songs take `L` for live.
     const MAGIC: [u8; 8] = *b"LLSIFLDB";
-    const VERSION: u32 = 1;
+    const VERSION: u32 = 2;
 }
 
 impl SongDb {

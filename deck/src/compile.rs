@@ -5,12 +5,16 @@
 //! fix a bug in the calculation order.
 //! See <https://docs.google.com/spreadsheets/d/1ecVUlSYMU5oBAvSbhgmbUjPlJZTklf2OF6_s3MY4dTM>
 //! for a historic relic of just how long I've been wanting to "solve" SIF.
+//! Edit: Turns out I think I might've had in oopsie in my 10-year old spreadsheet.
+//! Thank you sifcord Discord server logs.
 
 use core::num::NonZeroU8;
 
-use simulator::card::{LeaderSkill, LeaderTargets};
+use simulator::card::{Card, LeaderSkill, LeaderTargets};
+use simulator::play::Scoring;
 use simulator::scalar::{Attribute, CharacterId, CharacterSet, Milli, Pct};
 use simulator::sis::SisEffect;
+use simulator::song::Matching;
 
 use crate::level_cap::LevelCaps;
 use crate::manager::Manager;
@@ -18,6 +22,18 @@ use crate::team::{CENTER, Context, LANES, Team};
 
 /// The tap-score total the heart count is capped one step past.
 const OVERHEAL_TARGET: u32 = 20_000;
+
+/// A given lane's tap score multiplier.
+///
+/// 1.1x if a the card attribute or card's group matches the song's attribute group
+/// 1.1 * 1.1 = 1.21x if both match
+/// 1.0x if none of them match.
+///
+/// Putting this here since it stays constant for the same team+song if we're running many sims on the same
+/// configurations. Pre-compute at the compilation step instead of re-deriving later.
+const NO_MATCH: u16 = 100;
+const ONE_MATCH: u16 = 110;
+const BOTH_MATCH: u16 = 121;
 
 /// 9 cards w/ 1 HP,
 const MIN_TABLE_HP: u8 = 9;
@@ -91,18 +107,26 @@ impl SisFlags {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(C)]
 pub struct Slot {
     pub stats: [u32; 3],
+    pub bonus: u16,
     pub sis: SisFlags,
-    _pad: [u8; 3],
+    _pad: u8,
+}
+
+impl Default for Slot {
+    fn default() -> Self {
+        Self { stats: [0; 3], bonus: NO_MATCH, sis: SisFlags(0), _pad: 0 }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub struct Compiled {
     pub slots: [Slot; LANES],
     pub totals: [u32; 3],
+    pub team_strength: u32,
     pub max_hp: u8,
     pub per_heart: u16,
     pub max_hearts: u16,
@@ -110,12 +134,17 @@ pub struct Compiled {
 }
 
 impl Compiled {
-    /// TODO: Be able to calculate PPN for each lane given attribute/group bonus
-    /// TODO: Be able to recalculate PPN based on attribute changes (appeal boost,
-    /// sync, Trick SIS)
     #[must_use]
     pub const fn strength(&self, attribute: Attribute) -> u32 {
         pick(self.totals, attribute)
+    }
+
+    #[must_use]
+    pub fn scoring(&self) -> Scoring {
+        Scoring {
+            team_strength: self.team_strength,
+            lanes: self.slots.map(|s| s.bonus),
+        }
     }
 }
 
@@ -130,8 +159,20 @@ struct Sums {
     base: [u32; 3],
 }
 
+/// Each lane's initial tap multiplier.
+/// TODO: Still nothing on accuracy or Trick SIS. Not sure if I'll roll that into this function or elsewhere.
+fn lane_bonus(card: &Card, song: Matching) -> u16 {
+    let attribute = card.attribute == song.attribute;
+    let group = song.group.is_some_and(|set| set.contains(card.character));
+    match (attribute, group) {
+        (true, true) => BOTH_MATCH,
+        (true, false) | (false, true) => ONE_MATCH,
+        (false, false) => NO_MATCH,
+    }
+}
+
 #[must_use]
-pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps) -> Compiled {
+pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> Compiled {
     let mut out = Compiled::default();
     let mut sums = [Sums::default(); LANES];
     let mut chars = [None; LANES];
@@ -162,6 +203,7 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps) -> Compiled {
         }
 
         *who = Some(card.character);
+        dst.bonus = lane_bonus(card, song);
         out.characters.0 |= bit(card.character);
         out.max_hp = out.max_hp.saturating_add(entry.hp().map_or(0, NonZeroU8::get));
         if lane == CENTER {
@@ -208,6 +250,7 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps) -> Compiled {
             *t = t.saturating_add(s);
         }
     }
+    out.team_strength = pick(out.totals, song.attribute);
     out.per_heart = heart_bonus(out.max_hp);
     out.max_hearts = max_hearts(out.per_heart);
     out
@@ -301,7 +344,10 @@ fn bit(c: CharacterId) -> u128 {
 
 #[cfg(test)]
 mod tests {
-    use super::{Compiled, MAX_TABLE_HP, MIN_TABLE_HP, compile, heart_bonus, max_hearts};
+    use super::{
+        BOTH_MATCH, Compiled, MAX_TABLE_HP, MIN_TABLE_HP, NO_MATCH, ONE_MATCH, compile,
+        heart_bonus, max_hearts,
+    };
     use crate::accessory::{Accessories, tests::accessories};
     use crate::card::{Deck, Gallery, tests::cards};
     use crate::level_cap::{LevelCaps, tests::corpus};
@@ -310,8 +356,9 @@ mod tests {
     use crate::team::{CENTER, Context, Team};
     use simulator::accessory::AccessoryDb;
     use simulator::card::{CardDb, LeaderId, LeaderSkill};
-    use simulator::scalar::Attribute;
+    use simulator::scalar::{Attribute, CharacterId, CharacterSet};
     use simulator::sis::SisDb;
+    use simulator::song::Matching;
 
     struct Fixture {
         cards: CardDb,
@@ -347,8 +394,15 @@ mod tests {
             }
         }
 
+        /// The fixture card is a groupless Smile, so this is the song that
+        /// matches it on neither count - every stat assertion below is about
+        /// the pipeline and not about the tap bonus.
         fn run(&self, team: &Team) -> Compiled {
-            compile(team, self.ctx(), &self.caps)
+            self.against(team, Matching { attribute: Attribute::Cool, group: None })
+        }
+
+        fn against(&self, team: &Team, song: Matching) -> Compiled {
+            compile(team, self.ctx(), &self.caps, song)
         }
 
         fn card(&mut self, card_id: u16, idolized: bool, slots: u8) -> EntryId {
@@ -459,6 +513,45 @@ mod tests {
         team.clear(0).unwrap();
         team.equip_card(CENTER, card, f.ctx()).unwrap();
         assert_eq!(f.run(&team).slots[CENTER].stats[0], 1021 + 32, "ceil(315 * .10)");
+    }
+
+    /// The fixture card is `CharacterId(0)`, Smile.
+    #[test]
+    fn check_lane_bonus() {
+        let mut f = fixture();
+        let card = f.card(1, true, 8);
+        let mut team = Team::default();
+        team.equip_card(0, card, f.ctx()).unwrap();
+
+        let hers = CharacterSet(1 << CharacterId(0).0);
+        let cases = [
+            (Attribute::Cool, None, NO_MATCH),
+            (Attribute::Smile, None, ONE_MATCH),
+            (Attribute::Cool, Some(hers), ONE_MATCH),
+            (Attribute::Smile, Some(hers), BOTH_MATCH),
+            (Attribute::Smile, Some(CharacterSet(0)), ONE_MATCH),
+        ];
+        for (attribute, group, want) in cases {
+            let out = f.against(&team, Matching { attribute, group });
+            assert_eq!(out.slots[0].bonus, want, "{attribute:?} {group:?}");
+            assert_eq!(out.slots[1].bonus, NO_MATCH, "Empty lane is trivially 1.00x");
+            assert_eq!(out.scoring().lanes[0], want);
+        }
+    }
+
+    #[test]
+    fn check_team_strength_matches_song_attribute() {
+        let mut f = fixture();
+        let card = f.card(1, true, 8); // 1021 Smile, 2 Pure, 315 Cool
+        let mut team = Team::default();
+        team.equip_card(0, card, f.ctx()).unwrap();
+
+        let smile = f.against(&team, Matching { attribute: Attribute::Smile, group: None });
+        let cool = f.against(&team, Matching { attribute: Attribute::Cool, group: None });
+        assert_eq!(smile.team_strength, 1021, "raw team total.");
+        assert_eq!(cool.team_strength, 315);
+        assert_eq!(smile.scoring().team_strength, smile.team_strength);
+        assert_eq!(smile.totals, cool.totals, "only the attribute read differs");
     }
 
     #[test]
