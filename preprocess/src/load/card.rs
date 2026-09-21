@@ -158,7 +158,7 @@ mod tests {
         assert_eq!(db.skill_targets.len(), 14);
         assert_eq!(db.leaders.len(), 313);
         assert_eq!(db.leader_targets.len(), 74);
-        assert_eq!(db.roster.len(), 99);
+        assert_eq!(db.roster.len(), 102);
     }
 
     #[test]

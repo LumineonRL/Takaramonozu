@@ -336,7 +336,7 @@ mod tests {
     fn check_roster_is_sorted_correctly() {
         let cards = cards();
         let roster = Roster::build(cards.iter().map(|c| c.character.as_str()));
-        assert_eq!(roster.len(), 99);
+        assert_eq!(roster.len(), 102);
         for c in &cards {
             let id = roster.id(&c.character).expect("character present");
             assert_eq!(roster.name(id), Some(c.character.as_str()));

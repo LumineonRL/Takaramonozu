@@ -215,7 +215,7 @@ pub struct AccessoryDb {
 
 impl Kind for AccessoryDb {
     const MAGIC: [u8; 8] = *b"LLSIFADB";
-    const VERSION: u32 = 2;
+    const VERSION: u32 = 3;
 }
 
 impl AccessoryDb {

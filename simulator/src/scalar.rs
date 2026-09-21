@@ -66,7 +66,7 @@ pub enum Form {
     Idolized = 1,
 }
 
-/// One of 99 potential character values including all N girls.
+/// One of 102 potential character values including all N girls.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(transparent)]
 pub struct CharacterId(pub u8);
@@ -94,7 +94,7 @@ pub struct Roster {
 impl Roster {
     /// # Panics
     /// Past 128 names, which is what a `CharacterSet` bitmask holds.
-    /// There are 99 unique names.
+    /// There are 102 unique names.
     /// But idk what if someone wants to mod / extend the sim with new characters
     /// one day? Or what if custom characters become a thing on private servers
     /// one day?

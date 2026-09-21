@@ -76,7 +76,7 @@ pub struct SisDb {
 
 impl Kind for SisDb {
     const MAGIC: [u8; 8] = *b"LLSIFSDB";
-    const VERSION: u32 = 1;
+    const VERSION: u32 = 2;
 }
 
 impl SisDb {
