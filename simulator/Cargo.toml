@@ -5,6 +5,8 @@ edition.workspace = true
 
 [dependencies]
 memmap2 = { workspace = true }
+rand_pcg = { workspace = true }
+rand_xoshiro = { workspace = true }
 rkyv = { workspace = true }
 
 [lints]
