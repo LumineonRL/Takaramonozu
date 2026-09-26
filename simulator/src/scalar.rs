@@ -37,8 +37,16 @@ pub type Milli = u32;
 /// Note that this is a storage type for rates that came out of cards.json, all of
 /// which are 0..=100. However, It is deliberately too narrow for a rate as the simulator will
 /// need to handle because Skill Rate Up + Amplify shenanigans can technicaly get a skill activation chance
-/// to exceed 256% (I think... I actually need to check this edge case. Mark it as a TODO).
+/// to exceed 255% (I think... I actually need to check this edge case. Mark it as a TODO).
 pub type Pct = u8;
+
+/// You may be thinking, "what's the different between a percentage and a rate?"
+/// Most of the time they're exactly the same thing, but Rate is what actually needs
+/// to be used during the gameplay loop because of Skill Rate Up
+/// Stacking enough SRU can get the skill rate up way over 255%, breaking u8 and then
+/// everything would explode..
+pub type Rate = u16;
+pub const RATE_UNIT: Rate = 10_000;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(u8)]

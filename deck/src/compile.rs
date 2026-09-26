@@ -10,12 +10,14 @@
 
 use core::num::NonZeroU8;
 
-use simulator::card::{Card, LeaderSkill, LeaderTargets};
-use simulator::play::Scoring;
-use simulator::scalar::{Attribute, CharacterId, CharacterSet, Milli, Pct};
+use simulator::card::{Card, CardDb, LeaderSkill, LeaderTargets};
+use simulator::play::{Scoring, Skill};
+use simulator::scalar::{Attribute, Centi, CharacterId, CharacterSet, Milli, Pct, RATE_UNIT, Rate};
 use simulator::sis::SisEffect;
+use simulator::skill::{SkillEffect, SkillRows};
 use simulator::song::Matching;
 
+use crate::card::DeckEntry;
 use crate::level_cap::LevelCaps;
 use crate::manager::Manager;
 use crate::team::{CENTER, Context, LANES, Team};
@@ -34,6 +36,9 @@ const OVERHEAL_TARGET: u32 = 20_000;
 const NO_MATCH: u16 = 100;
 const ONE_MATCH: u16 = 110;
 const BOTH_MATCH: u16 = 121;
+const MILLI_UNIT: u32 = 1000;
+const PAYOUT_DIVISOR: u64 = MILLI_UNIT as u64 * 100;
+const CHARM: u32 = 2500;
 
 /// 9 cards w/ 1 HP,
 const MIN_TABLE_HP: u8 = 9;
@@ -111,6 +116,7 @@ impl SisFlags {
 #[repr(C)]
 pub struct Slot {
     pub stats: [u32; 3],
+    pub skill: Skill,
     pub bonus: u16,
     pub sis: SisFlags,
     _pad: u8,
@@ -118,7 +124,13 @@ pub struct Slot {
 
 impl Default for Slot {
     fn default() -> Self {
-        Self { stats: [0; 3], bonus: NO_MATCH, sis: SisFlags(0), _pad: 0 }
+        Self {
+            stats: [0; 3],
+            skill: Skill::NONE,
+            bonus: NO_MATCH,
+            sis: SisFlags(0),
+            _pad: 0,
+        }
     }
 }
 
@@ -144,6 +156,7 @@ impl Compiled {
         Scoring {
             team_strength: self.team_strength,
             lanes: self.slots.map(|s| s.bonus),
+            skills: self.slots.map(|s| s.skill),
         }
     }
 }
@@ -221,6 +234,8 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
                 SisEffect::Trick => {}
             }
         }
+
+        dst.skill = resolve(card, entry, ctx.cards, dst.sis);
     }
 
     if grouped && out.characters.0.count_ones() == u32::try_from(LANES).unwrap_or(u32::MAX) {
@@ -254,6 +269,44 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
     out.per_heart = heart_bonus(out.max_hp);
     out.max_hearts = max_hearts(out.per_heart);
     out
+}
+
+/// Trying to do some future proofing for Amplify skills where the skill level a skill gets resolved at can change.
+///
+/// TODO: Amplify. I'll be saving that for near the end though.
+fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> Skill {
+    let Some(def) = card.skill.and_then(|id| cards.skills.def(id)) else {
+        return Skill::NONE;
+    };
+    let level = entry.skill_level();
+    let trigger = cards.skills.trigger(def, level);
+    let (value, _duration) = cards.skills.payload(def, level);
+
+    // TODO: Every other effect
+    Skill {
+        value: if def.effect == SkillEffect::Scorer {
+            payout(value, sis)
+        } else {
+            value
+        },
+        chance: rate(trigger.chance),
+        threshold: trigger.threshold,
+        effect: def.effect,
+        trigger: def.trigger_type,
+    }
+}
+
+#[expect(clippy::integer_division, reason = "they're both constants")]
+const fn rate(chance: Pct) -> Rate {
+    (chance as Rate).saturating_mul(RATE_UNIT / 100)
+}
+
+/// The points that a scorer skill adds to the score total.
+#[expect(clippy::integer_division, reason = "Game mechanic.")]
+fn payout(value: Centi, sis: SisFlags) -> Centi {
+    let charm = if sis.charm() { CHARM } else { MILLI_UNIT };
+    let scaled = u64::from(value).saturating_mul(u64::from(charm)) / PAYOUT_DIVISOR;
+    u32::try_from(scaled).unwrap_or(u32::MAX)
 }
 
 /// Nonet can't be active unless all 9 slots are filled, so it doesn't even
