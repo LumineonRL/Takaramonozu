@@ -1,6 +1,6 @@
 //! A slot for each lane + a guest
 
-use simulator::accessory::AccessoryDb;
+use simulator::accessory::{Accessory, AccessoryDb};
 use simulator::card::{Card, CardDb, LeaderId};
 use simulator::sis::{Sis, SisDb, SisEffect};
 
@@ -55,6 +55,13 @@ impl<'a> Context<'a> {
         let card_id = self.deck.get(entry)?.card_id();
         let card = self.cards.cards.get(usize::from(self.cards.index(card_id)?.0))?;
         Some((card_id, card))
+    }
+
+    #[must_use]
+    pub fn accessory(self, entry: EntryId) -> Option<(&'a Accessory, u8)> {
+        let owned = self.accessories.get(entry)?;
+        let i = usize::from(self.acc_db.index(owned.acc_id())?.0);
+        Some((self.acc_db.accessories.get(i)?, owned.skill_level()))
     }
 
     fn accessory_equips(self, acc: EntryId, card_id: u16, equipped_by: &Card) -> Option<bool> {

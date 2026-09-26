@@ -113,11 +113,16 @@ pub(crate) mod tests {
     use simulator::scalar::{CharacterId, Stats};
     use simulator::skill::{self, SkillEffect};
 
-    /// Two accessories, ids 7 and 9, whose stat tables differ per level so a
-    /// skill level is visible in the answer.
     pub(crate) fn accessories() -> AccessoryDb {
         let mut skills = AccessoryArena::default();
         let skill = skills.push(SkillEffect::Encore, None, 0, &[3; 8], &[(0, 0)]);
+
+        // 100_000 `Centi` a level, so level 8 is 800_000 and 8000 points.
+        let payload: [(u32, u16); 8] = core::array::from_fn(|i| {
+            (u32::try_from(i).unwrap().saturating_add(1).saturating_mul(100_000), 0)
+        });
+        let scorer = skills.push(SkillEffect::Scorer, None, 0, &[31; 8], &payload);
+        let spark = skills.push(SkillEffect::Spark, None, 5, &[11; 8], &payload);
         let mut stats = StatArena::default();
 
         let ladder = |base: u16| {
@@ -135,7 +140,10 @@ pub(crate) mod tests {
             accessories: vec![
                 Accessory { skill, stats: first },
                 Accessory { skill, stats: second },
+                Accessory { skill: scorer, stats: second },
+                Accessory { skill: spark, stats: second },
             ],
+            // Just a random selection of accessories to use for testing skill level lookups.
             meta: vec![
                 AccessoryMeta {
                     acc_id: 7,
@@ -148,6 +156,18 @@ pub(crate) mod tests {
                     card_id: Some(3859),
                     character: Some(CharacterId(7)),
                     name: "UR Guren".into(),
+                },
+                AccessoryMeta {
+                    acc_id: 11,
+                    card_id: None,
+                    character: None,
+                    name: "UR Pin".into(),
+                },
+                AccessoryMeta {
+                    acc_id: 13,
+                    card_id: None,
+                    character: None,
+                    name: "UR Medal".into(),
                 },
             ],
             skills,

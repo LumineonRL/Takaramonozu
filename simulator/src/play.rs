@@ -83,8 +83,6 @@ fn note_score(team_strength: u32, combo: u16, lane: u16, note: u16) -> u64 {
 }
 
 /// Won't work for all skills, but there are some that we can pre-compute at compile-time
-///
-/// TODO: Accessory skill
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Skill {
     pub value: Centi,
@@ -111,10 +109,33 @@ impl Default for Skill {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct AccessorySkill {
+    pub value: Centi,
+    pub chance: Rate,
+    pub effect: SkillEffect,
+}
+
+impl AccessorySkill {
+    pub const NONE: Self = Self { value: 0, chance: 0, effect: SkillEffect::Scorer };
+
+    #[must_use]
+    pub const fn is_inert(self) -> bool {
+        self.chance == 0
+    }
+}
+
+impl Default for AccessorySkill {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Scoring {
     pub team_strength: u32,
     pub lanes: [u16; LANES],
     pub skills: [Skill; LANES],
+    pub accessories: [AccessorySkill; LANES],
 }
 
 impl Scoring {
@@ -124,6 +145,7 @@ impl Scoring {
             team_strength,
             lanes: [UNIT; LANES],
             skills: [Skill::NONE; LANES],
+            accessories: [AccessorySkill::NONE; LANES],
         }
     }
 }
@@ -281,6 +303,7 @@ pub struct Outcome {
     pub notes: u32,
     pub icons: u32,
     pub activations: u32,
+    pub accessory_activations: u32,
 }
 
 impl Outcome {
@@ -292,6 +315,8 @@ impl Outcome {
 
 /// Might move this to like, a `skill_activation_handler` module or something too Because again, when more skill effects get added
 /// this can get unuwieldy
+///
+/// Ties happen right to left. Actually there's a coinflip mechanic involving Amplify, but we'll worry about that once I get around to Amplify.
 #[inline]
 fn fire(mask: u16, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) {
     let mut bits = mask;
@@ -300,15 +325,28 @@ fn fire(mask: u16, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) {
         let Some(skill) = scoring.skills.get(lane as usize) else {
             continue;
         };
-        if !rng.roll(skill.chance) {
+        if rng.roll(skill.chance) {
+            out.activations = out.activations.saturating_add(1);
+            pay(skill.effect, skill.value, out);
             continue;
         }
-        out.activations = out.activations.saturating_add(1);
 
-        // TODO: every other effect.
-        if skill.effect == SkillEffect::Scorer {
-            out.skill = out.skill.saturating_add(u64::from(skill.value));
+        let Some(accessory) = scoring.accessories.get(lane as usize) else {
+            continue;
+        };
+        if accessory.is_inert() || !rng.roll(accessory.chance) {
+            continue;
         }
+        out.accessory_activations = out.accessory_activations.saturating_add(1);
+        pay(accessory.effect, accessory.value, out);
+    }
+}
+
+/// TODO: every other effect.
+#[inline]
+fn pay(effect: SkillEffect, value: Centi, out: &mut Outcome) {
+    if effect == SkillEffect::Scorer {
+        out.skill = out.skill.saturating_add(u64::from(value));
     }
 }
 
@@ -369,7 +407,9 @@ mod tests {
         reason = "Kind of need to verify that the things we're doing to avoid division still result in the same number."
     )]
 
-    use super::{Outcome, Queue, Scoring, Skill, Triggers, combo_bonus, points_per_note, run};
+    use super::{
+        AccessorySkill, Outcome, Queue, Scoring, Skill, Triggers, combo_bonus, points_per_note, run,
+    };
     use crate::play_config::{NoteSpeed, PlayConfig};
     use crate::rng::Rng;
     use crate::scalar::{RATE_UNIT, Rate};
@@ -407,6 +447,10 @@ mod tests {
             effect: SkillEffect::Scorer,
             trigger: TriggerType::RhythmIcons,
         }
+    }
+
+    fn worn(chance: Rate, value: u32) -> AccessorySkill {
+        AccessorySkill { value, chance, effect: SkillEffect::Scorer }
     }
 
     fn play(queue: &Queue, scoring: &Scoring) -> Outcome {
@@ -542,7 +586,7 @@ mod tests {
 
         // 110_000 team_strength = 1375 ppn
         let out = play(&queue, &Scoring::flat(110_000));
-        assert_eq!(out, Outcome { tap: 1375 * 3, skill: 0, notes: 3, icons: 3, activations: 0 });
+        assert_eq!(out, Outcome { tap: 1375 * 3, notes: 3, icons: 3, ..Outcome::default() });
 
         assert_eq!(super::note_score(110_000, 110, 100, 1000), 1512);
 
@@ -662,6 +706,40 @@ mod tests {
         let loud = play(&queue, &scoring);
         assert_eq!(loud.activations, 51, "every icon");
         assert_eq!(loud.tap, bare);
+    }
+
+    #[test]
+    fn check_accessory_trigger() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let mut scoring = Scoring::flat(0);
+        scoring.skills[2] = scorer(1, ALWAYS, 1120);
+        scoring.accessories[2] = worn(ALWAYS, 9000);
+        let hits = play(&queue, &scoring);
+        assert_eq!((hits.activations, hits.accessory_activations), (51, 0));
+        assert_eq!(hits.skill, 51 * 1120, "acc never got a chance to activate");
+
+        scoring.skills[2] = scorer(1, 0, 1120);
+        let misses = play(&queue, &scoring);
+        assert_eq!((misses.activations, misses.accessory_activations), (0, 51));
+        assert_eq!(misses.skill, 51 * 9000, "acc can now activate");
+    }
+
+    /// A member with no skill has none to fail, so an unscheduled lane silences
+    /// its accessory.
+    #[test]
+    fn check_no_card_skill_means_no_acc_skill() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let mut scoring = Scoring::flat(0);
+        scoring.skills[3] = Skill::NONE;
+        scoring.accessories[3] = worn(ALWAYS, 9000);
+        assert_eq!(Triggers::build(&queue, &scoring).rolls(), 0, "nothing to fail");
+
+        let out = play(&queue, &scoring);
+        assert_eq!((out.accessory_activations, out.skill), (0, 0));
     }
 
     #[test]

@@ -10,8 +10,9 @@
 
 use core::num::NonZeroU8;
 
+use simulator::accessory::AccessoryRows;
 use simulator::card::{Card, CardDb, LeaderSkill, LeaderTargets};
-use simulator::play::{Scoring, Skill};
+use simulator::play::{AccessorySkill, Scoring, Skill};
 use simulator::scalar::{Attribute, Centi, CharacterId, CharacterSet, Milli, Pct, RATE_UNIT, Rate};
 use simulator::sis::SisEffect;
 use simulator::skill::{SkillEffect, SkillRows};
@@ -19,7 +20,7 @@ use simulator::song::Matching;
 
 use crate::card::DeckEntry;
 use crate::level_cap::LevelCaps;
-use crate::manager::Manager;
+use crate::manager::{EntryId, Manager};
 use crate::team::{CENTER, Context, LANES, Team};
 
 /// The tap-score total the heart count is capped one step past.
@@ -117,6 +118,7 @@ impl SisFlags {
 pub struct Slot {
     pub stats: [u32; 3],
     pub skill: Skill,
+    pub accessory: AccessorySkill,
     pub bonus: u16,
     pub sis: SisFlags,
     _pad: u8,
@@ -127,6 +129,7 @@ impl Default for Slot {
         Self {
             stats: [0; 3],
             skill: Skill::NONE,
+            accessory: AccessorySkill::NONE,
             bonus: NO_MATCH,
             sis: SisFlags(0),
             _pad: 0,
@@ -157,6 +160,7 @@ impl Compiled {
             team_strength: self.team_strength,
             lanes: self.slots.map(|s| s.bonus),
             skills: self.slots.map(|s| s.skill),
+            accessories: self.slots.map(|s| s.accessory),
         }
     }
 }
@@ -236,6 +240,9 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
         }
 
         dst.skill = resolve(card, entry, ctx.cards, dst.sis);
+        dst.accessory = slot
+            .accessory()
+            .map_or(AccessorySkill::NONE, |worn| resolve_accessory(worn, ctx, dst.sis));
     }
 
     if grouped && out.characters.0.count_ones() == u32::try_from(LANES).unwrap_or(u32::MAX) {
@@ -293,6 +300,31 @@ fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> Skil
         threshold: trigger.threshold,
         effect: def.effect,
         trigger: def.trigger_type,
+    }
+}
+
+/// TODO: Spark. Durations. I'd prefer for this to also be generic enough to not need to reimplement every skill effect
+/// since accs have the same exact effects as cards besides spark.
+fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> AccessorySkill {
+    let Some((accessory, level)) = ctx.accessory(worn) else {
+        return AccessorySkill::NONE;
+    };
+    let Some(def) = ctx.acc_db.skills.def(accessory.skill) else {
+        return AccessorySkill::NONE;
+    };
+    if def.effect == SkillEffect::Spark {
+        return AccessorySkill::NONE;
+    }
+    let (value, _duration) = ctx.acc_db.skills.payload(def, level);
+
+    AccessorySkill {
+        value: if def.effect == SkillEffect::Scorer {
+            payout(value, sis)
+        } else {
+            value
+        },
+        chance: rate(ctx.acc_db.skills.chance(def, level)),
+        effect: def.effect,
     }
 }
 
@@ -411,6 +443,7 @@ mod tests {
     use simulator::card::{CardDb, LeaderId, LeaderSkill};
     use simulator::scalar::{Attribute, CharacterId, CharacterSet};
     use simulator::sis::SisDb;
+    use simulator::skill::SkillEffect;
     use simulator::song::Matching;
 
     struct Fixture {
@@ -447,9 +480,6 @@ mod tests {
             }
         }
 
-        /// The fixture card is a groupless Smile, so this is the song that
-        /// matches it on neither count - every stat assertion below is about
-        /// the pipeline and not about the tap bonus.
         fn run(&self, team: &Team) -> Compiled {
             self.against(team, Matching { attribute: Attribute::Cool, group: None })
         }
@@ -605,6 +635,41 @@ mod tests {
         assert_eq!(cool.team_strength, 315);
         assert_eq!(smile.scoring().team_strength, smile.team_strength);
         assert_eq!(smile.totals, cool.totals, "only the attribute read differs");
+    }
+
+    #[test]
+    fn check_scorer_accessory_gets_charm_sis() {
+        let mut f = fixture();
+        let card = f.card(1, true, 8);
+        let pin = f.accessories.add(&f.acc_db, 11, 8).unwrap().0; // Scorer
+        let charm = f.owns(15); // Smile Charm
+        let mut team = Team::default();
+        team.equip_card(0, card, f.ctx()).unwrap();
+        team.equip_accessory(0, pin, f.ctx()).unwrap();
+
+        let bare = f.run(&team).slots[0].accessory;
+        assert_eq!(bare.value, 8000,);
+        assert_eq!(bare.chance, 3100);
+        assert_eq!(bare.effect, SkillEffect::Scorer);
+
+        team.equip_sis(0, charm, f.ctx()).unwrap();
+        let charmed = f.run(&team).slots[0].accessory;
+        assert_eq!(charmed.value, 20_000);
+        assert_eq!(charmed.chance, bare.chance);
+        assert_eq!(f.run(&team).scoring().accessories[0], charmed);
+    }
+
+    /// It would be bad if accessories used the card's skill level because someone made an oopsie.
+    #[test]
+    fn check_an_accessory_skill_level() {
+        let mut f = fixture();
+        let card = f.card(1, true, 8);
+        let low = f.accessories.add(&f.acc_db, 11, 3).unwrap().0;
+        let mut team = Team::default();
+        team.equip_card(0, card, f.ctx()).unwrap();
+        team.equip_accessory(0, low, f.ctx()).unwrap();
+
+        assert_eq!(f.run(&team).slots[0].accessory.value, 3000, "300_000 Centi at level 3");
     }
 
     #[test]
