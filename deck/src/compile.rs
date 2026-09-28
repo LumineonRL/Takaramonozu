@@ -12,7 +12,8 @@ use core::num::NonZeroU8;
 
 use simulator::accessory::AccessoryRows;
 use simulator::card::{Card, CardDb, LeaderSkill, LeaderTargets};
-use simulator::play::{AccessorySkill, Scoring, Skill};
+use simulator::play::Scoring;
+use simulator::play::activation::{AccessorySkill, Skill};
 use simulator::scalar::{Attribute, Centi, CharacterId, CharacterSet, Milli, Pct, RATE_UNIT, Rate};
 use simulator::sis::SisEffect;
 use simulator::skill::{SkillEffect, SkillRows};

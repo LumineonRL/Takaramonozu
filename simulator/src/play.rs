@@ -1,10 +1,12 @@
 //! Orchestrator of one playthrough of one chart with one team.
 
+pub mod activation;
+
 use crate::play_config::PlayConfig;
 use crate::rng::Rng;
-use crate::scalar::{Centi, RATE_UNIT, Rate};
-use crate::skill::{SkillEffect, TriggerType};
+use crate::scalar::{RATE_UNIT, Rate};
 use crate::song::{Chart, ChartRows, Event, EventKind, LANES, Time};
+use activation::{AccessorySkill, Skill, Triggers, fire};
 
 /// I love magic numbers! PPN is calculated by `team_strength / 100 * 1.25`.
 /// But of course float arithmetic is the greatest evil of man-kind,
@@ -88,54 +90,6 @@ fn note_score(team_strength: u32, combo: u16, lane: u16, note: u16, judgement: u
         .saturating_mul(u64::from(note))
         .saturating_mul(u64::from(judgement))
         / DIVISOR
-}
-
-/// Won't work for all skills, but there are some that we can pre-compute at compile-time
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct Skill {
-    pub value: Centi,
-    pub chance: Rate,
-    pub threshold: u16,
-    pub effect: SkillEffect,
-    pub trigger: TriggerType,
-}
-
-impl Skill {
-    pub const NONE: Self = Self {
-        value: 0,
-        chance: 0,
-        threshold: 0,
-        effect: SkillEffect::Scorer,
-        trigger: TriggerType::RhythmIcons,
-    };
-}
-
-impl Default for Skill {
-    fn default() -> Self {
-        Self::NONE
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct AccessorySkill {
-    pub value: Centi,
-    pub chance: Rate,
-    pub effect: SkillEffect,
-}
-
-impl AccessorySkill {
-    pub const NONE: Self = Self { value: 0, chance: 0, effect: SkillEffect::Scorer };
-
-    #[must_use]
-    pub const fn is_inert(self) -> bool {
-        self.chance == 0
-    }
-}
-
-impl Default for AccessorySkill {
-    fn default() -> Self {
-        Self::NONE
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -323,68 +277,6 @@ impl Judgements {
     }
 }
 
-/// TODO: I might have a separate trigger handling module because this is going to get big fast.
-/// TODO: Combo and Star Notes belong here.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Triggers {
-    at: Vec<u32>,
-    lanes: Vec<u16>,
-}
-
-impl Triggers {
-    /// # Panics
-    /// Neverrrrr
-    #[must_use]
-    #[expect(clippy::arithmetic_side_effects, reason = "`bounded by threshold")]
-    #[expect(clippy::expect_used, reason = "9 lanes fit u16 no problemo so we gucci.")]
-    pub fn build(queue: &Queue, scoring: &Scoring) -> Self {
-        const { assert!(LANES <= u16::BITS as usize, "u16") };
-
-        let icons = queue.icons();
-        let mut dense = vec![0_u16; icons as usize + 1];
-        for (lane, skill) in scoring.skills.iter().enumerate() {
-            if skill.trigger != TriggerType::RhythmIcons || skill.threshold == 0 {
-                continue;
-            }
-            let bit = 1_u16.checked_shl(u32::try_from(lane).expect("9 lanes")).expect("u16");
-            let step = u32::from(skill.threshold);
-            let mut at = step;
-            while at <= icons {
-                if let Some(mask) = dense.get_mut(at as usize) {
-                    *mask |= bit;
-                }
-                at += step;
-            }
-        }
-
-        let mut out = Self { at: Vec::new(), lanes: Vec::new() };
-        for (at, &mask) in dense.iter().enumerate() {
-            if mask != 0 {
-                out.at.push(u32::try_from(at).unwrap_or(u32::MAX));
-                out.lanes.push(mask);
-            }
-        }
-        out.at.push(u32::MAX);
-        out.lanes.push(0);
-        out
-    }
-
-    #[must_use]
-    pub fn rolls(&self) -> u32 {
-        self.lanes.iter().map(|m| m.count_ones()).sum()
-    }
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.lanes.len().saturating_sub(1)
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub struct Outcome {
     pub tap: u64,
@@ -403,43 +295,6 @@ impl Outcome {
     #[must_use]
     pub const fn score(&self) -> u64 {
         self.tap.saturating_add(self.skill)
-    }
-}
-
-/// Might move this to like, a `skill_activation_handler` module or something too Because again, when more skill effects get added
-/// this can get unuwieldy
-///
-/// Ties happen right to left. Actually there's a coinflip mechanic involving Amplify, but we'll worry about that once I get around to Amplify.
-#[inline]
-fn fire(mask: u16, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) {
-    let mut bits = mask;
-    while let Some(lane) = bits.highest_one() {
-        bits ^= bits.isolate_highest_one();
-        let Some(skill) = scoring.skills.get(lane as usize) else {
-            continue;
-        };
-        if rng.roll(skill.chance) {
-            out.activations = out.activations.saturating_add(1);
-            pay(skill.effect, skill.value, out);
-            continue;
-        }
-
-        let Some(accessory) = scoring.accessories.get(lane as usize) else {
-            continue;
-        };
-        if accessory.is_inert() || !rng.roll(accessory.chance) {
-            continue;
-        }
-        out.accessory_activations = out.accessory_activations.saturating_add(1);
-        pay(accessory.effect, accessory.value, out);
-    }
-}
-
-/// TODO: every other effect.
-#[inline]
-fn pay(effect: SkillEffect, value: Centi, out: &mut Outcome) {
-    if effect == SkillEffect::Scorer {
-        out.skill = out.skill.saturating_add(u64::from(value));
     }
 }
 
@@ -462,18 +317,22 @@ pub fn run(
     let mut heads = [false; LANES];
     let mut icon = 0_usize;
     let mut tap = 0_usize;
-    let mut cursor = 0_usize;
-    let mut next = triggers.at[0] as usize;
+    let (icon_at, icon_lanes) = triggers.icons().columns();
+    let (combo_at, combo_lanes) = triggers.combo().columns();
+    let mut icon_cursor = 0_usize;
+    let mut next_icon = icon_at[0] as usize;
+    let mut combo_cursor = 0_usize;
+    let mut next_combo = combo_at[0];
 
     loop {
         let time = queue.times[tap];
 
         while icon < icons.len() && icons[icon].spawn(offset) < time {
             icon = icon.saturating_add(1);
-            if icon == next {
-                fire(triggers.lanes[cursor], scoring, &mut rng, &mut out);
-                cursor = cursor.saturating_add(1);
-                next = triggers.at[cursor] as usize;
+            if icon == next_icon {
+                fire(icon_lanes[icon_cursor], scoring, &mut rng, &mut out);
+                icon_cursor = icon_cursor.saturating_add(1);
+                next_icon = icon_at[icon_cursor] as usize;
             }
         }
 
@@ -501,7 +360,12 @@ pub fn run(
                 ));
                 out.notes = out.notes.saturating_add(1);
                 out.perfects = out.perfects.saturating_add(u32::from(perfect));
-                // TODO: the counter triggers roll here
+                if out.notes == next_combo {
+                    fire(combo_lanes[combo_cursor], scoring, &mut rng, &mut out);
+                    combo_cursor = combo_cursor.saturating_add(1);
+                    next_combo = combo_at[combo_cursor];
+                }
+                // TODO: Perfects, Star Notes and Score join combo here
             }
         }
 
@@ -524,7 +388,6 @@ mod tests {
         points_per_note, run,
     };
     use crate::play_config::{NoteSpeed, PlayConfig};
-    use crate::rng::Rng;
     use crate::scalar::{RATE_UNIT, Rate};
     use crate::skill::{SkillEffect, TriggerType};
     use crate::song::{
@@ -532,27 +395,27 @@ mod tests {
     };
 
     /// Fake skill that always procs so they can be tested.
-    const ALWAYS: Rate = RATE_UNIT;
+    pub(super) const ALWAYS: Rate = RATE_UNIT;
 
-    fn arena(judgements: &[(Time, Event)]) -> ChartArena {
+    pub(super) fn arena(judgements: &[(Time, Event)]) -> ChartArena {
         let mut arena = ChartArena::default();
         arena.push(SongIdx(0), Difficulty::Master, judgements);
         arena
     }
 
-    fn only(arena: &ChartArena) -> Chart {
+    pub(super) fn only(arena: &ChartArena) -> Chart {
         *arena.chart(ChartIdx(0)).expect("the one chart just pushed")
     }
 
-    fn tap(ms: u32, lane: u8) -> (Time, Event) {
+    pub(super) fn tap(ms: u32, lane: u8) -> (Time, Event) {
         (Time(ms), Event::new(lane, EventKind::Tap, false, false))
     }
 
-    fn config() -> PlayConfig {
+    pub(super) fn config() -> PlayConfig {
         PlayConfig::new(NoteSpeed::FASTEST, PlayConfig::ALL_PERFECT, 0)
     }
 
-    fn scorer(threshold: u16, chance: Rate, value: u32) -> Skill {
+    pub(super) fn scorer(threshold: u16, chance: Rate, value: u32) -> Skill {
         Skill {
             value,
             chance,
@@ -562,19 +425,19 @@ mod tests {
         }
     }
 
-    fn worn(chance: Rate, value: u32) -> AccessorySkill {
+    pub(super) fn worn(chance: Rate, value: u32) -> AccessorySkill {
         AccessorySkill { value, chance, effect: SkillEffect::Scorer }
     }
 
-    fn play(queue: &Queue, scoring: &Scoring) -> Outcome {
+    pub(super) fn play(queue: &Queue, scoring: &Scoring) -> Outcome {
         seeded(queue, scoring, 0)
     }
 
-    fn seeded(queue: &Queue, scoring: &Scoring, seed: u64) -> Outcome {
+    pub(super) fn seeded(queue: &Queue, scoring: &Scoring, seed: u64) -> Outcome {
         at(queue, scoring, &PlayConfig { seed, ..config() })
     }
 
-    fn at(queue: &Queue, scoring: &Scoring, config: &PlayConfig) -> Outcome {
+    pub(super) fn at(queue: &Queue, scoring: &Scoring, config: &PlayConfig) -> Outcome {
         let triggers = Triggers::build(queue, scoring);
         let judgements = Judgements::build(queue, config);
         run(queue, config, scoring, &triggers, &judgements)
@@ -813,79 +676,9 @@ mod tests {
         clippy::arithmetic_side_effects,
         reason = "why can't you configure clippy.toml to disable this in tests?"
     )]
-    fn fifty_one() -> ChartArena {
+    pub(super) fn fifty_one() -> ChartArena {
         let stream: Vec<_> = (0..51).map(|i| tap(2000 + i * 100, (i % 9) as u8)).collect();
         arena(&stream)
-    }
-
-    #[test]
-    fn check_scorer_and_charm() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-
-        // This card is 26 icons at a 26% chance for 1120 points.
-        let mut scoring = Scoring::flat(80_000);
-        scoring.skills[2] = scorer(26, ALWAYS, 1120);
-        let out = play(&queue, &scoring);
-        assert_eq!(out.activations, 1);
-        assert_eq!(out.skill, 1120);
-        assert_eq!(out.tap, 1000 * 50 + 1100, "tap unchanged");
-        assert_eq!(out.score(), out.tap + out.skill);
-
-        scoring.skills[2] = scorer(26, ALWAYS, 2800);
-        assert_eq!(play(&queue, &scoring).skill, 2800);
-
-        scoring.skills[2] = scorer(26, 0, 1120);
-        let cold = play(&queue, &scoring);
-        assert_eq!((cold.activations, cold.skill), (0, 0));
-        assert_eq!(Triggers::build(&queue, &scoring).rolls(), 1);
-    }
-
-    #[test]
-    fn check_tap_score_before_skills() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(80_000);
-        let bare = play(&queue, &scoring).tap;
-
-        scoring.skills[5] = scorer(1, ALWAYS, 1_000_000);
-        let loud = play(&queue, &scoring);
-        assert_eq!(loud.activations, 51, "every icon");
-        assert_eq!(loud.tap, bare);
-    }
-
-    #[test]
-    fn check_accessory_trigger() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-
-        let mut scoring = Scoring::flat(0);
-        scoring.skills[2] = scorer(1, ALWAYS, 1120);
-        scoring.accessories[2] = worn(ALWAYS, 9000);
-        let hits = play(&queue, &scoring);
-        assert_eq!((hits.activations, hits.accessory_activations), (51, 0));
-        assert_eq!(hits.skill, 51 * 1120, "acc never got a chance to activate");
-
-        scoring.skills[2] = scorer(1, 0, 1120);
-        let misses = play(&queue, &scoring);
-        assert_eq!((misses.activations, misses.accessory_activations), (0, 51));
-        assert_eq!(misses.skill, 51 * 9000, "acc can now activate");
-    }
-
-    /// A member with no skill has none to fail, so an unscheduled lane silences
-    /// its accessory.
-    #[test]
-    fn check_no_card_skill_means_no_acc_skill() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-
-        let mut scoring = Scoring::flat(0);
-        scoring.skills[3] = Skill::NONE;
-        scoring.accessories[3] = worn(ALWAYS, 9000);
-        assert_eq!(Triggers::build(&queue, &scoring).rolls(), 0, "nothing to fail");
-
-        let out = play(&queue, &scoring);
-        assert_eq!((out.accessory_activations, out.skill), (0, 0));
     }
 
     #[test]
@@ -970,33 +763,5 @@ mod tests {
             differed |= a.skill != b.skill;
         }
         assert!(differed, "the two teams never rolled differently");
-    }
-
-    #[test]
-    fn check_skills_resolve_right_to_left() {
-        const FLIP: Rate = RATE_UNIT / 2;
-
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-
-        let mut scoring = Scoring::flat(0);
-        scoring.skills[7] = scorer(51, FLIP, 1000);
-        scoring.skills[1] = scorer(51, FLIP, 1);
-        assert_eq!(Triggers::build(&queue, &scoring).len(), 1, "one icon count, two lanes");
-
-        // A manually and meticulously selected seed where the two rolls after different
-        let seed = (0..64_u64)
-            .find(|&s| {
-                let mut rng = Rng::new(s, Rng::SKILLS);
-                rng.roll(FLIP) != rng.roll(FLIP)
-            })
-            .expect("a seed where the first two draws differ");
-
-        let mut rng = Rng::new(seed, Rng::SKILLS);
-        let high = rng.roll(FLIP); // lane 8 first
-        let low = rng.roll(FLIP);
-        let want = u64::from(high) * 1000 + u64::from(low);
-
-        assert_eq!(seeded(&queue, &scoring, seed).skill, want, "seed {seed}");
     }
 }
