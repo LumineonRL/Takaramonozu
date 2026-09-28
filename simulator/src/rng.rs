@@ -4,8 +4,15 @@ use rand_xoshiro::SplitMix64;
 
 use crate::scalar::{RATE_UNIT, Rate};
 
-fn mix(seed: u64) -> u64 {
-    SplitMix64::seed_from_u64(seed).next_u64()
+/// Turns out that using the same seed to make two different streams was leading to
+/// correlated results between accuracy and skill activations. Runs with good acc also
+/// had a lot of skill activations and vice versa. This should fix that.
+fn mix(seed: u64, stream: u64) -> u64 {
+    let mut outputs = SplitMix64::seed_from_u64(seed);
+    for _ in 0..stream {
+        outputs.next_u64();
+    }
+    outputs.next_u64()
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -25,7 +32,7 @@ impl Rng {
 
     #[must_use]
     pub fn new(seed: u64, stream: u64) -> Self {
-        Self(Pcg32::new(mix(seed), stream))
+        Self(Pcg32::new(mix(seed, stream), stream))
     }
 
     #[inline]
