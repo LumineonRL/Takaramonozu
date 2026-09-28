@@ -11,9 +11,16 @@ fn mix(seed: u64) -> u64 {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Rng(Pcg32);
 
+/// Gave skills and acc different RNG streams. Shouldn't affect scoring or variance or
+/// anything like that, but it matters when one stream or the other just doesn't need
+/// to be constructed. For example, if accuracy is set to 100%, there's no need to
+/// build the acc RNG in the first place.
+/// Acc is also nice because a deterministic amount is needed per trial.
+/// Skills are only sometimes deterministic Throw in a score-based scorer or a
+/// star note scorer and the numbers of times they'll need to roll will change from
+/// trial to trial.
 impl Rng {
     pub const SKILLS: u64 = 0;
-    /// TODO - not actually drawing from this yet
     pub const ACCURACY: u64 = 1;
 
     #[must_use]

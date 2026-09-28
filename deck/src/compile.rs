@@ -177,7 +177,6 @@ struct Sums {
 }
 
 /// Each lane's initial tap multiplier.
-/// TODO: Still nothing on accuracy or Trick SIS. Not sure if I'll roll that into this function or elsewhere.
 fn lane_bonus(card: &Card, song: Matching) -> u16 {
     let attribute = card.attribute == song.attribute;
     let group = song.group.is_some_and(|set| set.contains(card.character));

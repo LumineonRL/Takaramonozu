@@ -1,13 +1,10 @@
-//! The things that can change between each run aka accuracy and approach rate
-//! I think seed is also going to live here. It's not something the user sets
-//! per se, but it is something that can vary from run-to-run.
+//! The things that can change between each run aka accuracy and approach rate.
+//! Seed also lives here.
 
-use crate::scalar::Pct;
+use crate::scalar::{RATE_UNIT, Rate};
 use crate::song::NOTE_SPEEDS;
 
-/// The in-game approach, 1 (slowest) to 10 (fastest).
-///
-///
+/// The in-game approach rate, 1 (slowest) to 10 (fastest).
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[repr(transparent)]
 pub struct NoteSpeed(u8);
@@ -45,23 +42,25 @@ pub struct PlayConfig {
     pub speed: NoteSpeed,
 
     /// The chance a judgement comes out PERFECT rather than GREAT.
+    ///
     /// Note that GOOD, BAD, and MISS are not being modeled. I see no reason to
     /// model it. I mean it's possible to model but I also don't see much value in it.
     /// I mean that's not a good argument. There's not much value in this project regardless.
     /// The game is dead.
-    ///
-    /// TODO: implemment accuracy
-    pub accuracy: Pct,
-
-    /// TODO: seed. for acc and skill rolls and I'll need to figure out how this will
-    /// work between threads.
+    pub accuracy: Rate,
     pub seed: u64,
 }
 
 impl PlayConfig {
+    /// aka accuracy = 1.0.
+    /// Assumes nothing about perfect locks. Obviously an AP is possible with sub-perfect
+    /// accuracy with perfect locks existing. This is just saying to not roll accuracy at all,
+    /// just call it a perfect.
+    pub const ALL_PERFECT: Rate = RATE_UNIT;
+
     #[must_use]
     #[expect(clippy::similar_names, reason = "Are `speed` and `seed` even really that similar?")]
-    pub const fn new(speed: NoteSpeed, accuracy: Pct, seed: u64) -> Self {
+    pub const fn new(speed: NoteSpeed, accuracy: Rate, seed: u64) -> Self {
         Self { speed, accuracy, seed }
     }
 }
@@ -83,7 +82,7 @@ mod tests {
     fn check_the_earliest_spawn_is_positive() {
         // It would be bad if a note spawned before the song started after applying
         // the note speed modifier.
-        let config = PlayConfig::new(NoteSpeed::SLOWEST, 100, 0);
+        let config = PlayConfig::new(NoteSpeed::SLOWEST, PlayConfig::ALL_PERFECT, 0);
         assert_eq!(crate::song::Time(2047).spawn(config.speed.offset()).0, 297);
     }
 }

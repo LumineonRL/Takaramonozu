@@ -2,7 +2,7 @@
 
 use crate::play_config::PlayConfig;
 use crate::rng::Rng;
-use crate::scalar::{Centi, Rate};
+use crate::scalar::{Centi, RATE_UNIT, Rate};
 use crate::skill::{SkillEffect, TriggerType};
 use crate::song::{Chart, ChartRows, Event, EventKind, LANES, Time};
 
@@ -19,7 +19,15 @@ const UNIT: u16 = 100;
 /// My script searching `songs.json` must've been wrong. Surely. Maybe.
 const NOTE_UNIT: u16 = 1000;
 
-const DIVISOR: u64 = BASE * 100 * 100 * 1000;
+const JUDGEMENT_UNIT: u16 = 100;
+
+/// Perfects are a 1.00x multiplier.
+const PERFECT: u16 = JUDGEMENT_UNIT;
+
+/// Greats are a 0.88x multiplier
+const GREAT: u16 = 88;
+
+const DIVISOR: u64 = BASE * 100 * 100 * 1000 * 100;
 
 /// Transcription of `combo_bonuses.json`.
 ///
@@ -70,15 +78,15 @@ const fn note_multiplier(event: Event) -> u16 {
     }
 }
 
-/// `floor(team_strength * combo * lane * note / 800_000_000)`.
-///
-/// TODO: accuracy, Trick SIS.
+/// `floor(team_strength * combo * lane * note * accuracy / 80_000_000_000)`.
+/// TODO: Trick SIS.
 #[expect(clippy::integer_division, reason = "Game mechanic.")]
-fn note_score(team_strength: u32, combo: u16, lane: u16, note: u16) -> u64 {
+fn note_score(team_strength: u32, combo: u16, lane: u16, note: u16, judgement: u16) -> u64 {
     u64::from(team_strength)
         .saturating_mul(u64::from(combo))
         .saturating_mul(u64::from(lane))
         .saturating_mul(u64::from(note))
+        .saturating_mul(u64::from(judgement))
         / DIVISOR
 }
 
@@ -234,6 +242,87 @@ impl<'a> Queue<'a> {
     }
 }
 
+/// Precompute acc rolls before a trial starts.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Judgements {
+    perfect: Vec<bool>,
+    seed: u64,
+    accuracy: Rate,
+    perfects: u32,
+}
+
+impl Judgements {
+    #[must_use]
+    pub fn build(queue: &Queue, config: &PlayConfig) -> Self {
+        let records = queue.events().len();
+        let rolls = records.saturating_sub(1);
+
+        let (perfect, perfects) = match config.accuracy {
+            0 => (vec![false; records], 0),
+            rate if rate >= RATE_UNIT => (vec![true; records], rolls),
+            rate => {
+                let mut rng = Rng::new(config.seed, Rng::ACCURACY);
+                let mut perfect = vec![false; records];
+                let mut hits = 0_usize;
+                for slot in perfect.iter_mut().take(rolls) {
+                    *slot = rng.roll(rate);
+                    hits = hits.saturating_add(usize::from(*slot));
+                }
+                (perfect, hits)
+            }
+        };
+
+        Self {
+            perfect,
+            seed: config.seed,
+            accuracy: config.accuracy,
+            perfects: u32::try_from(perfects).unwrap_or(u32::MAX),
+        }
+    }
+
+    /// Whether a given judgement rolled as Perfect
+    #[inline]
+    #[must_use]
+    pub fn at(&self, judgement: usize) -> bool {
+        self.perfect.get(judgement).copied().unwrap_or(true)
+    }
+
+    #[must_use]
+    pub fn records(&self) -> usize {
+        self.perfect.len()
+    }
+
+    /// Judgements actually rolled
+    #[must_use]
+    pub fn rolls(&self) -> u32 {
+        u32::try_from(self.records()).unwrap_or(u32::MAX).saturating_sub(1)
+    }
+
+    #[must_use]
+    pub const fn perfects(&self) -> u32 {
+        self.perfects
+    }
+
+    #[must_use]
+    pub const fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    #[must_use]
+    pub const fn accuracy(&self) -> Rate {
+        self.accuracy
+    }
+
+    #[must_use]
+    pub fn observed(&self) -> Rate {
+        let scaled = u64::from(self.perfects)
+            .saturating_mul(u64::from(RATE_UNIT))
+            .checked_div(u64::from(self.rolls()))
+            .unwrap_or(0);
+        Rate::try_from(scaled).unwrap_or(RATE_UNIT)
+    }
+}
+
 /// TODO: I might have a separate trigger handling module because this is going to get big fast.
 /// TODO: Combo and Star Notes belong here.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -302,6 +391,10 @@ pub struct Outcome {
     pub skill: u64,
     pub notes: u32,
     pub icons: u32,
+
+    /// Not to be confused with the perfect judgement. Hold notes require both
+    /// the head and tail or a hold to be perfect, else its a great.
+    pub perfects: u32,
     pub activations: u32,
     pub accessory_activations: u32,
 }
@@ -352,11 +445,21 @@ fn pay(effect: SkillEffect, value: Centi, out: &mut Outcome) {
 
 #[must_use]
 #[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
-pub fn run(queue: &Queue, config: &PlayConfig, scoring: &Scoring, triggers: &Triggers) -> Outcome {
+pub fn run(
+    queue: &Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome {
+    debug_assert_eq!(judgements.records(), queue.events.len(), "judgements of another chart");
+    debug_assert_eq!(judgements.seed(), config.seed, "judgements of another trial");
+
     let offset = config.speed.offset();
     let icons: &[Time] = &queue.icons;
     let mut out = Outcome::default();
     let mut rng = Rng::new(config.seed, Rng::SKILLS);
+    let mut heads = [false; LANES];
     let mut icon = 0_usize;
     let mut tap = 0_usize;
     let mut cursor = 0_usize;
@@ -375,22 +478,31 @@ pub fn run(queue: &Queue, config: &PlayConfig, scoring: &Scoring, triggers: &Tri
         }
 
         let event = queue.events[tap];
-        if event.kind() == EventKind::End {
-            break;
-        }
+        let lane = event.lane() as usize;
+        match event.kind() {
+            EventKind::End => break,
+            EventKind::HoldStart => {
+                if let Some(head) = heads.get_mut(lane) {
+                    *head = judgements.at(tap);
+                }
+            }
 
-        // TODO: I guess the accuracy will go here
-        if scores(event) {
-            let lane = scoring.lanes.get(event.lane() as usize).copied().unwrap_or(UNIT);
-            let note = note_multiplier(event);
-            out.tap = out.tap.saturating_add(note_score(
-                scoring.team_strength,
-                queue.combo[tap],
-                lane,
-                note,
-            ));
-            out.notes = out.notes.saturating_add(1);
-            // TODO: the counter triggers roll here
+            kind @ (EventKind::Tap | EventKind::HoldRelease) => {
+                let mut perfect = judgements.at(tap);
+                if kind == EventKind::HoldRelease {
+                    perfect &= heads.get(lane).copied().unwrap_or(true);
+                }
+                out.tap = out.tap.saturating_add(note_score(
+                    scoring.team_strength,
+                    queue.combo[tap],
+                    scoring.lanes.get(lane).copied().unwrap_or(UNIT),
+                    note_multiplier(event),
+                    if perfect { PERFECT } else { GREAT },
+                ));
+                out.notes = out.notes.saturating_add(1);
+                out.perfects = out.perfects.saturating_add(u32::from(perfect));
+                // TODO: the counter triggers roll here
+            }
         }
 
         tap = tap.saturating_add(1);
@@ -408,7 +520,8 @@ mod tests {
     )]
 
     use super::{
-        AccessorySkill, Outcome, Queue, Scoring, Skill, Triggers, combo_bonus, points_per_note, run,
+        AccessorySkill, Judgements, Outcome, Queue, Scoring, Skill, Triggers, combo_bonus,
+        points_per_note, run,
     };
     use crate::play_config::{NoteSpeed, PlayConfig};
     use crate::rng::Rng;
@@ -436,7 +549,7 @@ mod tests {
     }
 
     fn config() -> PlayConfig {
-        PlayConfig::new(NoteSpeed::FASTEST, 100, 0)
+        PlayConfig::new(NoteSpeed::FASTEST, PlayConfig::ALL_PERFECT, 0)
     }
 
     fn scorer(threshold: u16, chance: Rate, value: u32) -> Skill {
@@ -458,8 +571,17 @@ mod tests {
     }
 
     fn seeded(queue: &Queue, scoring: &Scoring, seed: u64) -> Outcome {
+        at(queue, scoring, &PlayConfig { seed, ..config() })
+    }
+
+    fn at(queue: &Queue, scoring: &Scoring, config: &PlayConfig) -> Outcome {
         let triggers = Triggers::build(queue, scoring);
-        run(queue, &PlayConfig { seed, ..config() }, scoring, &triggers)
+        let judgements = Judgements::build(queue, config);
+        run(queue, config, scoring, &triggers, &judgements)
+    }
+
+    fn sloppy(accuracy: Rate, seed: u64) -> PlayConfig {
+        PlayConfig { accuracy, seed, ..config() }
     }
 
     #[test]
@@ -498,13 +620,25 @@ mod tests {
 
     #[test]
     fn check_accuracy_multipliers() {
-        const PERFECT: u64 = 125;
-        const GREAT: u64 = 110;
+        const TABLE_PERFECT: u64 = 125;
+        const TABLE_GREAT: u64 = 110;
 
-        assert_eq!(100 * 100, super::BASE * PERFECT);
-        assert_eq!(GREAT * 100, 88 * PERFECT);
+        assert_eq!(100 * 100, super::BASE * TABLE_PERFECT, "0.01 * 1.25 = 1/80");
+        assert_eq!(
+            TABLE_GREAT * u64::from(super::JUDGEMENT_UNIT),
+            u64::from(super::GREAT) * TABLE_PERFECT
+        );
+        assert_eq!(super::PERFECT, super::JUDGEMENT_UNIT, "assumed PERFECT");
 
-        assert_eq!(11 * 100 * 100 * 100, 800 * PERFECT * 110);
+        assert_eq!(11 * 100 * 100 * 100, 800 * TABLE_PERFECT * 110);
+
+        assert_eq!(super::DIVISOR, 800_000_000 * u64::from(super::JUDGEMENT_UNIT));
+        for team_strength in [1_u32, 999, 26_540, 80_400, 2_700_000, 16_000_000] {
+            assert_eq!(
+                super::note_score(team_strength, 135, 121, 1250, super::PERFECT),
+                u64::from(team_strength) * 135 * 121 * 1250 / 800_000_000,
+            );
+        }
     }
 
     #[test]
@@ -548,9 +682,8 @@ mod tests {
         assert_eq!(out.activations, 2);
         assert_eq!(out.skill, 14);
 
-        let slow = PlayConfig::new(NoteSpeed::SLOWEST, 100, 0);
-        let triggers = Triggers::build(&queue, &scoring);
-        assert_eq!(run(&queue, &slow, &scoring, &triggers).icons, 2);
+        let slow = PlayConfig::new(NoteSpeed::SLOWEST, PlayConfig::ALL_PERFECT, 0);
+        assert_eq!(at(&queue, &scoring, &slow).icons, 2);
     }
 
     #[test]
@@ -586,12 +719,21 @@ mod tests {
 
         // 110_000 team_strength = 1375 ppn
         let out = play(&queue, &Scoring::flat(110_000));
-        assert_eq!(out, Outcome { tap: 1375 * 3, notes: 3, icons: 3, ..Outcome::default() });
+        assert_eq!(
+            out,
+            Outcome {
+                tap: 1375 * 3,
+                notes: 3,
+                icons: 3,
+                perfects: 3,
+                ..Outcome::default()
+            }
+        );
 
-        assert_eq!(super::note_score(110_000, 110, 100, 1000), 1512);
+        assert_eq!(super::note_score(110_000, 110, 100, 1000, 100), 1512);
 
         assert_eq!(points_per_note(26_540), 331);
-        assert_eq!(super::note_score(26_540, 130, 110, 1000), 474);
+        assert_eq!(super::note_score(26_540, 130, 110, 1000, 100), 474);
         assert_eq!(331 * 130 * 110 / 10_000, 473, "pre-flooring the base is a no-no apparently.");
     }
 
@@ -641,11 +783,15 @@ mod tests {
         let out = play(&queue, &scoring);
         assert_eq!(out.score(), 3 * (1005 + 1105 + 1216));
 
-        assert_eq!(super::note_score(80_400, 100, 121, 1000), 1216);
-        assert_eq!(super::note_score(80_400, 100, 110, 1000), 1105);
-        assert_eq!(super::note_score(88_400, 100, 110, 1000), 1215);
+        assert_eq!(super::note_score(80_400, 100, 121, 1000, 100), 1216);
+        assert_eq!(super::note_score(80_400, 100, 110, 1000, 100), 1105);
+        assert_eq!(super::note_score(88_400, 100, 110, 1000, 100), 1215);
 
-        assert_eq!(super::note_score(80_400, 110, 110, 1000), 1216, "1005 * 1.21 the long way");
+        assert_eq!(
+            super::note_score(80_400, 110, 110, 1000, 100),
+            1216,
+            "1005 * 1.21 the long way"
+        );
     }
 
     #[test]
@@ -740,6 +886,90 @@ mod tests {
 
         let out = play(&queue, &scoring);
         assert_eq!((out.accessory_activations, out.skill), (0, 0));
+    }
+
+    #[test]
+    fn check_all_great_12_perc_lower_than_ap() {
+        let stream = [tap(2000, 0), tap(2500, 1), tap(3000, 2)];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let scoring = Scoring::flat(800_000); // 10_000 a note flat
+
+        assert_eq!(at(&queue, &scoring, &config()).tap, 3 * 10_000);
+        assert_eq!(at(&queue, &scoring, &sloppy(0, 0)).tap, 3 * 8_800, "0.88 a note");
+
+        for seed in 0..16 {
+            let all_perfect = at(&queue, &scoring, &sloppy(PlayConfig::ALL_PERFECT, seed));
+            let all_great = at(&queue, &scoring, &sloppy(0, seed));
+            assert_eq!(all_perfect.perfects, 3, "seed {seed}");
+            assert_eq!(all_great.perfects, 0, "seed {seed}");
+            assert_eq!(all_perfect.tap, 3 * 10_000, "seed {seed}");
+            assert_eq!(all_great.tap, 3 * 8_800, "seed {seed}");
+        }
+
+        assert_eq!(at(&queue, &scoring, &sloppy(RATE_UNIT * 2, 7)).tap, 3 * 10_000);
+    }
+
+    #[test]
+    fn check_a_hold_is_perfect_only_if_both_taps_are() {
+        const FLIP: Rate = RATE_UNIT / 2;
+
+        let stream = [
+            (Time(2000), Event::new(0, EventKind::HoldStart, false, false)),
+            (Time(3000), Event::new(0, EventKind::HoldRelease, false, false)),
+        ];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let scoring = Scoring::flat(800_000);
+        let triggers = Triggers::build(&queue, &scoring);
+
+        let mut seen = [false; 4];
+        for seed in 0..64 {
+            let config = sloppy(FLIP, seed);
+            let judged = Judgements::build(&queue, &config);
+            assert_eq!(judged.rolls(), 2, "hold is 2 judgements");
+            assert_eq!(judged.records(), queue.events().len());
+
+            let (head, release) = (judged.at(0), judged.at(1));
+            let out = run(&queue, &config, &scoring, &triggers, &judged);
+
+            let both = head && release;
+            assert_eq!(out.notes, 1, "holds score once at the end.");
+            assert_eq!(out.perfects, u32::from(both), "seed {seed}: {head} then {release}");
+            assert_eq!(
+                out.tap,
+                if both { 12_500 } else { 11_000 },
+                "seed {seed}: {head} then {release}",
+            );
+            assert_eq!(judged.perfects(), u32::from(head) + u32::from(release));
+            seen[usize::from(head) * 2 + usize::from(release)] = true;
+        }
+        assert!(seen.iter().all(|&s| s), "Seeds missed a (head, release) pair: {seen:?}");
+    }
+
+    #[test]
+    fn check_diff_teams_same_judgements() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let mut one = Scoring::flat(80_000);
+        one.skills[2] = scorer(5, RATE_UNIT / 2, 900);
+        let mut two = Scoring::flat(123_456);
+        two.lanes = [100, 110, 121, 100, 110, 121, 100, 110, 121];
+        two.skills[7] = scorer(2, RATE_UNIT / 4, 40);
+        two.accessories[7] = worn(RATE_UNIT / 2, 7);
+
+        let mut differed = false;
+        for seed in 0..32 {
+            let config = sloppy(8000, seed);
+            let judged = Judgements::build(&queue, &config);
+            let a = run(&queue, &config, &one, &Triggers::build(&queue, &one), &judged);
+            let b = run(&queue, &config, &two, &Triggers::build(&queue, &two), &judged);
+            assert_eq!(a.perfects, b.perfects, "seed {seed}");
+            assert_eq!(a.perfects, judged.perfects(), "no holds");
+            differed |= a.skill != b.skill;
+        }
+        assert!(differed, "the two teams never rolled differently");
     }
 
     #[test]
