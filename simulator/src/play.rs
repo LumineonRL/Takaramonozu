@@ -21,15 +21,23 @@ const UNIT: u16 = 100;
 /// My script searching `songs.json` must've been wrong. Surely. Maybe.
 const NOTE_UNIT: u16 = 1000;
 
-const JUDGEMENT_UNIT: u16 = 100;
+/// Previously this was 1.00, but apparently getting a great+great on a hold notes gives you a
+/// 0.88*0.88 = 0.7744 multiplier, not 0.88. The problem is we can't express 0.7744 with integer division with
+/// 100 as the base. But fear not, 625 is the smallest available number that allows us to express all the multipliers
+/// we need! Thank goodness because using 10000 would've looked ugly.
+const JUDGEMENT_UNIT: u16 = 625;
 
 /// Perfects are a 1.00x multiplier.
 const PERFECT: u16 = JUDGEMENT_UNIT;
 
-/// Greats are a 0.88x multiplier
-const GREAT: u16 = 88;
+/// Greats are a 0.88x multiplier 500/625 = 0.88
+const GREAT: u16 = 550;
 
-const DIVISOR: u64 = BASE * 100 * 100 * 1000 * 100;
+/// A hold GREAT at both ends: 484/625 = 0.7744
+const GREAT_GREAT: u16 = 484;
+const JUDGEMENT: [[u16; 2]; 2] = [[GREAT_GREAT, GREAT], [GREAT, PERFECT]];
+
+const DIVISOR: u64 = BASE * 100 * 100 * 1000 * JUDGEMENT_UNIT as u64;
 
 /// Transcription of `combo_bonuses.json`.
 ///
@@ -80,7 +88,7 @@ const fn note_multiplier(event: Event) -> u16 {
     }
 }
 
-/// `floor(team_strength * combo * lane * note * accuracy / 80_000_000_000)`.
+/// `floor(team_strength * combo * lane * note * judgement / 500_000_000_000)`.
 /// TODO: Trick SIS.
 #[expect(clippy::integer_division, reason = "Game mechanic.")]
 fn note_score(team_strength: u32, combo: u16, lane: u16, note: u16, judgement: u16) -> u64 {
@@ -347,19 +355,17 @@ pub fn run(
             }
 
             kind @ (EventKind::Tap | EventKind::HoldRelease) => {
-                let mut perfect = judgements.at(tap);
-                if kind == EventKind::HoldRelease {
-                    perfect &= heads.get(lane).copied().unwrap_or(true);
-                }
+                let tail = judgements.at(tap);
+                let head = (kind == EventKind::Tap) | heads.get(lane).copied().unwrap_or(true);
                 out.tap = out.tap.saturating_add(note_score(
                     scoring.team_strength,
                     queue.combo[tap],
                     scoring.lanes.get(lane).copied().unwrap_or(UNIT),
                     note_multiplier(event),
-                    if perfect { PERFECT } else { GREAT },
+                    JUDGEMENT[usize::from(head)][usize::from(tail)],
                 ));
                 out.notes = out.notes.saturating_add(1);
-                out.perfects = out.perfects.saturating_add(u32::from(perfect));
+                out.perfects = out.perfects.saturating_add(u32::from(head & tail));
                 if out.notes == next_combo {
                     fire(combo_lanes[combo_cursor], scoring, &mut rng, &mut out);
                     combo_cursor = combo_cursor.saturating_add(1);
@@ -492,6 +498,15 @@ mod tests {
             u64::from(super::GREAT) * TABLE_PERFECT
         );
         assert_eq!(super::PERFECT, super::JUDGEMENT_UNIT, "assumed PERFECT");
+        assert_eq!(
+            u32::from(super::GREAT_GREAT) * u32::from(super::JUDGEMENT_UNIT),
+            u32::from(super::GREAT) * u32::from(super::GREAT),
+            "multiply both greats of the hold, 0.88 * 0.88 = 0.7744"
+        );
+        assert_eq!(
+            super::JUDGEMENT,
+            [[super::GREAT_GREAT, super::GREAT], [super::GREAT, super::PERFECT]]
+        );
 
         assert_eq!(11 * 100 * 100 * 100, 800 * TABLE_PERFECT * 110);
 
@@ -593,10 +608,10 @@ mod tests {
             }
         );
 
-        assert_eq!(super::note_score(110_000, 110, 100, 1000, 100), 1512);
+        assert_eq!(super::note_score(110_000, 110, 100, 1000, super::PERFECT), 1512);
 
         assert_eq!(points_per_note(26_540), 331);
-        assert_eq!(super::note_score(26_540, 130, 110, 1000, 100), 474);
+        assert_eq!(super::note_score(26_540, 130, 110, 1000, super::PERFECT), 474);
         assert_eq!(331 * 130 * 110 / 10_000, 473, "pre-flooring the base is a no-no apparently.");
     }
 
@@ -646,12 +661,12 @@ mod tests {
         let out = play(&queue, &scoring);
         assert_eq!(out.score(), 3 * (1005 + 1105 + 1216));
 
-        assert_eq!(super::note_score(80_400, 100, 121, 1000, 100), 1216);
-        assert_eq!(super::note_score(80_400, 100, 110, 1000, 100), 1105);
-        assert_eq!(super::note_score(88_400, 100, 110, 1000, 100), 1215);
+        assert_eq!(super::note_score(80_400, 100, 121, 1000, super::PERFECT), 1216);
+        assert_eq!(super::note_score(80_400, 100, 110, 1000, super::PERFECT), 1105);
+        assert_eq!(super::note_score(88_400, 100, 110, 1000, super::PERFECT), 1215);
 
         assert_eq!(
-            super::note_score(80_400, 110, 110, 1000, 100),
+            super::note_score(80_400, 110, 110, 1000, super::PERFECT),
             1216,
             "1005 * 1.21 the long way"
         );
@@ -731,7 +746,11 @@ mod tests {
             assert_eq!(out.perfects, u32::from(both), "seed {seed}: {head} then {release}");
             assert_eq!(
                 out.tap,
-                if both { 12_500 } else { 11_000 },
+                match (head, release) {
+                    (true, true) => 12_500,
+                    (false, false) => 9_680,
+                    _ => 11_000,
+                },
                 "seed {seed}: {head} then {release}",
             );
             assert_eq!(judged.perfects(), u32::from(head) + u32::from(release));
