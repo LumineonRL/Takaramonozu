@@ -115,7 +115,16 @@ fn slots<'a>(raw: &'a RawSongs, titles: &[Distinct<'a>]) -> Result<Vec<Slot<'a>>
 }
 
 /// Merge the note starts with the hold releases into one stream, sorted on
-/// `(time, lane)`.
+/// time.
+///
+/// Previously, I was sorting the charts by their lane. So if one chart had two notes at the
+/// same millisecond in lanes 3 and 8 (3 listed first then 8) and another chart had two notes
+/// also at the same millisecond in lanes 8 and 3 (8 first then 3), I was sorting them so it'd always
+/// process 3, then 8. Burrito's reference sim does *not* do this — (yes, I typed an emdash)
+/// they just process the notes in `songs.json` order. This can have a small effect on scores when
+/// combo-tier thresholds are crossed. It doesn't *really* matter and *barely* changes the score, but
+/// it's because it barely matters that I'd rather match burrito. Just helps me validate this one.
+/// Reference sim I'm referring to: <https://github.com/NonSpicyBurrito/sif-team-simulator>
 ///
 /// I'll note that this is a bit of an assumption being made here / divergence from actual
 /// play. In practice, if two notes occur at the same time, the player may not deterministcally hit
@@ -128,7 +137,8 @@ fn slots<'a>(raw: &'a RawSongs, titles: &[Distinct<'a>]) -> Result<Vec<Slot<'a>>
 /// the resultant score.
 ///
 /// But this is so minor and modelling it requires making strong assumption about the player's habits
-///  which means it's just not worth adjusting.
+/// which means it's just not worth adjusting. How did I write this much about something that
+/// impacts scores by maybe like, 10 total points in a game where you score in the millions?
 fn judgements(slot: &Slot<'_>, out: &mut Vec<(Time, Event)>) -> Result<(), LoadError> {
     out.clear();
     if slot.raw.notes.is_empty() {
@@ -159,11 +169,12 @@ fn judgements(slot: &Slot<'_>, out: &mut Vec<(Time, Event)>) -> Result<(), LoadE
         }
     }
 
-    out.sort_unstable_by_key(|&(time, event)| (time, event.lane()));
+    out.sort_by_key(|&(time, _)| time);
 
-    let collides = out.windows(2).any(|w| {
-        let [a, b] = w else { return false };
-        (a.0, a.1.lane()) == (b.0, b.1.lane())
+    let collides = out.chunk_by(|a, b| a.0 == b.0).any(|same| {
+        same.iter()
+            .enumerate()
+            .any(|(i, a)| same.iter().take(i).any(|b| b.1.lane() == a.1.lane()))
     });
     if collides {
         return Err(ErrorKind::Invariant).at(slot.key, "start_time");
@@ -260,6 +271,30 @@ mod tests {
         assert_eq!(song.attribute, Attribute::Smile);
         let set = db.groups.set(song.group.expect("μ's")).expect("interned");
         assert_eq!(set.0.count_ones(), 9);
+    }
+
+    /// This chart has 2 notes at the same millisecond with the higher lane listed first.
+    /// This is the thing that was fixed, where previously we were sorting the charts and always
+    /// processing lower lanes in the event of a tie.
+    #[test]
+    fn check_a_millisecond_keeps_chart_order() {
+        let db = built();
+        let id = db.chart("Bokura no LIVE Kimi to no LIFE", Difficulty::Master).expect("present");
+        let chart = db.charts.chart(id).expect("in range");
+        let (times, events) = db.charts.stream(chart);
+        let tied: Vec<Event> = times
+            .iter()
+            .zip(events)
+            .filter(|&(&t, _)| t == Time(69_807))
+            .map(|(_, &e)| e)
+            .collect();
+        assert_eq!(
+            tied,
+            [
+                Event::new(6, EventKind::HoldRelease, false, false),
+                Event::new(1, EventKind::Tap, false, false),
+            ]
+        );
     }
 
     /// Checks that the one chart in `songs.json` with out-of-order notes gets fixed properly

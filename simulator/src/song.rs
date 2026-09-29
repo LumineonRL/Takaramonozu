@@ -174,9 +174,11 @@ pub struct ChartArena {
 }
 
 impl ChartArena {
+    /// Notes on the same exact millisecond keep the order they spawned in
+    ///
     /// # Panics
-    /// Empty note chart, an out-of-order or duplicate `(time, lane)`,
-    /// more than `u32::MAX` events, more than 65535 charts.
+    /// Empty note chart, times out of order, two notes in one lane at one
+    /// millisecond, more than `u32::MAX` events, more than 65535 charts.
     #[expect(clippy::expect_used, reason = "capacity bounds, documented above")]
     pub fn push(
         &mut self,
@@ -188,12 +190,22 @@ impl ChartArena {
             .last()
             .expect("a chart with no judgements would read the next chart's");
 
-        let mut prev = None;
+        let mut prev: Option<(Time, u16)> = None;
         for &(time, event) in judgements {
             assert!(event.kind() != EventKind::End, "`push` appends the terminator itself");
-            let key = Some((time, event.lane()));
-            assert!(prev < key, "the stream is not sorted and unique on (time, lane)");
-            prev = key;
+            let bit = 1_u16.checked_shl(u32::from(event.lane())).expect("a lane is under 16");
+            let seen = match prev {
+                Some((at, seen)) if at == time => {
+                    assert!(seen & bit == 0, "two records share a lane and a millisecond");
+                    seen | bit
+                }
+                Some((at, _)) => {
+                    assert!(at < time, "the stream is not sorted on time");
+                    bit
+                }
+                None => bit,
+            };
+            prev = Some((time, seen));
         }
 
         // Naively the song is over when its final note is processed, but a small
@@ -282,7 +294,7 @@ pub struct SongDb {
 impl Kind for SongDb {
     /// `LLSIFSDB` is the SIS database, so songs take `L` for live.
     const MAGIC: [u8; 8] = *b"LLSIFLDB";
-    const VERSION: u32 = 2;
+    const VERSION: u32 = 3;
 }
 
 impl SongDb {
@@ -407,7 +419,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "sorted and unique")]
+    #[should_panic(expected = "not sorted on time")]
     fn check_an_unsorted_stream_fails() {
         // `Live_s0607` is written 69.583 then 69.580, out of order notes.
         let out_of_order = vec![
@@ -415,6 +427,29 @@ mod tests {
             (Time(69_580), Event::new(1, EventKind::HoldRelease, false, false)),
         ];
         ChartArena::default().push(SongIdx(0), Difficulty::Expert, &out_of_order);
+    }
+
+    #[test]
+    fn check_a_millisecond_keeps_the_order_it_arrives_in() {
+        // A higher lane before a lower one
+        let chart_order = [
+            (Time(69_807), Event::new(6, EventKind::HoldRelease, false, false)),
+            (Time(69_807), Event::new(1, EventKind::Tap, false, false)),
+        ];
+        let mut arena = ChartArena::default();
+        let id = arena.push(SongIdx(0), Difficulty::Master, &chart_order);
+        let (_, events) = arena.stream(arena.chart(id).expect("just pushed"));
+        assert_eq!(events[..2].iter().map(|e| e.lane()).collect::<Vec<_>>(), [6, 1]);
+    }
+
+    #[test]
+    #[should_panic(expected = "share a lane and a millisecond")]
+    fn check_one_lane_twice_in_a_millisecond_fails() {
+        let twice = [
+            (Time(69_807), Event::new(1, EventKind::Tap, false, false)),
+            (Time(69_807), Event::new(1, EventKind::Tap, false, false)),
+        ];
+        ChartArena::default().push(SongIdx(0), Difficulty::Master, &twice);
     }
 
     #[test]

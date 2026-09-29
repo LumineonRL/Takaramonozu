@@ -196,9 +196,7 @@ fn pay(effect: SkillEffect, value: Centi, out: &mut Outcome) {
 #[cfg(test)]
 mod tests {
     use super::{Skill, Triggers};
-    use crate::play::tests::{
-        ALWAYS, arena, fifty_one, only, play, scorer, seeded, tap, worn,
-    };
+    use crate::play::tests::{ALWAYS, arena, fifty_one, only, play, scorer, seeded, tap, worn};
     use crate::play::{Queue, Scoring};
     use crate::rng::Rng;
     use crate::scalar::{RATE_UNIT, Rate};
