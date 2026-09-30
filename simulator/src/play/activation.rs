@@ -54,7 +54,7 @@ impl Default for AccessorySkill {
     }
 }
 
-// Can pre-add to the queue certain activations like rhythm icons, combo and time.
+// Can pre-add to the queue certain activations like rhythm icons, combo, and time.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Schedule {
     at: Vec<u32>,
@@ -63,9 +63,11 @@ pub struct Schedule {
 
 impl Schedule {
     /// Pre-schedules each lane's skill activations if their trigger type allows for it.
-    /// We can pre-schedule every condition besides perfects, scorer, star note, and year group.
-    /// I say "all of them besides", but there's only 7 `TriggerType`s and we can only pre-schedule 3 of them.
-    /// For the record, the 3 we can pre-schedule are rhythm icons, combo, and time.
+    /// We can pre-schedule every condition besides perfects*, score, star note, and year group.
+    /// For the record, the 4 we can pre-schedule are rhythm icons, combo, perfects, and time.
+    /// Perfects gets an asterisk becayse we sort-of-do-sort-of-don't pre-schedule them.
+    /// We can pre-roll and have everything ready to go, but we need to wait for the perfects
+    /// to actually occur.
     ///
     /// # Panics
     /// Neverrrrr
@@ -127,6 +129,7 @@ impl Schedule {
 pub struct Triggers {
     icons: Schedule,
     combo: Schedule,
+    perfects: Schedule,
     time: Schedule,
 }
 
@@ -138,6 +141,7 @@ impl Triggers {
         Self {
             icons: Schedule::build(queue.icons(), 1, skills, TriggerType::RhythmIcons),
             combo: Schedule::build(queue.notes(), 1, skills, TriggerType::Combo),
+            perfects: Schedule::build(queue.notes(), 1, skills, TriggerType::Perfects),
             time: Schedule::build(seconds, Time::SECOND, skills, TriggerType::Time),
         }
     }
@@ -153,18 +157,27 @@ impl Triggers {
     }
 
     #[must_use]
+    pub const fn perfects(&self) -> &Schedule {
+        &self.perfects
+    }
+
+    #[must_use]
     pub const fn time(&self) -> &Schedule {
         &self.time
     }
 
     #[must_use]
     pub fn rolls(&self) -> u32 {
-        [&self.icons, &self.combo, &self.time].iter().map(|s| s.rolls()).sum()
+        self.all().iter().map(|s| s.rolls()).sum()
     }
 
     #[must_use]
     pub fn len(&self) -> usize {
-        [&self.icons, &self.combo, &self.time].iter().map(|s| s.len()).sum()
+        self.all().iter().map(|s| s.len()).sum()
+    }
+
+    const fn all(&self) -> [&Schedule; 4] {
+        [&self.icons, &self.combo, &self.perfects, &self.time]
     }
 
     #[must_use]
@@ -213,7 +226,7 @@ mod tests {
     use crate::play::tests::{
         ALWAYS, arena, at, config, fifty_one, only, play, scorer, seeded, tap, worn,
     };
-    use crate::play::{Queue, Scoring};
+    use crate::play::{Judgements, Queue, Scoring, run};
     use crate::play_config::{NoteSpeed, PlayConfig};
     use crate::rng::Rng;
     use crate::scalar::{RATE_UNIT, Rate};
@@ -223,9 +236,11 @@ mod tests {
     #[expect(clippy::integer_division, reason = "a coin flip")]
     const FLIP: Rate = RATE_UNIT / 2;
 
-    const CLOCKS: [(TriggerType, u16); 3] = [
+    /// Note that for an all-perfect, Perfect is essentially equivalent to Combo.
+    const CLOCKS: [(TriggerType, u16); 4] = [
         (TriggerType::RhythmIcons, 51),
         (TriggerType::Combo, 51),
+        (TriggerType::Perfects, 51),
         (TriggerType::Time, 7),
     ];
 
@@ -279,11 +294,12 @@ mod tests {
         let mut scoring = Scoring::flat(80_000);
         let bare = play(&queue, &scoring).tap;
 
+        scoring.skills[4] = clocked(TriggerType::Perfects, 1, ALWAYS, 1_000_000);
         scoring.skills[5] = scorer(1, ALWAYS, 1_000_000);
         scoring.skills[6] = clocked(TriggerType::Combo, 1, ALWAYS, 1_000_000);
         scoring.skills[7] = clocked(TriggerType::Time, 1, ALWAYS, 1_000_000);
         let loud = play(&queue, &scoring);
-        assert_eq!(loud.activations, 51 + 51 + 7, "every icon, combo and second");
+        assert_eq!(loud.activations, 51 + 51 + 51 + 7, "every icon, combo, perfect and second");
         assert_eq!(loud.tap, bare);
     }
 
@@ -452,6 +468,166 @@ mod tests {
                 };
                 assert_eq!(at(&queue, &scoring, &slow(seed)).skill, want, "seed {seed}");
             }
+        }
+    }
+
+    fn sloppy(accuracy: Rate, seed: u64) -> PlayConfig {
+        PlayConfig { accuracy, seed, ..config() }
+    }
+
+    #[expect(clippy::arithmetic_side_effects, reason = "test helper")]
+    fn perfect_notes(queue: &Queue, judged: &Judgements) -> u32 {
+        let mut heads = [true; 9];
+        let mut count = 0;
+        for (i, event) in queue.events().iter().enumerate() {
+            let lane = event.lane() as usize;
+            match event.kind() {
+                EventKind::HoldStart => heads[lane] = judged.at(i),
+                EventKind::HoldRelease => count += u32::from(heads[lane] && judged.at(i)),
+                EventKind::Tap => count += u32::from(judged.at(i)),
+                EventKind::End => {}
+            }
+        }
+        count
+    }
+
+    #[test]
+    fn check_perfects_is_combo_at_all_perfect() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let mut combo = Scoring::flat(80_000);
+        combo.skills[3] = clocked(TriggerType::Combo, 7, FLIP, 300);
+        combo.skills[6] = clocked(TriggerType::Combo, 5, FLIP, 20);
+        let mut perfects = combo;
+        perfects.skills[6].trigger = TriggerType::Perfects;
+
+        let (a, b) = (Triggers::build(&queue, &combo), Triggers::build(&queue, &perfects));
+        assert_eq!(b.perfects().columns().0, [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, u32::MAX]);
+        assert_eq!(a.rolls(), b.rolls());
+        assert_eq!(a.len() + 1, b.len());
+
+        for seed in 0..32 {
+            assert_eq!(
+                seeded(&queue, &combo, seed),
+                seeded(&queue, &perfects, seed),
+                "seed {seed}"
+            );
+        }
+    }
+
+    /// Holds are perfect if and only if the start and end were both perfect.
+    #[test]
+    #[expect(clippy::integer_division, reason = "firings of a threshold")]
+    fn check_perfects_counts_perfect_notes() {
+        let stream = [
+            (Time(2000), Event::new(0, EventKind::HoldStart, false, false)),
+            tap(2300, 1),
+            (Time(2600), Event::new(0, EventKind::HoldRelease, false, false)),
+            tap(2900, 2),
+            (Time(3200), Event::new(3, EventKind::HoldStart, false, false)),
+            tap(3500, 4),
+            (Time(3800), Event::new(3, EventKind::HoldRelease, false, false)),
+            tap(4100, 5),
+        ];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        for threshold in [1, 2, 3] {
+            let mut scoring = Scoring::flat(0);
+            scoring.skills[8] = clocked(TriggerType::Perfects, threshold, ALWAYS, 1);
+            let triggers = Triggers::build(&queue, &scoring);
+            assert_eq!(triggers.perfects().rolls(), 6 / u32::from(threshold), "ceiling");
+
+            let mut seen = [false; 7];
+            for seed in 0..64 {
+                let config = sloppy(FLIP, seed);
+                let judged = Judgements::build(&queue, &config);
+                let out = run(&queue, &config, &scoring, &triggers, &judged);
+                let want = perfect_notes(&queue, &judged);
+                assert_eq!(out.perfects, want, "seed {seed}");
+                assert_eq!(out.activations, want / u32::from(threshold), "seed {seed}");
+                seen[want as usize] = true;
+            }
+            assert!(seen.iter().filter(|&&s| s).count() > 4, "{seen:?}");
+        }
+    }
+
+    /// It would be bad if greats incremented the perfect counter.
+    #[test]
+    fn check_perfect_skills_roll_only_on_perfects() {
+        // Spawns at 1400, 1700, 2000 and 2300 at AR10.
+        let stream = [tap(2000, 0), tap(2300, 1), tap(2600, 2), tap(2900, 3)];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let mut scoring = Scoring::flat(0);
+        scoring.skills[0] = clocked(TriggerType::RhythmIcons, 4, FLIP, 1);
+        scoring.skills[8] = clocked(TriggerType::Perfects, 2, FLIP, 10);
+        let triggers = Triggers::build(&queue, &scoring);
+
+        let mut orders = [false; 2];
+        for seed in 0..64 {
+            let config = sloppy(FLIP, seed);
+            let judged = Judgements::build(&queue, &config);
+
+            // (ms, tap before spawn, payout)
+            let mut firings = vec![(2300, 1, 1)];
+            let mut count = 0;
+            for (i, ms) in [2000, 2300, 2600, 2900].into_iter().enumerate() {
+                count += u32::from(judged.at(i));
+                if judged.at(i) && count % 2 == 0 {
+                    firings.push((ms, 0, 10));
+                }
+            }
+            firings.sort_unstable();
+            let d = draws(seed, firings.len());
+            let want: u64 = firings.iter().zip(&d).map(|(f, hit)| f.2 * hit).sum();
+
+            let out = run(&queue, &config, &scoring, &triggers, &judged);
+            assert_eq!(out.skill, want, "seed {seed}: {firings:?}");
+            orders[usize::from(firings[0].2 == 1)] = true;
+        }
+        assert_eq!(orders, [true; 2], "the icon never beat, or never trailed, the perfects");
+    }
+
+    #[test]
+    fn check_a_combo_and_perfect_skills_trigger_together_best_buds() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let seed = split_seed();
+        let d = draws(seed, 2);
+        let want = d[0] * 1000 + d[1];
+
+        for (high, low) in [
+            (TriggerType::Perfects, TriggerType::Combo),
+            (TriggerType::Combo, TriggerType::Perfects),
+        ] {
+            let mut scoring = Scoring::flat(0);
+            scoring.skills[7] = clocked(high, 51, FLIP, 1000);
+            scoring.skills[1] = clocked(low, 51, FLIP, 1);
+            assert_eq!(seeded(&queue, &scoring, seed).skill, want, "{high:?} over {low:?}");
+        }
+    }
+
+    #[test]
+    fn check_no_perfects_no_draws() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let mut scoring = Scoring::flat(80_000);
+        scoring.skills[2] = scorer(4, FLIP, 100);
+        scoring.skills[5] = clocked(TriggerType::Combo, 3, FLIP, 10);
+        let mut deaf = scoring;
+        deaf.skills[8] = clocked(TriggerType::Perfects, 1, FLIP, 1);
+        deaf.accessories[8] = worn(ALWAYS, 1);
+        assert_eq!(Triggers::build(&queue, &deaf).perfects().rolls(), 51, "scheduled all the same");
+
+        for seed in 0..32 {
+            let config = sloppy(0, seed);
+            let out = at(&queue, &deaf, &config);
+            assert_eq!(out.perfects, 0, "seed {seed}");
+            assert_eq!(out, at(&queue, &scoring, &config), "seed {seed}");
         }
     }
 }

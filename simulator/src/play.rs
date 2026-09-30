@@ -6,7 +6,7 @@ use crate::play_config::PlayConfig;
 use crate::rng::Rng;
 use crate::scalar::{RATE_UNIT, Rate};
 use crate::song::{Chart, ChartRows, Event, EventKind, LANES, Time};
-use activation::{AccessorySkill, Skill, Triggers, fire};
+use activation::{AccessorySkill, Schedule, Skill, Triggers, fire};
 
 /// I love magic numbers! PPN is calculated by `team_strength / 100 * 1.25`.
 /// But of course float arithmetic is the greatest evil of man-kind,
@@ -331,7 +331,6 @@ pub fn run(
     let mut heads = [false; LANES];
     let mut tap = 0_usize;
     let (icon_at, icon_lanes) = triggers.icons().columns();
-    let (combo_at, combo_lanes) = triggers.combo().columns();
     let (timer_at, timer_lanes) = triggers.time().columns();
     let mut spawns = Spawns {
         icons: &queue.icons,
@@ -341,8 +340,8 @@ pub fn run(
         cursor: 0,
         next: icon_at[0] as usize,
     };
-    let mut combo_cursor = 0_usize;
-    let mut next_combo = combo_at[0];
+    let mut combo = Tally::new(triggers.combo());
+    let mut perfects = Tally::new(triggers.perfects());
     let mut timer_cursor = 0_usize;
     let mut next_timer = Time(timer_at[0]);
 
@@ -382,13 +381,14 @@ pub fn run(
                     JUDGEMENT[usize::from(head)][usize::from(tail)],
                 ));
                 out.notes = out.notes.saturating_add(1);
+                // TODO: a PL converted GREATs count towards PERFECT total
                 out.perfects = out.perfects.saturating_add(u32::from(head & tail));
-                if out.notes == next_combo {
-                    fire(combo_lanes[combo_cursor], scoring, &mut rng, &mut out);
-                    combo_cursor = combo_cursor.saturating_add(1);
-                    next_combo = combo_at[combo_cursor];
+
+                // TODO: Star Notes and Score here
+                if out.notes == combo.next || out.perfects == perfects.next {
+                    let due = combo.due(out.notes) | perfects.due(out.perfects);
+                    fire(due, scoring, &mut rng, &mut out);
                 }
-                // TODO: Perfects, Star Notes and Score join combo here
             }
         }
 
@@ -397,6 +397,38 @@ pub fn run(
 
     out.icons = u32::try_from(spawns.icon).unwrap_or(u32::MAX);
     out
+}
+
+/// For skill trigger conditions that we need to actively track e.g. perfects, star notes.
+/// This may need to be adjusted for year group down the line that condition sucks.
+/// Spark might be a tally too? I mean we need to tally it I just don't know if it will ive
+/// in this tally, since Spark is for an accessory trigger eh it probably goes here.
+struct Tally<'a> {
+    at: &'a [u32],
+    lanes: &'a [u16],
+    cursor: usize,
+    next: u32,
+}
+
+impl<'a> Tally<'a> {
+    #[expect(clippy::indexing_slicing, reason = "`terminated")]
+    fn new(schedule: &'a Schedule) -> Self {
+        let (at, lanes) = schedule.columns();
+        Self { at, lanes, cursor: 0, next: at[0] }
+    }
+
+    /// The lanes firing at `count`, or none.
+    #[inline]
+    #[expect(clippy::indexing_slicing, reason = "`terminated. I'LL BE BACK.")]
+    fn due(&mut self, count: u32) -> u16 {
+        if count != self.next {
+            return 0;
+        }
+        let mask = self.lanes[self.cursor];
+        self.cursor = self.cursor.saturating_add(1);
+        self.next = self.at[self.cursor];
+        mask
+    }
 }
 
 struct Spawns<'a> {
