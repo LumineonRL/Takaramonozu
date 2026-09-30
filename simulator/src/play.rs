@@ -134,6 +134,7 @@ pub struct Queue<'a> {
     combo: Vec<u16>,
     lanes: [u32; LANES],
     notes: u32,
+    stars: u32,
 }
 
 impl<'a> Queue<'a> {
@@ -151,9 +152,11 @@ impl<'a> Queue<'a> {
         let mut icons = Vec::with_capacity(events.len());
         let mut lanes = [0_u32; LANES];
         let mut notes = 0_u32;
+        let mut stars = 0_u32;
         for (&time, &event) in times.iter().zip(events) {
             if scores(event) {
                 notes = notes.saturating_add(1);
+                stars = stars.saturating_add(u32::from(event.is_star()));
                 if let Some(n) = lanes.get_mut(event.lane() as usize) {
                     *n = n.saturating_add(1);
                 }
@@ -163,7 +166,7 @@ impl<'a> Queue<'a> {
             }
             combo.push(combo_bonus(notes));
         }
-        Some(Self { times, events, icons, combo, lanes, notes })
+        Some(Self { times, events, icons, combo, lanes, notes, stars })
     }
 
     /// Tap event. So tap single note or hold start/end.
@@ -176,6 +179,11 @@ impl<'a> Queue<'a> {
     #[must_use]
     pub const fn notes(&self) -> u32 {
         self.notes
+    }
+
+    #[must_use]
+    pub const fn stars(&self) -> u32 {
+        self.stars
     }
 
     #[must_use]
@@ -314,8 +322,26 @@ impl Outcome {
 }
 
 #[must_use]
-#[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
 pub fn run(
+    queue: &Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome {
+    /// Only one card has a star note skill trigger and it's a very old SR that's not very good.
+    /// So this has const generics since, in almost every case, we can completely ignore star notes at compile time.
+    if triggers.stars().is_empty() {
+        walk::<false>(queue, config, scoring, triggers, judgements)
+    } else {
+        core::hint::cold_path();
+        walk::<true>(queue, config, scoring, triggers, judgements)
+    }
+}
+
+#[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
+#[expect(clippy::else_if_without_else, reason = "lazy")]
+fn walk<const STARS: bool>(
     queue: &Queue,
     config: &PlayConfig,
     scoring: &Scoring,
@@ -342,6 +368,8 @@ pub fn run(
     };
     let mut combo = Tally::new(triggers.combo());
     let mut perfects = Tally::new(triggers.perfects());
+    let mut stars = Tally::new(triggers.stars());
+    let mut star_perfects = 0_u32;
     let mut timer_cursor = 0_usize;
     let mut next_timer = Time(timer_at[0]);
 
@@ -381,11 +409,21 @@ pub fn run(
                     JUDGEMENT[usize::from(head)][usize::from(tail)],
                 ));
                 out.notes = out.notes.saturating_add(1);
-                // TODO: a PL converted GREATs count towards PERFECT total
-                out.perfects = out.perfects.saturating_add(u32::from(head & tail));
+                // TODO: PL converted GREATs count towards PERFECT total
+                let perfect = head & tail;
+                out.perfects = out.perfects.saturating_add(u32::from(perfect));
 
-                // TODO: Star Notes and Score here
-                if out.notes == combo.next || out.perfects == perfects.next {
+                // Shoutouts to Snow Maiden Umi. I wonder why they gave a skill to one card and then just never again.
+                // I wonder why. Could've been interesting.
+                if STARS & event.is_star() & perfect {
+                    core::hint::cold_path();
+                    star_perfects = star_perfects.saturating_add(1);
+                    let due = stars.due(star_perfects)
+                        | combo.due(out.notes)
+                        | perfects.due(out.perfects);
+                    fire(due, scoring, &mut rng, &mut out);
+                } else if out.notes == combo.next || out.perfects == perfects.next {
+                    // TODO: Score here
                     let due = combo.due(out.notes) | perfects.due(out.perfects);
                     fire(due, scoring, &mut rng, &mut out);
                 }

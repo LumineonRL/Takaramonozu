@@ -6,7 +6,8 @@ use crate::scalar::{Centi, Rate};
 use crate::skill::{SkillEffect, TriggerType};
 use crate::song::{LANES, Time};
 
-/// Won't work for all skills, but there are some that we can pre-compute at compile-time
+/// Won't work for all skills, but there are some that we can pre-computed before a trial starts and
+/// reused if the same team is being evaluated many times.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Skill {
     pub value: Centi,
@@ -63,11 +64,13 @@ pub struct Schedule {
 
 impl Schedule {
     /// Pre-schedules each lane's skill activations if their trigger type allows for it.
-    /// We can pre-schedule every condition besides perfects*, score, star note, and year group.
-    /// For the record, the 4 we can pre-schedule are rhythm icons, combo, perfects, and time.
-    /// Perfects gets an asterisk becayse we sort-of-do-sort-of-don't pre-schedule them.
-    /// We can pre-roll and have everything ready to go, but we need to wait for the perfects
-    /// to actually occur.
+    /// We can trivially pre-schedule rhythm icons, combo, and time.
+    /// We can mostly pre-schedule perfects, and star notes.
+    /// We can not pre-schedule year-group or score-based scorers.
+    ///
+    /// And what I mean by "mostly pre-schedule"  is we can pre-roll and have everything ready to go,
+    /// but we need to wait for the perfects to actually occur before triggering, so there's still some
+    /// branchy logic.
     ///
     /// # Panics
     /// Neverrrrr
@@ -124,13 +127,13 @@ impl Schedule {
     }
 }
 
-/// TODO: Star Notes belongs here too.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Triggers {
     icons: Schedule,
     combo: Schedule,
     perfects: Schedule,
     time: Schedule,
+    stars: Schedule,
 }
 
 impl Triggers {
@@ -143,6 +146,7 @@ impl Triggers {
             combo: Schedule::build(queue.notes(), 1, skills, TriggerType::Combo),
             perfects: Schedule::build(queue.notes(), 1, skills, TriggerType::Perfects),
             time: Schedule::build(seconds, Time::SECOND, skills, TriggerType::Time),
+            stars: Schedule::build(queue.stars(), 1, skills, TriggerType::StarNotes),
         }
     }
 
@@ -167,6 +171,11 @@ impl Triggers {
     }
 
     #[must_use]
+    pub const fn stars(&self) -> &Schedule {
+        &self.stars
+    }
+
+    #[must_use]
     pub fn rolls(&self) -> u32 {
         self.all().iter().map(|s| s.rolls()).sum()
     }
@@ -176,8 +185,8 @@ impl Triggers {
         self.all().iter().map(|s| s.len()).sum()
     }
 
-    const fn all(&self) -> [&Schedule; 4] {
-        [&self.icons, &self.combo, &self.perfects, &self.time]
+    const fn all(&self) -> [&Schedule; 5] {
+        [&self.icons, &self.combo, &self.perfects, &self.time, &self.stars]
     }
 
     #[must_use]
@@ -628,6 +637,139 @@ mod tests {
             let out = at(&queue, &deaf, &config);
             assert_eq!(out.perfects, 0, "seed {seed}");
             assert_eq!(out, at(&queue, &scoring, &config), "seed {seed}");
+        }
+    }
+
+    fn star(ms: u32, lane: u8) -> (Time, Event) {
+        (Time(ms), Event::new(lane, EventKind::Tap, true, false))
+    }
+
+    // TODO: Come up with a better name LMAO.
+    fn starry(chance: Rate, value: u32) -> Skill {
+        clocked(TriggerType::StarNotes, 1, chance, value)
+    }
+
+    #[expect(clippy::arithmetic_side_effects, reason = "test helper")]
+    fn perfect_stars(queue: &Queue, judged: &Judgements) -> u32 {
+        let mut heads = [true; 9];
+        let mut count = 0;
+        for (i, event) in queue.events().iter().enumerate() {
+            let lane = event.lane() as usize;
+            match event.kind() {
+                EventKind::HoldStart => heads[lane] = judged.at(i),
+                EventKind::HoldRelease if event.is_star() => {
+                    count += u32::from(heads[lane] && judged.at(i));
+                }
+                EventKind::Tap if event.is_star() => count += u32::from(judged.at(i)),
+                EventKind::Tap | EventKind::HoldRelease | EventKind::End => {}
+            }
+        }
+        count
+    }
+
+    /// For the record, star notes are only regular tap notes, never a swing, never a hold. Although I suppose
+    /// nothing would stop a custom charter from doing that.
+    #[test]
+    fn check_star_notes_roll_on_perfect_stars() {
+        let stream = [
+            star(2000, 0),
+            tap(2300, 1),
+            star(2600, 2),
+            (Time(2900), Event::new(3, EventKind::HoldStart, true, false)),
+            star(3200, 4),
+            (Time(3500), Event::new(3, EventKind::HoldRelease, true, false)),
+            tap(3800, 5),
+        ];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        assert_eq!(queue.stars(), 4, "three taps and a hold");
+
+        let mut scoring = Scoring::flat(0);
+        scoring.skills[6] = starry(ALWAYS, 1);
+        let triggers = Triggers::build(&queue, &scoring);
+        assert_eq!(triggers.stars().rolls(), 4, "every star during an all-PERFECT");
+        assert_eq!(triggers.rolls(), 4, "no others");
+        assert_eq!(play(&queue, &scoring).activations, 4);
+
+        let mut seen = [false; 5];
+        for seed in 0..64 {
+            let config = sloppy(FLIP, seed);
+            let judged = Judgements::build(&queue, &config);
+            let want = perfect_stars(&queue, &judged);
+            let out = run(&queue, &config, &scoring, &triggers, &judged);
+            assert_eq!(out.activations, want, "seed {seed}");
+            assert_eq!(out.skill, u64::from(want), "seed {seed}");
+            seen[want as usize] = true;
+        }
+        assert!(seen.iter().filter(|&&s| s).count() > 3, "{seen:?}");
+    }
+
+    /// A bit of a modeling assumption here. Say you have two simultaneous star notes on the same millisecond and
+    /// get a perfect on both of them. This will process them tap -> skill -> tap -> skill.
+    #[test]
+    fn check_simultaneous_stars_roll_after_their_own_tap() {
+        let twins = arena(&[star(2000, 0), star(2000, 1)]);
+        let both = Queue::build(&twins, &only(&twins)).expect("terminated");
+        let mut lone = Scoring::flat(0);
+        lone.skills[4] = starry(ALWAYS, 1);
+        assert_eq!(play(&both, &lone).activations, 2);
+
+        let mixed = arena(&[star(2000, 0), tap(2000, 1)]);
+        let queue = Queue::build(&mixed, &only(&mixed)).expect("terminated");
+        let mut scoring = Scoring::flat(0);
+        scoring.skills[1] = starry(FLIP, 1);
+        scoring.skills[7] = clocked(TriggerType::Combo, 2, FLIP, 1000);
+
+        let seed = split_seed();
+        let d = draws(seed, 2);
+        assert_ne!(d[0] + d[1] * 1000, d[0] * 1000 + d[1]);
+        assert_eq!(seeded(&queue, &scoring, seed).skill, d[0] + d[1] * 1000, "seed {seed}");
+    }
+
+    #[test]
+    fn check_a_star_failure_rolls_acc() {
+        let stream = [star(2000, 0), tap(2300, 1), star(2600, 2), star(2900, 3)];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let mut scoring = Scoring::flat(0);
+        scoring.skills[0] = starry(0, 1);
+        scoring.accessories[0] = worn(ALWAYS, 9000);
+        let out = play(&queue, &scoring);
+        assert_eq!((out.activations, out.accessory_activations), (0, 3));
+        assert_eq!(out.skill, 3 * 9000);
+    }
+
+    #[test]
+    fn check_no_star_perfects_no_rolls() {
+        let stream: Vec<_> = (0_u8..27)
+            .map(|i| {
+                let note = if i % 3 == 0 { star } else { tap };
+                note(2000 + u32::from(i) * 100, i % 9)
+            })
+            .collect();
+        let starred = arena(&stream);
+        let plain = fifty_one();
+
+        for arena in [&starred, &plain] {
+            let queue = Queue::build(arena, &only(arena)).expect("terminated");
+            let mut scoring = Scoring::flat(80_000);
+            scoring.skills[2] = scorer(4, FLIP, 100);
+            scoring.skills[5] = clocked(TriggerType::Combo, 3, FLIP, 10);
+            let mut deaf = scoring;
+            deaf.skills[8] = starry(FLIP, 1);
+            deaf.accessories[8] = worn(ALWAYS, 1);
+            assert_eq!(Triggers::build(&queue, &deaf).stars().rolls(), queue.stars());
+
+            let accuracy = if queue.stars() == 0 { FLIP } else { 0 };
+            for seed in 0..32 {
+                let config = sloppy(accuracy, seed);
+                assert_eq!(
+                    at(&queue, &deaf, &config),
+                    at(&queue, &scoring, &config),
+                    "seed {seed}"
+                );
+            }
         }
     }
 }
