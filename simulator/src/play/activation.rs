@@ -4,7 +4,7 @@ use super::{Outcome, Queue, Scoring};
 use crate::rng::Rng;
 use crate::scalar::{Centi, Rate};
 use crate::skill::{SkillEffect, TriggerType};
-use crate::song::LANES;
+use crate::song::{LANES, Time};
 
 /// Won't work for all skills, but there are some that we can pre-compute at compile-time
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -54,7 +54,7 @@ impl Default for AccessorySkill {
     }
 }
 
-// Can pre-add to the queue certain activations like rhythm icons and combo.
+// Can pre-add to the queue certain activations like rhythm icons, combo and time.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Schedule {
     at: Vec<u32>,
@@ -62,11 +62,16 @@ pub struct Schedule {
 }
 
 impl Schedule {
+    /// Pre-schedules each lane's skill activations if their trigger type allows for it.
+    /// We can pre-schedule every condition besides perfects, scorer, star note, and year group.
+    /// I say "all of them besides", but there's only 7 `TriggerType`s and we can only pre-schedule 3 of them.
+    /// For the record, the 3 we can pre-schedule are rhythm icons, combo, and time.
+    ///
     /// # Panics
     /// Neverrrrr
     #[expect(clippy::arithmetic_side_effects, reason = "`bounded by threshold")]
     #[expect(clippy::expect_used, reason = "9 lanes fit u16 no problemo so we gucci.")]
-    fn build(count: u32, skills: &[Skill; LANES], clock: TriggerType) -> Self {
+    fn build(count: u32, unit: u32, skills: &[Skill; LANES], clock: TriggerType) -> Self {
         const { assert!(LANES <= u16::BITS as usize, "u16") };
 
         let mut dense = vec![0_u16; count as usize + 1];
@@ -88,7 +93,7 @@ impl Schedule {
         let mut out = Self { at: Vec::new(), lanes: Vec::new() };
         for (at, &mask) in dense.iter().enumerate() {
             if mask != 0 {
-                out.at.push(u32::try_from(at).unwrap_or(u32::MAX));
+                out.at.push(u32::try_from(at).unwrap_or(u32::MAX).saturating_mul(unit));
                 out.lanes.push(mask);
             }
         }
@@ -122,14 +127,18 @@ impl Schedule {
 pub struct Triggers {
     icons: Schedule,
     combo: Schedule,
+    time: Schedule,
 }
 
 impl Triggers {
     #[must_use]
     pub fn build(queue: &Queue, scoring: &Scoring) -> Self {
+        let skills = &scoring.skills;
+        let seconds = queue.last_judgement().seconds();
         Self {
-            icons: Schedule::build(queue.icons(), &scoring.skills, TriggerType::RhythmIcons),
-            combo: Schedule::build(queue.notes(), &scoring.skills, TriggerType::Combo),
+            icons: Schedule::build(queue.icons(), 1, skills, TriggerType::RhythmIcons),
+            combo: Schedule::build(queue.notes(), 1, skills, TriggerType::Combo),
+            time: Schedule::build(seconds, Time::SECOND, skills, TriggerType::Time),
         }
     }
 
@@ -144,13 +153,18 @@ impl Triggers {
     }
 
     #[must_use]
+    pub const fn time(&self) -> &Schedule {
+        &self.time
+    }
+
+    #[must_use]
     pub fn rolls(&self) -> u32 {
-        self.icons.rolls().saturating_add(self.combo.rolls())
+        [&self.icons, &self.combo, &self.time].iter().map(|s| s.rolls()).sum()
     }
 
     #[must_use]
     pub fn len(&self) -> usize {
-        self.icons.len().saturating_add(self.combo.len())
+        [&self.icons, &self.combo, &self.time].iter().map(|s| s.len()).sum()
     }
 
     #[must_use]
@@ -196,8 +210,11 @@ fn pay(effect: SkillEffect, value: Centi, out: &mut Outcome) {
 #[cfg(test)]
 mod tests {
     use super::{Skill, Triggers};
-    use crate::play::tests::{ALWAYS, arena, fifty_one, only, play, scorer, seeded, tap, worn};
+    use crate::play::tests::{
+        ALWAYS, arena, at, config, fifty_one, only, play, scorer, seeded, tap, worn,
+    };
     use crate::play::{Queue, Scoring};
+    use crate::play_config::{NoteSpeed, PlayConfig};
     use crate::rng::Rng;
     use crate::scalar::{RATE_UNIT, Rate};
     use crate::skill::TriggerType;
@@ -206,10 +223,20 @@ mod tests {
     #[expect(clippy::integer_division, reason = "a coin flip")]
     const FLIP: Rate = RATE_UNIT / 2;
 
-    const CLOCKS: [TriggerType; 2] = [TriggerType::RhythmIcons, TriggerType::Combo];
+    const CLOCKS: [(TriggerType, u16); 3] = [
+        (TriggerType::RhythmIcons, 51),
+        (TriggerType::Combo, 51),
+        (TriggerType::Time, 7),
+    ];
 
     fn clocked(trigger: TriggerType, threshold: u16, chance: Rate, value: u32) -> Skill {
         Skill { trigger, ..scorer(threshold, chance, value) }
+    }
+
+    /// First `n` skill draws of a seed.
+    fn draws(seed: u64, n: usize) -> Vec<u64> {
+        let mut rng = Rng::new(seed, Rng::SKILLS);
+        core::iter::repeat_with(|| u64::from(rng.roll(FLIP))).take(n).collect()
     }
 
     /// A manually and meticulously selected seed where the first two rolls differ.
@@ -254,8 +281,9 @@ mod tests {
 
         scoring.skills[5] = scorer(1, ALWAYS, 1_000_000);
         scoring.skills[6] = clocked(TriggerType::Combo, 1, ALWAYS, 1_000_000);
+        scoring.skills[7] = clocked(TriggerType::Time, 1, ALWAYS, 1_000_000);
         let loud = play(&queue, &scoring);
-        assert_eq!(loud.activations, 51 + 51, "every icon and every combo");
+        assert_eq!(loud.activations, 51 + 51 + 7, "every icon, combo and second");
         assert_eq!(loud.tap, bare);
     }
 
@@ -264,18 +292,23 @@ mod tests {
         let arena = fifty_one();
         let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
 
-        for clock in CLOCKS {
+        for (clock, ticks) in CLOCKS {
+            let n = u32::from(ticks);
             let mut scoring = Scoring::flat(0);
             scoring.skills[2] = clocked(clock, 1, ALWAYS, 1120);
             scoring.accessories[2] = worn(ALWAYS, 9000);
             let hits = play(&queue, &scoring);
-            assert_eq!((hits.activations, hits.accessory_activations), (51, 0), "{clock:?}");
-            assert_eq!(hits.skill, 51 * 1120, "{clock:?}: acc never got a chance to activate");
+            assert_eq!((hits.activations, hits.accessory_activations), (n, 0), "{clock:?}");
+            assert_eq!(
+                hits.skill,
+                u64::from(n) * 1120,
+                "{clock:?}: acc never got a chance to activate"
+            );
 
             scoring.skills[2] = clocked(clock, 1, 0, 1120);
             let misses = play(&queue, &scoring);
-            assert_eq!((misses.activations, misses.accessory_activations), (0, 51), "{clock:?}");
-            assert_eq!(misses.skill, 51 * 9000, "{clock:?}: acc can now activate");
+            assert_eq!((misses.activations, misses.accessory_activations), (0, n), "{clock:?}");
+            assert_eq!(misses.skill, u64::from(n) * 9000, "{clock:?}: acc can now activate");
         }
     }
 
@@ -304,10 +337,10 @@ mod tests {
         let low = rng.roll(FLIP);
         let want = u64::from(high) * 1000 + u64::from(low);
 
-        for clock in CLOCKS {
+        for (clock, once) in CLOCKS {
             let mut scoring = Scoring::flat(0);
-            scoring.skills[7] = clocked(clock, 51, FLIP, 1000);
-            scoring.skills[1] = clocked(clock, 51, FLIP, 1);
+            scoring.skills[7] = clocked(clock, once, FLIP, 1000);
+            scoring.skills[1] = clocked(clock, once, FLIP, 1);
             assert_eq!(
                 Triggers::build(&queue, &scoring).len(),
                 1,
@@ -340,6 +373,85 @@ mod tests {
             assert_eq!(triggers.combo().rolls(), rolls, "every {threshold}");
             assert!(triggers.icons().is_empty(), "every {threshold}");
             assert_eq!(play(&queue, &scoring).activations, rolls, "every {threshold}");
+        }
+    }
+
+    #[test]
+    fn check_timet() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        assert_eq!(queue.last_judgement(), Time(7000));
+        assert_eq!(queue.times()[0], Time(2000), "the first note");
+
+        let every: Vec<u32> = (1..=7).map(|s| s * 1000).collect();
+        let cases: [(u16, &[u32]); 4] =
+            [(1, &every), (2, &[2000, 4000, 6000]), (7, &[7000]), (8, &[])];
+        for (threshold, want) in cases {
+            let mut scoring = Scoring::flat(0);
+            scoring.skills[0] = clocked(TriggerType::Time, threshold, ALWAYS, 1);
+            let triggers = Triggers::build(&queue, &scoring);
+            let (fires, _) = triggers.time().columns();
+            assert_eq!(fires, [want, &[u32::MAX]].concat(), "every {threshold}s in ms");
+            assert!(triggers.icons().is_empty() && triggers.combo().is_empty());
+
+            let n = u32::try_from(want.len()).expect("a hearty handful");
+            assert_eq!(play(&queue, &scoring).activations, n, "every {threshold}s");
+            let slow = PlayConfig { speed: NoteSpeed::SLOWEST, ..config() };
+            assert_eq!(at(&queue, &scoring, &slow).activations, n, "a time event");
+        }
+    }
+
+    /// Time > tap > note spawn then the spawn, but reversed for the lanes
+    #[test]
+    fn check_time_tiebreakers() {
+        // Spawns at 1400, 2400 and 3000 at the fastest speed.
+        let stream = [tap(2000, 0), tap(3000, 1), tap(3600, 2)];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let mut scoring = Scoring::flat(0);
+        scoring.skills[0] = clocked(TriggerType::Time, 3, FLIP, 100);
+        scoring.skills[4] = clocked(TriggerType::Combo, 2, FLIP, 10);
+        scoring.skills[8] = clocked(TriggerType::RhythmIcons, 3, FLIP, 1);
+        let triggers = Triggers::build(&queue, &scoring);
+        assert_eq!(triggers.time().columns().0, [3000, u32::MAX]);
+
+        let mut discriminated = false;
+        for seed in 0..32 {
+            let d = draws(seed, 3);
+            let want = d[0] * 100 + d[1] * 10 + d[2];
+            assert_eq!(seeded(&queue, &scoring, seed).skill, want, "seed {seed}: {d:?}");
+            discriminated |= want != d[2] * 100 + d[1] * 10 + d[0];
+        }
+        assert!(discriminated, "couldn't identify order");
+    }
+
+    /// Really just making sure the event queue is populated
+    #[test]
+    fn check_time_scheudling() {
+        let slow = |seed| PlayConfig { speed: NoteSpeed::SLOWEST, seed, ..config() };
+        let offset = NoteSpeed::SLOWEST.offset();
+
+        for (second, icon_first) in [(4000, true), (5000, false)] {
+            let stream = [tap(2000, 0), tap(second, 1)];
+            let arena = arena(&stream);
+            let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+            assert_eq!(Time(second).spawn(offset) < Time(3000), icon_first);
+
+            let mut scoring = Scoring::flat(0);
+            scoring.skills[0] = clocked(TriggerType::RhythmIcons, 2, FLIP, 10);
+            scoring.skills[8] = clocked(TriggerType::Time, 3, FLIP, 1);
+            assert_eq!(Triggers::build(&queue, &scoring).time().columns().0, [3000, u32::MAX]);
+
+            for seed in 0..32 {
+                let d = draws(seed, 2);
+                let want = if icon_first {
+                    d[0] * 10 + d[1]
+                } else {
+                    d[1] * 10 + d[0]
+                };
+                assert_eq!(at(&queue, &scoring, &slow(seed)).skill, want, "seed {seed}");
+            }
         }
     }
 }

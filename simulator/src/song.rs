@@ -22,11 +22,19 @@ pub struct ChartIdx(pub u16);
 pub struct Time(pub u32);
 
 impl Time {
+    pub const SECOND: u32 = 1000;
+
     /// Tap time - note speed offset = spawn time.
     #[inline]
     #[must_use]
     pub const fn spawn(self, offset: u32) -> Self {
         Self(self.0.saturating_sub(offset))
+    }
+
+    #[must_use]
+    #[expect(clippy::integer_division, reason = "game mechanic")]
+    pub const fn seconds(self) -> u32 {
+        self.0 / Self::SECOND
     }
 }
 

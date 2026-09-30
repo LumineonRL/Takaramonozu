@@ -183,6 +183,13 @@ impl<'a> Queue<'a> {
         u32::try_from(self.icons.len()).unwrap_or(u32::MAX)
     }
 
+    /// This is used for Time skill triggers, believe it or not.
+    /// Just used to not try to activate timer skills past the last note.
+    #[must_use]
+    pub fn last_judgement(&self) -> Time {
+        self.times.iter().rev().nth(1).copied().unwrap_or_default()
+    }
+
     #[must_use]
     pub const fn lanes(&self) -> [u32; LANES] {
         self.lanes
@@ -319,30 +326,40 @@ pub fn run(
     debug_assert_eq!(judgements.seed(), config.seed, "judgements of another trial");
 
     let offset = config.speed.offset();
-    let icons: &[Time] = &queue.icons;
     let mut out = Outcome::default();
     let mut rng = Rng::new(config.seed, Rng::SKILLS);
     let mut heads = [false; LANES];
-    let mut icon = 0_usize;
     let mut tap = 0_usize;
     let (icon_at, icon_lanes) = triggers.icons().columns();
     let (combo_at, combo_lanes) = triggers.combo().columns();
-    let mut icon_cursor = 0_usize;
-    let mut next_icon = icon_at[0] as usize;
+    let (timer_at, timer_lanes) = triggers.time().columns();
+    let mut spawns = Spawns {
+        icons: &queue.icons,
+        at: icon_at,
+        lanes: icon_lanes,
+        icon: 0,
+        cursor: 0,
+        next: icon_at[0] as usize,
+    };
     let mut combo_cursor = 0_usize;
     let mut next_combo = combo_at[0];
+    let mut timer_cursor = 0_usize;
+    let mut next_timer = Time(timer_at[0]);
 
     loop {
         let time = queue.times[tap];
 
-        while icon < icons.len() && icons[icon].spawn(offset) < time {
-            icon = icon.saturating_add(1);
-            if icon == next_icon {
-                fire(icon_lanes[icon_cursor], scoring, &mut rng, &mut out);
-                icon_cursor = icon_cursor.saturating_add(1);
-                next_icon = icon_at[icon_cursor] as usize;
-            }
+        // Spawns and taps processed before time. Actually unsure if this is how
+        // it works in-game, but it is how burrito's sim does it.
+        while next_timer <= time {
+            // timer skills really don't roll very often
+            core::hint::cold_path();
+            spawns.drain(next_timer, offset, scoring, &mut rng, &mut out);
+            fire(timer_lanes[timer_cursor], scoring, &mut rng, &mut out);
+            timer_cursor = timer_cursor.saturating_add(1);
+            next_timer = Time(timer_at[timer_cursor]);
         }
+        spawns.drain(time, offset, scoring, &mut rng, &mut out);
 
         let event = queue.events[tap];
         let lane = event.lane() as usize;
@@ -378,8 +395,39 @@ pub fn run(
         tap = tap.saturating_add(1);
     }
 
-    out.icons = u32::try_from(icon).unwrap_or(u32::MAX);
+    out.icons = u32::try_from(spawns.icon).unwrap_or(u32::MAX);
     out
+}
+
+struct Spawns<'a> {
+    icons: &'a [Time],
+    at: &'a [u32],
+    lanes: &'a [u16],
+    icon: usize,
+    cursor: usize,
+    next: usize,
+}
+
+impl Spawns<'_> {
+    #[inline]
+    #[expect(clippy::indexing_slicing, reason = "`at` is terminated, `icons` is bounded")]
+    fn drain(
+        &mut self,
+        bound: Time,
+        offset: u32,
+        scoring: &Scoring,
+        rng: &mut Rng,
+        out: &mut Outcome,
+    ) {
+        while self.icon < self.icons.len() && self.icons[self.icon].spawn(offset) < bound {
+            self.icon = self.icon.saturating_add(1);
+            if self.icon == self.next {
+                fire(self.lanes[self.cursor], scoring, rng, out);
+                self.cursor = self.cursor.saturating_add(1);
+                self.next = self.at[self.cursor] as usize;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
