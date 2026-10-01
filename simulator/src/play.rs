@@ -329,19 +329,25 @@ pub fn run(
     triggers: &Triggers,
     judgements: &Judgements,
 ) -> Outcome {
-    /// Only one card has a star note skill trigger and it's a very old SR that's not very good.
-    /// So this has const generics since, in almost every case, we can completely ignore star notes at compile time.
-    if triggers.stars().is_empty() {
-        walk::<false>(queue, config, scoring, triggers, judgements)
-    } else {
-        core::hint::cold_path();
-        walk::<true>(queue, config, scoring, triggers, judgements)
+    // Only one card has a star note skill trigger and it's a very old SR that's not very good.
+    // So this has const generics since, in almost every case, we can completely ignore star notes pre-trial.
+    match (!triggers.stars().is_empty(), triggers.score() != 0) {
+        (false, false) => walk::<false, false>(queue, config, scoring, triggers, judgements),
+        (false, true) => walk::<false, true>(queue, config, scoring, triggers, judgements),
+        (true, false) => {
+            core::hint::cold_path();
+            walk::<true, false>(queue, config, scoring, triggers, judgements)
+        }
+        (true, true) => {
+            core::hint::cold_path();
+            walk::<true, true>(queue, config, scoring, triggers, judgements)
+        }
     }
 }
 
 #[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
 #[expect(clippy::else_if_without_else, reason = "lazy")]
-fn walk<const STARS: bool>(
+fn walk<const STARS: bool, const SCORE: bool>(
     queue: &Queue,
     config: &PlayConfig,
     scoring: &Scoring,
@@ -372,6 +378,7 @@ fn walk<const STARS: bool>(
     let mut star_perfects = 0_u32;
     let mut timer_cursor = 0_usize;
     let mut next_timer = Time(timer_at[0]);
+    let mut ladder = Ladder::new(scoring, if SCORE { triggers.score() } else { 0 });
 
     loop {
         let time = queue.times[tap];
@@ -381,12 +388,19 @@ fn walk<const STARS: bool>(
         while next_timer <= time {
             // timer skills really don't roll very often
             core::hint::cold_path();
-            spawns.drain(next_timer, offset, scoring, &mut rng, &mut out);
+            let at = next_timer;
+            spawns.drain::<SCORE>(at, offset, scoring, &mut rng, &mut out, &mut ladder);
+            if SCORE {
+                ladder.catch_up(at, scoring, &mut rng, &mut out);
+            }
             fire(timer_lanes[timer_cursor], scoring, &mut rng, &mut out);
             timer_cursor = timer_cursor.saturating_add(1);
             next_timer = Time(timer_at[timer_cursor]);
+            if SCORE {
+                ladder.settle(at, scoring, &mut rng, &mut out);
+            }
         }
-        spawns.drain(time, offset, scoring, &mut rng, &mut out);
+        spawns.drain::<SCORE>(time, offset, scoring, &mut rng, &mut out, &mut ladder);
 
         let event = queue.events[tap];
         let lane = event.lane() as usize;
@@ -399,6 +413,9 @@ fn walk<const STARS: bool>(
             }
 
             kind @ (EventKind::Tap | EventKind::HoldRelease) => {
+                if SCORE {
+                    ladder.catch_up(time, scoring, &mut rng, &mut out);
+                }
                 let tail = judgements.at(tap);
                 let head = (kind == EventKind::Tap) | heads.get(lane).copied().unwrap_or(true);
                 out.tap = out.tap.saturating_add(note_score(
@@ -421,11 +438,13 @@ fn walk<const STARS: bool>(
                     let due = stars.due(star_perfects)
                         | combo.due(out.notes)
                         | perfects.due(out.perfects);
-                    fire(due, scoring, &mut rng, &mut out);
-                } else if out.notes == combo.next || out.perfects == perfects.next {
-                    // TODO: Score here
+                    hit::<SCORE>(due, time, scoring, &mut rng, &mut out, &mut ladder);
+                } else if out.notes == combo.next
+                    || out.perfects == perfects.next
+                    || (SCORE && out.score() >= ladder.low)
+                {
                     let due = combo.due(out.notes) | perfects.due(out.perfects);
-                    fire(due, scoring, &mut rng, &mut out);
+                    hit::<SCORE>(due, time, scoring, &mut rng, &mut out, &mut ladder);
                 }
             }
         }
@@ -435,6 +454,226 @@ fn walk<const STARS: bool>(
 
     out.icons = u32::try_from(spawns.icon).unwrap_or(u32::MAX);
     out
+}
+
+#[inline(always)]
+#[expect(
+    clippy::inline_always,
+    reason = "I benchmarked and it didn't get inlined with regular inline."
+)]
+fn hit<const SCORE: bool>(
+    due: u16,
+    now: Time,
+    scoring: &Scoring,
+    rng: &mut Rng,
+    out: &mut Outcome,
+    ladder: &mut Ladder,
+) {
+    // tldr here. Score-based scorers can activate once per frame, so this banks
+    // their trigger for the next frame after they activate.
+    if SCORE && out.score() >= ladder.low {
+        ladder.climb(due, now, scoring, rng, out);
+    } else {
+        fire(due, scoring, rng, out);
+        if SCORE {
+            ladder.settle(now, scoring, rng, out);
+        }
+    }
+}
+
+/// I wonder how SIF ran on devices that went past 60 FPS. I think it was still hard-capped at 60?
+///
+/// tbh this is probably way over-engineered, but I'm a sucker for modeling things the hard way
+/// even if it makes things harder and contributes almost no additional accuracy.
+///
+/// Score-based scorers have two properties that are important. A) Their activations contribute to
+/// the total needed for their next activation and B) they're only supposed to be able to activate once
+/// per frame. So if, in a single tick, enough points are scored for a score-based scorer to try to proc
+/// multiple times, it will roll once, wait a frame, and then roll again the next frame, up until the point
+/// where it exhausted all of its rolls or it's not allowed to activate anymore because this skill was so
+/// busted they nerfed it into the ground.
+///
+/// I thought of doing a naive implementation where I just roll it on the next ms, which technically speaking
+/// is less than one frame at 60 FPS. It'd be way easier than doing FPS math. The difference is so minor.
+/// But here I am doing FPS math because why not.
+const FPS: u32 = 60;
+const MS: u32 = 1000;
+
+/// For score-based scorers when a card needs to roll again on a later frame.
+const NO_PASS: Time = Time(u32::MAX);
+
+#[expect(clippy::integer_division, reason = "frame index")]
+const fn frame_of(t: Time) -> u32 {
+    t.0.saturating_mul(FPS) / MS
+}
+
+/// The timestamp of the next frame.
+const fn frame_start(k: u32) -> Time {
+    Time(k.saturating_mul(MS).div_ceil(FPS))
+}
+
+/// I noted in a comment above about how I'm a sucker for over-engineering to get as close to reality.
+/// This next section will make me sound like a hypocrite as I will state several assumptions I made
+/// that I can not verify. I read through SIFcord's Discord logs and JP wikis to get as much information as I could.
+///
+/// A) Fixed multiples. If the threshold is 10k points and 10,500 are scored in one go, it is now 9500 from triggering
+/// again, not 10,000.
+/// B) What happens if the threshold is passed multiple times in one frame. In the 10k threshold example, say a scorer
+/// puts up 20k points in one activation. I have chosen to model this as roll the skill for the 10k beind surpassed
+/// immediately, then queue the roll for surpassing 20k points to be triggered on the next frame. It may not actually
+/// work like this and I can't confirm.
+/// C) Skill activations still go from right to left, but score-based scorers trigger as soon as their threshold is passed.
+/// So if a lane to the left of a score-based scorer sets it over the score threshold to activate, it will technically break
+/// order and trigger immediately, even before more-left skills activate on that same event.
+///
+/// TODO: Activation cap. I need to research what the actual limits were.
+#[expect(clippy::doc_markdown, reason = "SIFCord doesn't need backticks.")]
+struct Ladder {
+    /// Lowest threshold
+    low: u64,
+    /// The next frame
+    pending: Time,
+    /// aka thresholds
+    rungs: Rungs,
+}
+
+struct Rungs {
+    step: [u16; LANES],
+    next: [u64; LANES],
+    lanes: u16,
+    /// Lanes that rolled in `frame`.
+    spent: u16,
+    frame: u32,
+}
+
+impl Ladder {
+    #[expect(clippy::indexing_slicing, reason = "`lanes` holds lane bits")]
+    fn new(scoring: &Scoring, lanes: u16) -> Self {
+        let mut ladder = Self {
+            low: u64::MAX,
+            pending: NO_PASS,
+            rungs: Rungs {
+                step: [0; LANES],
+                next: [u64::MAX; LANES],
+                lanes,
+                spent: 0,
+                frame: 0,
+            },
+        };
+        let mut bits = lanes;
+        while let Some(lane) = bits.lowest_one() {
+            bits ^= bits.isolate_lowest_one();
+            let step = scoring.skills[lane as usize].threshold;
+            ladder.rungs.step[lane as usize] = step;
+            ladder.rungs.next[lane as usize] = u64::from(step);
+            ladder.low = ladder.low.min(u64::from(step));
+        }
+        ladder
+    }
+
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "I benchmarked")]
+    fn settle(&mut self, now: Time, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) {
+        if out.score() >= self.low {
+            self.climb(0, now, scoring, rng, out);
+        }
+    }
+
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "I benchmarked")]
+    fn climb(
+        &mut self,
+        first: u16,
+        now: Time,
+        scoring: &Scoring,
+        rng: &mut Rng,
+        out: &mut Outcome,
+    ) {
+        let climbed = self.rungs.climb(first, now, scoring, rng.clone(), *out);
+        (*rng, *out, self.low, self.pending) = climbed;
+    }
+
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "I benchmarked")]
+    fn catch_up(&mut self, until: Time, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) {
+        if self.pending < until {
+            let owed = self.rungs.owe(self.pending, until, scoring, rng.clone(), *out);
+            (*rng, *out, self.low, self.pending) = owed;
+        }
+    }
+}
+
+impl Rungs {
+    #[inline]
+    #[expect(clippy::indexing_slicing, reason = "`lanes` holds lane bits")]
+    fn take(&mut self, now: Time, score: u64) -> (u16, u64, Time) {
+        let frame = frame_of(now);
+        if frame != self.frame {
+            self.frame = frame;
+            self.spent = 0;
+        }
+        let mut due = 0;
+        let mut low = u64::MAX;
+        let mut bits = self.lanes;
+        while let Some(lane) = bits.lowest_one() {
+            let bit = bits.isolate_lowest_one();
+            bits ^= bit;
+            let lane = lane as usize;
+            if self.next[lane] <= score && self.spent & bit == 0 {
+                due |= bit;
+                self.next[lane] = self.next[lane].saturating_add(u64::from(self.step[lane]));
+            }
+            low = low.min(self.next[lane]);
+        }
+        self.spent |= due;
+        let pending = if low <= score {
+            frame_start(frame.saturating_add(1))
+        } else {
+            NO_PASS
+        };
+        (due, low, pending)
+    }
+
+    /// For when a score-based scorer is "owed" an activation on a later frame.
+    #[inline(never)]
+    fn owe(
+        &mut self,
+        mut pending: Time,
+        until: Time,
+        scoring: &Scoring,
+        mut rng: Rng,
+        mut out: Outcome,
+    ) -> (Rng, Outcome, u64, Time) {
+        let mut low = 0;
+        while pending < until {
+            (rng, out, low, pending) = self.climb(0, pending, scoring, rng, out);
+        }
+        (rng, out, low, pending)
+    }
+
+    /// increments the score counter for score-based scorers.
+    #[inline(never)]
+    fn climb(
+        &mut self,
+        first: u16,
+        now: Time,
+        scoring: &Scoring,
+        mut rng: Rng,
+        mut out: Outcome,
+    ) -> (Rng, Outcome, u64, Time) {
+        let (mut due, mut low, mut pending) = (first, 0, NO_PASS);
+        loop {
+            if out.score() >= low {
+                let (taken, next, owed) = self.take(now, out.score());
+                (due, low, pending) = (due | taken, next, owed);
+            }
+            if due == 0 {
+                return (rng, out, low, pending);
+            }
+            fire(due, scoring, &mut rng, &mut out);
+            due = 0;
+        }
+    }
 }
 
 /// For skill trigger conditions that we need to actively track e.g. perfects, star notes.
@@ -479,22 +718,31 @@ struct Spawns<'a> {
 }
 
 impl Spawns<'_> {
-    #[inline]
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "I benchmarked")]
     #[expect(clippy::indexing_slicing, reason = "`at` is terminated, `icons` is bounded")]
-    fn drain(
+    fn drain<const SCORE: bool>(
         &mut self,
         bound: Time,
         offset: u32,
         scoring: &Scoring,
         rng: &mut Rng,
         out: &mut Outcome,
+        ladder: &mut Ladder,
     ) {
         while self.icon < self.icons.len() && self.icons[self.icon].spawn(offset) < bound {
             self.icon = self.icon.saturating_add(1);
             if self.icon == self.next {
+                let now = self.icons[self.icon.saturating_sub(1)].spawn(offset);
+                if SCORE {
+                    ladder.catch_up(now, scoring, rng, out);
+                }
                 fire(self.lanes[self.cursor], scoring, rng, out);
                 self.cursor = self.cursor.saturating_add(1);
                 self.next = self.at[self.cursor] as usize;
+                if SCORE {
+                    ladder.settle(now, scoring, rng, out);
+                }
             }
         }
     }

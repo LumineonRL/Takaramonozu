@@ -134,6 +134,7 @@ pub struct Triggers {
     perfects: Schedule,
     time: Schedule,
     stars: Schedule,
+    score: u16,
 }
 
 impl Triggers {
@@ -147,6 +148,7 @@ impl Triggers {
             perfects: Schedule::build(queue.notes(), 1, skills, TriggerType::Perfects),
             time: Schedule::build(seconds, Time::SECOND, skills, TriggerType::Time),
             stars: Schedule::build(queue.stars(), 1, skills, TriggerType::StarNotes),
+            score: lanes_on(skills, TriggerType::Score),
         }
     }
 
@@ -176,10 +178,16 @@ impl Triggers {
     }
 
     #[must_use]
+    pub const fn score(&self) -> u16 {
+        self.score
+    }
+
+    #[must_use]
     pub fn rolls(&self) -> u32 {
         self.all().iter().map(|s| s.rolls()).sum()
     }
 
+    /// Used to tell how many score-triggered skills are queued up.
     #[must_use]
     pub fn len(&self) -> usize {
         self.all().iter().map(|s| s.len()).sum()
@@ -191,12 +199,20 @@ impl Triggers {
 
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.len() == 0 && self.score == 0
     }
 }
 
+fn lanes_on(skills: &[Skill; LANES], clock: TriggerType) -> u16 {
+    (0_u32..)
+        .zip(skills)
+        .filter(|(_, skill)| skill.trigger == clock && skill.threshold != 0)
+        .fold(0, |mask, (lane, _)| mask | 1_u16.checked_shl(lane).unwrap_or(0))
+}
+
 /// Ties happen right to left. Actually there's a coinflip mechanic involving Amplify, but we'll worry about that once I get around to Amplify.
-#[inline]
+#[inline(always)]
+#[expect(clippy::inline_always, reason = "I benchmarked.")]
 pub(super) fn fire(mask: u16, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) {
     let mut bits = mask;
     while let Some(lane) = bits.highest_one() {
@@ -771,5 +787,77 @@ mod tests {
                 );
             }
         }
+    }
+
+    fn laddered(threshold: u16, chance: Rate, value: u32) -> Skill {
+        clocked(TriggerType::Score, threshold, chance, value)
+    }
+
+    /// First seed where the first `n` draws pass `pred`.
+    fn seed_where(n: usize, pred: impl Fn(&[u64]) -> bool) -> u64 {
+        (0..256_u64).find(|&s| pred(&draws(s, n))).expect("useable seed")
+    }
+
+    /// 2000 vs 1500 means 500 towards the goal of 3000.
+    #[test]
+    fn check_score_thresholds_are_fixed() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(80_000);
+        scoring.skills[4] = laddered(1500, ALWAYS, 0);
+
+        let triggers = Triggers::build(&queue, &scoring);
+        assert_eq!(triggers.score(), 0b1_0000);
+        assert_eq!(triggers.rolls(), 0, "nothing to queue");
+        assert!(!triggers.is_empty(), "can roll skill");
+
+        let out = play(&queue, &scoring);
+        assert_eq!(out.score(), 51_100);
+        assert_eq!(out.activations, 34, "51,100 / 1500");
+    }
+
+    #[test]
+    fn check_a_scorer_once_per_frame_per_lane() {
+        let stream = [tap(2000, 0), tap(2100, 1), tap(2200, 2), tap(2300, 3)];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(80_000);
+        scoring.skills[6] = laddered(1000, ALWAYS, 2500);
+
+        let out = play(&queue, &scoring);
+        assert_eq!(out.activations, 19);
+        assert_eq!(out.skill, 19 * 2500);
+    }
+
+    #[test]
+    fn check_frame_calculation() {
+        let stream = [tap(2000, 0), tap(2010, 1), tap(2100, 2)];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let mut scoring = Scoring::flat(0);
+        scoring.skills[0] = clocked(TriggerType::Time, 2, ALWAYS, 6000);
+        scoring.skills[1] = clocked(TriggerType::Combo, 2, FLIP, 100);
+        scoring.skills[4] = laddered(3000, FLIP, 1);
+
+        let seed = seed_where(4, |d| d[2] != d[3]);
+        let d = draws(seed, 4);
+        let want = 6000 + d[1] + d[2] * 100 + d[3];
+        assert_ne!(want, 6000 + d[1] + d[2] + d[3] * 100, "both thresholds before the tap");
+        assert_eq!(seeded(&queue, &scoring, seed).skill, want, "seed {seed}: {d:?}");
+    }
+
+    #[test]
+    fn check_scorer_threshold_accessory_works() {
+        let stream = [tap(2000, 0), tap(2100, 1), tap(2200, 2), tap(2300, 3)];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(80_000);
+        scoring.skills[3] = laddered(3000, 0, 1590);
+        scoring.accessories[3] = worn(ALWAYS, 9000);
+
+        let out = play(&queue, &scoring);
+        assert_eq!((out.activations, out.accessory_activations), (0, 7));
+        assert_eq!(out.skill, 7 * 9000);
     }
 }
