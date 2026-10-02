@@ -1,9 +1,14 @@
 //! Skill activation trigger conditions e.g. rhythm icons, combo, etc.
 
+pub(super) mod chain;
+pub(super) mod ladder;
+
 use core::num::NonZeroU8;
 
-use super::{Outcome, Queue, Scoring};
-use crate::rng::Rng;
+use super::effect::pay;
+use super::queue::Queue;
+use super::rng::Rng;
+use super::{Outcome, Scoring};
 use crate::scalar::{Centi, Rate};
 use crate::skill::{SkillEffect, TriggerType};
 use crate::song::{LANES, Time};
@@ -222,6 +227,43 @@ fn lanes_on(skills: &[Skill; LANES], clock: TriggerType) -> u16 {
         .fold(0, |mask, (lane, _)| mask | 1_u16.checked_shl(lane).unwrap_or(0))
 }
 
+/// For skill trigger conditions that we need to actively track e.g. perfects, star notes.
+/// Didn't end up putting year group here. Gave it its own struct `Chain` instead of `Tally`.
+/// Spark might be a tally too? I mean we need to tally it I just don't know if it will ive
+/// in this tally, since Spark is for an accessory trigger eh it probably goes here.
+pub(super) struct Tally<'a> {
+    at: &'a [u32],
+    lanes: &'a [u16],
+    cursor: usize,
+    next: u32,
+}
+
+impl<'a> Tally<'a> {
+    #[expect(clippy::indexing_slicing, reason = "`terminated")]
+    pub(super) fn new(schedule: &'a Schedule) -> Self {
+        let (at, lanes) = schedule.columns();
+        Self { at, lanes, cursor: 0, next: at[0] }
+    }
+
+    #[inline]
+    pub(super) const fn next(&self) -> u32 {
+        self.next
+    }
+
+    /// The lanes firing at `count`, or none.
+    #[inline]
+    #[expect(clippy::indexing_slicing, reason = "`terminated. I'LL BE BACK.")]
+    pub(super) fn due(&mut self, count: u32) -> u16 {
+        if count != self.next {
+            return 0;
+        }
+        let mask = self.lanes[self.cursor];
+        self.cursor = self.cursor.saturating_add(1);
+        self.next = self.at[self.cursor];
+        mask
+    }
+}
+
 /// Ties happen right to left. Actually there's a coinflip mechanic involving Amplify, but we'll worry about that once I get around to Amplify.
 #[inline(always)]
 #[expect(clippy::inline_always, reason = "I benchmarked.")]
@@ -263,46 +305,42 @@ pub(super) fn fire<const LANDED: bool>(
     landed
 }
 
-/// TODO: every other effect.
-#[inline]
-fn pay(effect: SkillEffect, value: Centi, out: &mut Outcome) {
-    if effect == SkillEffect::Scorer {
-        out.skill = out.skill.saturating_add(u64::from(value));
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use core::num::NonZeroU8;
-
     use super::{Skill, Triggers};
+    use crate::play::config::{NoteSpeed, PlayConfig};
+    use crate::play::judgement::Judgements;
+    use crate::play::queue::Queue;
+    use crate::play::rng::Rng;
     use crate::play::tests::{
-        ALWAYS, arena, at, config, fifty_one, only, play, scorer, seeded, tap, worn,
+        ALWAYS, arena, at, config, fifty_one, only, play, scorer, seeded, sloppy, tap, worn,
     };
-    use crate::play::{Judgements, Queue, Scoring, run};
-    use crate::play_config::{NoteSpeed, PlayConfig};
-    use crate::rng::Rng;
+    use crate::play::{Scoring, run};
     use crate::scalar::{RATE_UNIT, Rate};
     use crate::skill::TriggerType;
     use crate::song::{Event, EventKind, Time};
 
     #[expect(clippy::integer_division, reason = "a coin flip")]
-    const FLIP: Rate = RATE_UNIT / 2;
+    pub(super) const FLIP: Rate = RATE_UNIT / 2;
 
     /// Note that for an all-perfect, Perfect is essentially equivalent to Combo.
-    const CLOCKS: [(TriggerType, u16); 4] = [
+    pub(super) const CLOCKS: [(TriggerType, u16); 4] = [
         (TriggerType::RhythmIcons, 51),
         (TriggerType::Combo, 51),
         (TriggerType::Perfects, 51),
         (TriggerType::Time, 7),
     ];
 
-    fn clocked(trigger: TriggerType, threshold: u16, chance: Rate, value: u32) -> Skill {
+    pub(super) fn clocked(trigger: TriggerType, threshold: u16, chance: Rate, value: u32) -> Skill {
         Skill { trigger, ..scorer(threshold, chance, value) }
     }
 
+    pub(super) fn laddered(threshold: u16, chance: Rate, value: u32) -> Skill {
+        clocked(TriggerType::Score, threshold, chance, value)
+    }
+
     /// First `n` skill draws of a seed.
-    fn draws(seed: u64, n: usize) -> Vec<u64> {
+    pub(super) fn draws(seed: u64, n: usize) -> Vec<u64> {
         let mut rng = Rng::new(seed, Rng::SKILLS);
         core::iter::repeat_with(|| u64::from(rng.roll(FLIP))).take(n).collect()
     }
@@ -315,6 +353,11 @@ mod tests {
                 rng.roll(FLIP) != rng.roll(FLIP)
             })
             .expect("a seed where the first two draws differ")
+    }
+
+    /// First seed where the first `n` draws pass `pred`.
+    pub(super) fn seed_where(n: usize, pred: impl Fn(&[u64]) -> bool) -> u64 {
+        (0..256_u64).find(|&s| pred(&draws(s, n))).expect("useable seed")
     }
 
     #[test]
@@ -522,10 +565,6 @@ mod tests {
                 assert_eq!(at(&queue, &scoring, &slow(seed)).skill, want, "seed {seed}");
             }
         }
-    }
-
-    fn sloppy(accuracy: Rate, seed: u64) -> PlayConfig {
-        PlayConfig { accuracy, seed, ..config() }
     }
 
     #[expect(clippy::arithmetic_side_effects, reason = "test helper")]
@@ -815,404 +854,5 @@ mod tests {
                 );
             }
         }
-    }
-
-    fn laddered(threshold: u16, chance: Rate, value: u32) -> Skill {
-        clocked(TriggerType::Score, threshold, chance, value)
-    }
-
-    /// First seed where the first `n` draws pass `pred`.
-    fn seed_where(n: usize, pred: impl Fn(&[u64]) -> bool) -> u64 {
-        (0..256_u64).find(|&s| pred(&draws(s, n))).expect("useable seed")
-    }
-
-    /// 2000 vs 1500 means 500 towards the goal of 3000.
-    #[test]
-    fn check_score_thresholds_are_fixed() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(80_000);
-        scoring.skills[4] = laddered(1500, ALWAYS, 0);
-
-        let triggers = Triggers::build(&queue, &scoring);
-        assert_eq!(triggers.score(), 0b1_0000);
-        assert_eq!(triggers.rolls(), 0, "nothing to queue");
-        assert!(!triggers.is_empty(), "can roll skill");
-
-        let out = play(&queue, &scoring);
-        assert_eq!(out.score(), 51_100);
-        assert_eq!(out.activations, 34, "51,100 / 1500");
-    }
-
-    #[test]
-    fn check_a_scorer_once_per_frame_per_lane() {
-        let stream = [tap(2000, 0), tap(2100, 1), tap(2200, 2), tap(2300, 3)];
-        let arena = arena(&stream);
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(80_000);
-        scoring.skills[6] = laddered(1000, ALWAYS, 2500);
-
-        let out = play(&queue, &scoring);
-        assert_eq!(out.activations, 19);
-        assert_eq!(out.skill, 19 * 2500);
-    }
-
-    #[test]
-    fn check_frame_calculation() {
-        let stream = [tap(2000, 0), tap(2010, 1), tap(2100, 2)];
-        let arena = arena(&stream);
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-
-        let mut scoring = Scoring::flat(0);
-        scoring.skills[0] = clocked(TriggerType::Time, 2, ALWAYS, 6000);
-        scoring.skills[1] = clocked(TriggerType::Combo, 2, FLIP, 100);
-        scoring.skills[4] = laddered(3000, FLIP, 1);
-
-        let seed = seed_where(4, |d| d[2] != d[3]);
-        let d = draws(seed, 4);
-        let want = 6000 + d[1] + d[2] * 100 + d[3];
-        assert_ne!(want, 6000 + d[1] + d[2] + d[3] * 100, "both thresholds before the tap");
-        assert_eq!(seeded(&queue, &scoring, seed).skill, want, "seed {seed}: {d:?}");
-    }
-
-    #[test]
-    fn check_scorer_threshold_accessory_works() {
-        let stream = [tap(2000, 0), tap(2100, 1), tap(2200, 2), tap(2300, 3)];
-        let arena = arena(&stream);
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(80_000);
-        scoring.skills[3] = laddered(3000, 0, 1590);
-        scoring.accessories[3] = worn(ALWAYS, 9000);
-
-        let out = play(&queue, &scoring);
-        assert_eq!((out.activations, out.accessory_activations), (0, 7));
-        assert_eq!(out.skill, 7 * 9000);
-    }
-
-    fn limited(threshold: u16, chance: Rate, value: u32, limit: u8) -> Skill {
-        Skill {
-            limit: NonZeroU8::new(limit),
-            ..laddered(threshold, chance, value)
-        }
-    }
-
-    /// 34 thresholds of 1500 on `fifty_one`, makes sure that it stops activating.
-    #[test]
-    fn check_a_score_trigger_stops_at_its_limit() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-
-        for (limit, want) in [(0, 34), (1, 1), (5, 5), (33, 33), (34, 34), (200, 34)] {
-            let mut scoring = Scoring::flat(80_000);
-            scoring.skills[4] = limited(1500, ALWAYS, 0, limit);
-            assert_eq!(play(&queue, &scoring).activations, want, "limit {limit}");
-        }
-    }
-
-    /// I wanted to write an entire paragraph for the skill function but I'll just put it in a comment instead.
-    /// This checks that a score-based scorer only has its activation limit consumed when a skill succeeds, either
-    /// the card's skill or its accessory.
-    #[test]
-    fn check_score_activation_only_use_on_activation() {
-        const LIMIT: u64 = 5;
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(80_000);
-        scoring.skills[0] = clocked(TriggerType::Time, 7, FLIP, 1);
-        scoring.skills[4] = limited(1500, FLIP, 0, 5);
-
-        let (mut drawing, mut charged) = (false, false);
-        for seed in 0..64 {
-            let d = draws(seed, 40);
-            let (mut i, mut hits) = (0, 0);
-            while i < 33 && hits < LIMIT {
-                hits += d[i];
-                i += 1;
-            }
-            let timer = d[i];
-            if hits < LIMIT {
-                hits += d[i + 1];
-            }
-
-            let out = seeded(&queue, &scoring, seed);
-            assert_eq!(out.skill, timer, "seed {seed}: {d:?}");
-            assert_eq!(u64::from(out.activations), hits + timer, "seed {seed}: {d:?}");
-            drawing |= timer != d[33];
-            charged |= timer != d[5];
-        }
-        assert!(drawing, "couldn't differentiate");
-        assert!(charged, "still activating");
-    }
-
-    #[test]
-    fn check_an_accessory_spends_the_cards_activatiion_limit() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(80_000);
-        scoring.skills[4] = limited(1500, 0, 0, 5);
-        scoring.accessories[4] = worn(ALWAYS, 0);
-        let missed = play(&queue, &scoring);
-        assert_eq!((missed.activations, missed.accessory_activations), (0, 5));
-
-        scoring.skills[4].chance = ALWAYS;
-        let hit = play(&queue, &scoring);
-        assert_eq!((hit.activations, hit.accessory_activations), (5, 0));
-
-        scoring.skills[4].chance = FLIP;
-        scoring.accessories[4] = worn(FLIP, 0);
-        let mut mixed = false;
-        for seed in 0..32 {
-            let d = draws(seed, 80);
-            let (mut i, mut card, mut acc) = (0, 0, 0);
-            for _ in 0..34 {
-                if card + acc == 5 {
-                    break;
-                }
-                if d[i] == 1 {
-                    card += 1;
-                } else {
-                    i += 1;
-                    acc += d[i];
-                }
-                i += 1;
-            }
-            let out = seeded(&queue, &scoring, seed);
-            let got = (u64::from(out.activations), u64::from(out.accessory_activations));
-            assert_eq!(got, (card, acc), "seed {seed}");
-            mixed |= card + acc == 5 && acc > 0;
-        }
-        assert!(mixed, "accessory never activated before limit reached");
-    }
-
-    #[test]
-    fn check_activation_limit_is_per_lane() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(80_000);
-        scoring.skills[2] = limited(1500, ALWAYS, 0, 3);
-        scoring.skills[6] = limited(1500, ALWAYS, 0, 7);
-        scoring.skills[8] = laddered(1500, ALWAYS, 0);
-        assert_eq!(play(&queue, &scoring).activations, 3 + 7 + 34);
-    }
-
-    /// Second-year Aqours. Any distinct bits should work. The trial just compares them.
-    /// Sorry that there's a million tests for this mechanic.
-    const CHIKA: u16 = 1 << 0;
-    const YOU: u16 = 1 << 1;
-    const RIKO: u16 = 1 << 2;
-
-    fn chained(need: u16, chance: Rate, value: u32) -> Skill {
-        clocked(TriggerType::YearGroup, need, chance, value)
-    }
-
-    /// Dummy cards whose skills proc every threshold, but their effect doesn't actually do anything.
-    /// So we can isolate the year group trigger without having to account for what the others skills
-    /// are doing.
-    fn member(scoring: &mut Scoring, lane: usize, who: u16, clock: TriggerType, threshold: u16) {
-        scoring.skills[lane] = clocked(clock, threshold, ALWAYS, 0);
-        scoring.members[lane] = who;
-    }
-
-    /// I never called "year group scorers" "chain scorers" but apparently that was sifcord's name for them.
-    /// I will be adopting it going forward because it's easier to type.
-    #[test]
-    fn check_chain_requires_other_members() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-
-        for (often, rarely) in [(CHIKA, YOU), (YOU, CHIKA)] {
-            let mut scoring = Scoring::flat(0);
-            member(&mut scoring, 8, often, TriggerType::RhythmIcons, 1);
-            member(&mut scoring, 5, rarely, TriggerType::RhythmIcons, 5);
-            scoring.skills[0] = chained(CHIKA | YOU, ALWAYS, 1);
-            scoring.members[0] = RIKO;
-            let triggers = Triggers::build(&queue, &scoring);
-            assert_eq!(triggers.year(), 0b1);
-            assert_eq!(triggers.rolls(), 51 + 10, "nothing pre-scheduled for chain scorers");
-
-            let out = play(&queue, &scoring);
-            assert_eq!(out.skill, 10, "once per 5 icons");
-            assert_eq!(out.activations, 51 + 10 + 10);
-        }
-
-        let mut alone = Scoring::flat(0);
-        member(&mut alone, 8, CHIKA, TriggerType::RhythmIcons, 1);
-        member(&mut alone, 5, RIKO, TriggerType::RhythmIcons, 1);
-        alone.skills[0] = chained(CHIKA | YOU, ALWAYS, 1);
-        alone.members[0] = RIKO;
-        assert_eq!(play(&queue, &alone).skill, 0, "no You, no chain");
-    }
-
-    /// Riko in left-most slot 1, You and Chika alternating in slots 2-9. The question is, if You and Chika have the same
-    /// threshold, and all 8 of them proc their skills at the same time, does Riko proc 1 or 4 times? After all,
-    /// since skill activations happen right->left, Riko's condition is satisfied after lanes 8 and 9 proc, theoretically
-    /// letting her roll, then roll again when lanes 6 and 7 proc, then again when 5 and 4, and finally when 2 and 3 proc.
-    ///
-    /// But this apparently, from what I can gather from sifcord logs, is not actually what happens. You get at most
-    /// one activation at any given moment for chain scorers. And they don't bank and roll on the next frame like score scorers do.
-    #[test]
-    fn check_a_chain_goes_once_per_moment() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-
-        for (clock, ticks) in CLOCKS {
-            let mut scoring = Scoring::flat(0);
-            for lane in 1..9 {
-                member(&mut scoring, lane, [YOU, CHIKA][lane % 2], clock, 1);
-            }
-            scoring.skills[0] = chained(CHIKA | YOU, ALWAYS, 2500);
-            scoring.members[0] = RIKO;
-
-            let out = play(&queue, &scoring);
-            assert_eq!(out.skill, u64::from(ticks) * 2500, "{clock:?}");
-            assert_eq!(out.activations, u32::from(ticks) * 9, "{clock:?}");
-        }
-    }
-
-    /// Another assumption I can't verify, related to the one above. Extra members proccing at the same time
-    ///  a chain threshold is satisfied means none of them carry over to the next threshold.
-    /// with it.
-    /// Here we have Chikas in 8 and 2, a You in 5 every 4 icons, another You in 7 every 6. 
-    /// If the second Chika carried over, the the You at icon 6 would set the chain off again, at 6, 18, 30 and 42.
-    #[test]
-    fn check_a_moments_extra_members_dont_carry_over() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(0);
-        member(&mut scoring, 8, CHIKA, TriggerType::RhythmIcons, 4);
-        member(&mut scoring, 7, YOU, TriggerType::RhythmIcons, 6);
-        member(&mut scoring, 5, YOU, TriggerType::RhythmIcons, 4);
-        member(&mut scoring, 2, CHIKA, TriggerType::RhythmIcons, 4);
-        scoring.skills[0] = chained(CHIKA | YOU, ALWAYS, 1);
-        scoring.members[0] = RIKO;
-        assert_eq!(play(&queue, &scoring).skill, 12, "every 4 icons but didn't go 16 times.");
-    }
-
-    /// Chain scorers break the right->left skill activation paradigm. Or at least all evidence points to
-    /// this being in the case. Every other skill rolls, then chain scorer is checked, and then if rolls if
-    /// its trigger was satisfied.
-    #[test]
-    fn check_chain_rolls_last() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(0);
-        scoring.skills[8] = chained(CHIKA | YOU, FLIP, 1000);
-        scoring.members[8] = RIKO;
-        member(&mut scoring, 6, CHIKA, TriggerType::RhythmIcons, 51);
-        member(&mut scoring, 4, YOU, TriggerType::RhythmIcons, 51);
-        scoring.skills[2] = scorer(51, FLIP, 1);
-
-        let seed = seed_where(4, |d| d[2] != d[3]);
-        let d = draws(seed, 4);
-        let want = d[2] + d[3] * 1000;
-        assert_ne!(want, d[2] * 1000 + d[3], "chain would draw before lane 3 if it were right->left");
-        assert_eq!(seeded(&queue, &scoring, seed).skill, want, "seed {seed}: {d:?}");
-    }
-
-    #[test]
-    fn check_an_accessory_counts_as_its_card() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(0);
-        scoring.skills[8] = clocked(TriggerType::RhythmIcons, 1, 0, 0);
-        scoring.members[8] = CHIKA;
-        member(&mut scoring, 5, YOU, TriggerType::RhythmIcons, 1);
-        scoring.skills[0] = chained(CHIKA | YOU, ALWAYS, 1);
-        scoring.members[0] = RIKO;
-        assert_eq!(play(&queue, &scoring).skill, 0, "Chika never activates");
-
-        scoring.accessories[8] = worn(ALWAYS, 0);
-        let hers = play(&queue, &scoring);
-        assert_eq!(hers.skill, 51, "her accessory does");
-        assert_eq!(hers.accessory_activations, 51);
-
-        scoring.skills[0].chance = 0;
-        scoring.accessories[0] = worn(ALWAYS, 9000);
-        let rikos = play(&queue, &scoring);
-        assert_eq!(
-            (rikos.accessory_activations, rikos.skill),
-            (2 * 51, 51 * 9000),
-            "and so does Riko's"
-        );
-    }
-
-    #[test]
-    fn check_chain_resets_if_skill_fails() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(0);
-        member(&mut scoring, 8, CHIKA, TriggerType::RhythmIcons, 1);
-        member(&mut scoring, 5, YOU, TriggerType::RhythmIcons, 10);
-        scoring.skills[0] = chained(CHIKA | YOU, FLIP, 1);
-        scoring.members[0] = RIKO;
-
-        let mut missed = false;
-        for seed in 0..32 {
-            let d = draws(seed, 51 + 5 + 5);
-            let mut i = 0;
-            let mut want = 0;
-            for icon in 1..=51 {
-                i += 1;
-                if icon % 10 == 0 {
-                    want += d[i + 1];
-                    i += 2;
-                }
-            }
-            assert_eq!(seeded(&queue, &scoring, seed).skill, want, "seed {seed}: {d:?}");
-            missed |= want < 5;
-        }
-        assert!(missed, "chain skill never missed");
-    }
-
-    /// Riko chains in 8 and 2, a You chain between them, a Chika in 9 and a plain Riko in 1, all landing every icon.
-    /// The You chain starts it off of the plain Riko at icon 1, then all three go every icon. Since a chain resets when
-    /// all other events have been processed at a given time, the You chain proccing in the counts for both Rikos' next cycle.
-    #[test]
-    fn check_chains_proc_each_other() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(0);
-        member(&mut scoring, 8, CHIKA, TriggerType::RhythmIcons, 1);
-        member(&mut scoring, 0, RIKO, TriggerType::RhythmIcons, 1);
-        scoring.skills[7] = chained(CHIKA | YOU, ALWAYS, 1);
-        scoring.skills[4] = chained(CHIKA | RIKO, ALWAYS, 1000);
-        scoring.skills[1] = chained(CHIKA | YOU, ALWAYS, 1_000_000);
-        (scoring.members[7], scoring.members[4], scoring.members[1]) = (RIKO, YOU, RIKO);
-        assert_eq!(Triggers::build(&queue, &scoring).year(), 0b1001_0010);
-
-        let out = play(&queue, &scoring);
-        assert_eq!(out.skill, 50 + 51 * 1000 + 50 * 1_000_000);
-    }
-
-    #[test]
-    fn check_score_scorer_counts_for_chain_scorer() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(80_000);
-        scoring.skills[8] = laddered(1000, ALWAYS, 0);
-        scoring.members[8] = CHIKA;
-        member(&mut scoring, 5, YOU, TriggerType::RhythmIcons, 1);
-        scoring.skills[0] = chained(CHIKA | YOU, ALWAYS, 1);
-        scoring.members[0] = RIKO;
-
-        let out = play(&queue, &scoring);
-        assert_eq!(out.activations, 51 + 51 + 46, "a threshold per tap");
-        assert_eq!(out.skill, 46);
-    }
-
-    #[test]
-    fn check_chain_score_increments_score_scorer_threshold() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(0);
-        member(&mut scoring, 8, CHIKA, TriggerType::RhythmIcons, 1);
-        member(&mut scoring, 5, YOU, TriggerType::RhythmIcons, 1);
-        scoring.skills[3] = laddered(10_000, ALWAYS, 0);
-        scoring.skills[0] = chained(CHIKA | YOU, ALWAYS, 10_000);
-        scoring.members[0] = RIKO;
-
-        let out = play(&queue, &scoring);
-        assert_eq!(out.skill, 51 * 10_000);
-        assert_eq!(out.activations, 51 * 4);
     }
 }

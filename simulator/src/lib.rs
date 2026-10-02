@@ -2,8 +2,6 @@ pub mod accessory;
 pub mod archive;
 pub mod card;
 pub mod play;
-pub mod play_config;
-pub mod rng;
 pub mod scalar;
 pub mod sis;
 pub mod skill;
