@@ -106,6 +106,9 @@ pub struct Scoring {
     pub lanes: [u16; LANES],
     pub skills: [Skill; LANES],
     pub accessories: [AccessorySkill; LANES],
+    /// For Year-Group triggers, although effects like sync will probably steal this too. Or something similar.
+    /// One bit for each lane's character. The bit of the first lane that character is in.
+    pub members: [u16; LANES],
 }
 
 impl Scoring {
@@ -116,6 +119,7 @@ impl Scoring {
             lanes: [UNIT; LANES],
             skills: [Skill::NONE; LANES],
             accessories: [AccessorySkill::NONE; LANES],
+            members: [0; LANES],
         }
     }
 }
@@ -331,23 +335,51 @@ pub fn run(
 ) -> Outcome {
     // Only one card has a star note skill trigger and it's a very old SR that's not very good.
     // So this has const generics since, in almost every case, we can completely ignore star notes pre-trial.
+    if triggers.year() != 0 {
+        return chained(queue, config, scoring, triggers, judgements);
+    }
     match (!triggers.stars().is_empty(), triggers.score() != 0) {
-        (false, false) => walk::<false, false>(queue, config, scoring, triggers, judgements),
-        (false, true) => walk::<false, true>(queue, config, scoring, triggers, judgements),
+        (false, false) => walk::<false, false, false>(queue, config, scoring, triggers, judgements),
+        (false, true) => walk::<false, true, false>(queue, config, scoring, triggers, judgements),
         (true, false) => {
             core::hint::cold_path();
-            walk::<true, false>(queue, config, scoring, triggers, judgements)
+            walk::<true, false, false>(queue, config, scoring, triggers, judgements)
         }
         (true, true) => {
             core::hint::cold_path();
-            walk::<true, true>(queue, config, scoring, triggers, judgements)
+            walk::<true, true, false>(queue, config, scoring, triggers, judgements)
+        }
+    }
+}
+
+/// Really don't think there's a clean way to integrate year-group triggers / chain scorers into what exists
+/// so it gets its own bespoke handling.
+#[inline(never)]
+fn chained(
+    queue: &Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome {
+    match (!triggers.stars().is_empty(), triggers.score() != 0) {
+        (false, false) => walk::<false, false, true>(queue, config, scoring, triggers, judgements),
+        (false, true) => walk::<false, true, true>(queue, config, scoring, triggers, judgements),
+        (true, false) => {
+            core::hint::cold_path();
+            walk::<true, false, true>(queue, config, scoring, triggers, judgements)
+        }
+        (true, true) => {
+            core::hint::cold_path();
+            walk::<true, true, true>(queue, config, scoring, triggers, judgements)
         }
     }
 }
 
 #[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
 #[expect(clippy::else_if_without_else, reason = "lazy")]
-fn walk<const STARS: bool, const SCORE: bool>(
+#[expect(clippy::too_many_lines, reason = "Benchmarked. Splitting it moved what LLVM inlined.")]
+fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool>(
     queue: &Queue,
     config: &PlayConfig,
     scoring: &Scoring,
@@ -379,6 +411,7 @@ fn walk<const STARS: bool, const SCORE: bool>(
     let mut timer_cursor = 0_usize;
     let mut next_timer = Time(timer_at[0]);
     let mut ladder = Ladder::new(scoring, if SCORE { triggers.score() } else { 0 });
+    let mut chain = Chain::new(if YEAR { triggers.year() } else { 0 });
 
     loop {
         let time = queue.times[tap];
@@ -389,18 +422,34 @@ fn walk<const STARS: bool, const SCORE: bool>(
             // timer skills really don't roll very often
             core::hint::cold_path();
             let at = next_timer;
-            spawns.drain::<SCORE>(at, offset, scoring, &mut rng, &mut out, &mut ladder);
+            spawns.drain::<SCORE, YEAR>(
+                at,
+                offset,
+                scoring,
+                &mut rng,
+                &mut out,
+                &mut ladder,
+                &mut chain,
+            );
             if SCORE {
-                ladder.catch_up(at, scoring, &mut rng, &mut out);
+                ladder.catch_up::<YEAR>(at, scoring, &mut rng, &mut out, &mut chain);
             }
-            fire(timer_lanes[timer_cursor], scoring, &mut rng, &mut out);
+            moment::<YEAR>(timer_lanes[timer_cursor], scoring, &mut rng, &mut out, &mut chain);
             timer_cursor = timer_cursor.saturating_add(1);
             next_timer = Time(timer_at[timer_cursor]);
             if SCORE {
-                ladder.settle(at, scoring, &mut rng, &mut out);
+                ladder.settle::<YEAR>(at, scoring, &mut rng, &mut out, &mut chain);
             }
         }
-        spawns.drain::<SCORE>(time, offset, scoring, &mut rng, &mut out, &mut ladder);
+        spawns.drain::<SCORE, YEAR>(
+            time,
+            offset,
+            scoring,
+            &mut rng,
+            &mut out,
+            &mut ladder,
+            &mut chain,
+        );
 
         let event = queue.events[tap];
         let lane = event.lane() as usize;
@@ -414,7 +463,7 @@ fn walk<const STARS: bool, const SCORE: bool>(
 
             kind @ (EventKind::Tap | EventKind::HoldRelease) => {
                 if SCORE {
-                    ladder.catch_up(time, scoring, &mut rng, &mut out);
+                    ladder.catch_up::<YEAR>(time, scoring, &mut rng, &mut out, &mut chain);
                 }
                 let tail = judgements.at(tap);
                 let head = (kind == EventKind::Tap) | heads.get(lane).copied().unwrap_or(true);
@@ -438,13 +487,29 @@ fn walk<const STARS: bool, const SCORE: bool>(
                     let due = stars.due(star_perfects)
                         | combo.due(out.notes)
                         | perfects.due(out.perfects);
-                    hit::<SCORE>(due, time, scoring, &mut rng, &mut out, &mut ladder);
+                    hit::<SCORE, YEAR>(
+                        due,
+                        time,
+                        scoring,
+                        &mut rng,
+                        &mut out,
+                        &mut ladder,
+                        &mut chain,
+                    );
                 } else if out.notes == combo.next
                     || out.perfects == perfects.next
                     || (SCORE && out.score() >= ladder.low)
                 {
                     let due = combo.due(out.notes) | perfects.due(out.perfects);
-                    hit::<SCORE>(due, time, scoring, &mut rng, &mut out, &mut ladder);
+                    hit::<SCORE, YEAR>(
+                        due,
+                        time,
+                        scoring,
+                        &mut rng,
+                        &mut out,
+                        &mut ladder,
+                        &mut chain,
+                    );
                 }
             }
         }
@@ -461,23 +526,116 @@ fn walk<const STARS: bool, const SCORE: bool>(
     clippy::inline_always,
     reason = "I benchmarked and it didn't get inlined with regular inline."
 )]
-fn hit<const SCORE: bool>(
+fn hit<const SCORE: bool, const YEAR: bool>(
     due: u16,
     now: Time,
     scoring: &Scoring,
     rng: &mut Rng,
     out: &mut Outcome,
     ladder: &mut Ladder,
+    chain: &mut Chain,
 ) {
     // tldr here. Score-based scorers can activate once per frame, so this banks
     // their trigger for the next frame after they activate.
     if SCORE && out.score() >= ladder.low {
-        ladder.climb(due, now, scoring, rng, out);
+        ladder.climb::<YEAR>(due, now, scoring, rng, out, chain);
     } else {
-        fire(due, scoring, rng, out);
+        moment::<YEAR>(due, scoring, rng, out, chain);
         if SCORE {
-            ladder.settle(now, scoring, rng, out);
+            ladder.settle::<YEAR>(now, scoring, rng, out, chain);
         }
+    }
+}
+
+/// You can think of this as a millisecond even if that's not quite accurate.
+/// Handles the skill activation mask, most skills firing right->left, and then year groups.
+/// Will probably need to modify when encore+amplify are in and the coinflip mechanics flips
+/// the order that skills resolve on its head. TODO amplify
+#[inline(always)]
+#[expect(
+    clippy::inline_always,
+    reason = "`fire` is inlined and this is all that gets added without YEAR"
+)]
+fn moment<const YEAR: bool>(
+    mask: u16,
+    scoring: &Scoring,
+    rng: &mut Rng,
+    out: &mut Outcome,
+    chain: &mut Chain,
+) {
+    if YEAR {
+        let landed = fire::<true>(mask, scoring, rng, out);
+        chain.after(landed, scoring, rng, out);
+    } else {
+        fire::<false>(mask, scoring, rng, out);
+    }
+}
+
+/// Year Group aka chain scorers (Year Group is a trigger condition, but every card with it is also a scorer).
+/// Requires every other member of the same year group to activate. e.g. Riko needs both Chika and You cards to activate
+/// before it can roll. Accessories count for this.
+struct Chain {
+    lanes: u16,
+    seen: [u16; LANES],
+}
+
+impl Chain {
+    const fn new(lanes: u16) -> Self {
+        Self { lanes, seen: [0; LANES] }
+    }
+
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "benchmarked")]
+    #[expect(clippy::indexing_slicing, reason = "`lanes` have lane bits")]
+    fn after(&mut self, landed: u16, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) {
+        let mut members = 0;
+        let mut landings = landed;
+        while let Some(lane) = landings.lowest_one() {
+            landings ^= landings.isolate_lowest_one();
+            members |= scoring.members[lane as usize];
+        }
+
+        let mut due = 0;
+        let mut chains = self.lanes;
+        while let Some(lane) = chains.lowest_one() {
+            let bit = chains.isolate_lowest_one();
+            chains ^= bit;
+            let need = scoring.skills[lane as usize].threshold;
+            let seen = &mut self.seen[lane as usize];
+            *seen |= members;
+            if *seen & need == need {
+                due |= bit;
+                *seen = 0;
+            }
+        }
+        if due != 0 {
+            (*rng, *out) = self.round(due, scoring, rng.clone(), *out);
+        }
+    }
+
+    #[inline(never)]
+    #[expect(clippy::indexing_slicing, reason = "`lanes` have lane bits")]
+    fn round(
+        &mut self,
+        due: u16,
+        scoring: &Scoring,
+        mut rng: Rng,
+        mut out: Outcome,
+    ) -> (Rng, Outcome) {
+        let mut bits = due;
+        while let Some(lane) = bits.highest_one() {
+            let bit = bits.isolate_highest_one();
+            bits ^= bit;
+            if fire::<true>(bit, scoring, &mut rng, &mut out) != 0 {
+                let member = scoring.members[lane as usize];
+                let mut others = self.lanes;
+                while let Some(other) = others.lowest_one() {
+                    others ^= others.isolate_lowest_one();
+                    self.seen[other as usize] |= member;
+                }
+            }
+        }
+        (rng, out)
     }
 }
 
@@ -590,31 +748,47 @@ impl Ladder {
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "I benchmarked")]
-    fn settle(&mut self, now: Time, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) {
+    fn settle<const YEAR: bool>(
+        &mut self,
+        now: Time,
+        scoring: &Scoring,
+        rng: &mut Rng,
+        out: &mut Outcome,
+        chain: &mut Chain,
+    ) {
         if out.score() >= self.low {
-            self.climb(0, now, scoring, rng, out);
+            self.climb::<YEAR>(0, now, scoring, rng, out, chain);
         }
     }
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "I benchmarked")]
-    fn climb(
+    fn climb<const YEAR: bool>(
         &mut self,
         first: u16,
         now: Time,
         scoring: &Scoring,
         rng: &mut Rng,
         out: &mut Outcome,
+        chain: &mut Chain,
     ) {
-        let climbed = self.rungs.climb(first, now, scoring, rng.clone(), *out);
+        let climbed = self.rungs.climb::<YEAR>(first, now, scoring, rng.clone(), *out, chain);
         (*rng, *out, self.low, self.pending) = climbed;
     }
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "I benchmarked")]
-    fn catch_up(&mut self, until: Time, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) {
+    fn catch_up<const YEAR: bool>(
+        &mut self,
+        until: Time,
+        scoring: &Scoring,
+        rng: &mut Rng,
+        out: &mut Outcome,
+        chain: &mut Chain,
+    ) {
         if self.pending < until {
-            let owed = self.rungs.owe(self.pending, until, scoring, rng.clone(), *out);
+            let owed =
+                self.rungs.owe::<YEAR>(self.pending, until, scoring, rng.clone(), *out, chain);
             (*rng, *out, self.low, self.pending) = owed;
         }
     }
@@ -653,30 +827,32 @@ impl Rungs {
 
     /// For when a score-based scorer is "owed" an activation on a later frame.
     #[inline(never)]
-    fn owe(
+    fn owe<const YEAR: bool>(
         &mut self,
         mut pending: Time,
         until: Time,
         scoring: &Scoring,
         mut rng: Rng,
         mut out: Outcome,
+        chain: &mut Chain,
     ) -> (Rng, Outcome, u64, Time) {
         let mut low = 0;
         while pending < until {
-            (rng, out, low, pending) = self.climb(0, pending, scoring, rng, out);
+            (rng, out, low, pending) = self.climb::<YEAR>(0, pending, scoring, rng, out, chain);
         }
         (rng, out, low, pending)
     }
 
     /// increments the score counter for score-based scorers.
     #[inline(never)]
-    fn climb(
+    fn climb<const YEAR: bool>(
         &mut self,
         first: u16,
         now: Time,
         scoring: &Scoring,
         mut rng: Rng,
         mut out: Outcome,
+        chain: &mut Chain,
     ) -> (Rng, Outcome, u64, Time) {
         let (mut due, mut low, mut pending) = (first, 0, NO_PASS);
         loop {
@@ -690,6 +866,9 @@ impl Rungs {
             let landed = fire_landed(due, scoring, &mut rng, &mut out);
             if self.spend(landed) {
                 low = 0;
+            }
+            if YEAR {
+                chain.after(landed, scoring, &mut rng, &mut out);
             }
             due = 0;
         }
@@ -724,7 +903,7 @@ fn fire_landed(due: u16, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) ->
         let bit = bits.isolate_highest_one();
         bits ^= bit;
         let before = (out.activations, out.accessory_activations);
-        fire(bit, scoring, rng, out);
+        fire::<false>(bit, scoring, rng, out);
         if (out.activations, out.accessory_activations) != before {
             landed |= bit;
         }
@@ -733,7 +912,7 @@ fn fire_landed(due: u16, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) ->
 }
 
 /// For skill trigger conditions that we need to actively track e.g. perfects, star notes.
-/// This may need to be adjusted for year group down the line that condition sucks.
+/// Didn't end up putting year group here. Gave it its own struct `Chain` instead of `Tally`.
 /// Spark might be a tally too? I mean we need to tally it I just don't know if it will ive
 /// in this tally, since Spark is for an accessory trigger eh it probably goes here.
 struct Tally<'a> {
@@ -777,7 +956,11 @@ impl Spawns<'_> {
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "I benchmarked")]
     #[expect(clippy::indexing_slicing, reason = "`at` is terminated, `icons` is bounded")]
-    fn drain<const SCORE: bool>(
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "Legit trying to fix this lead to a +7% performance regression. `offset` as a field of `Spawns` moved register allocation to all of `walk`."
+    )]
+    fn drain<const SCORE: bool, const YEAR: bool>(
         &mut self,
         bound: Time,
         offset: u32,
@@ -785,19 +968,20 @@ impl Spawns<'_> {
         rng: &mut Rng,
         out: &mut Outcome,
         ladder: &mut Ladder,
+        chain: &mut Chain,
     ) {
         while self.icon < self.icons.len() && self.icons[self.icon].spawn(offset) < bound {
             self.icon = self.icon.saturating_add(1);
             if self.icon == self.next {
                 let now = self.icons[self.icon.saturating_sub(1)].spawn(offset);
                 if SCORE {
-                    ladder.catch_up(now, scoring, rng, out);
+                    ladder.catch_up::<YEAR>(now, scoring, rng, out, chain);
                 }
-                fire(self.lanes[self.cursor], scoring, rng, out);
+                moment::<YEAR>(self.lanes[self.cursor], scoring, rng, out, chain);
                 self.cursor = self.cursor.saturating_add(1);
                 self.next = self.at[self.cursor] as usize;
                 if SCORE {
-                    ladder.settle(now, scoring, rng, out);
+                    ladder.settle::<YEAR>(now, scoring, rng, out, chain);
                 }
             }
         }

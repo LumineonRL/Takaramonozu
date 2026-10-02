@@ -16,7 +16,7 @@ use simulator::play::Scoring;
 use simulator::play::activation::{AccessorySkill, Skill};
 use simulator::scalar::{Attribute, Centi, CharacterId, CharacterSet, Milli, Pct, RATE_UNIT, Rate};
 use simulator::sis::SisEffect;
-use simulator::skill::{SkillEffect, SkillRows};
+use simulator::skill::{SkillEffect, SkillRows, TriggerType};
 use simulator::song::Matching;
 
 use crate::activation_limit;
@@ -122,8 +122,10 @@ pub struct Slot {
     pub skill: Skill,
     pub accessory: AccessorySkill,
     pub bonus: u16,
+    /// See `Scoring::members`.
+    pub member: u16,
     pub sis: SisFlags,
-    _pad: u8,
+    _pad: [u8; 3],
 }
 
 impl Default for Slot {
@@ -133,8 +135,9 @@ impl Default for Slot {
             skill: Skill::NONE,
             accessory: AccessorySkill::NONE,
             bonus: NO_MATCH,
+            member: 0,
             sis: SisFlags(0),
-            _pad: 0,
+            _pad: [0; 3],
         }
     }
 }
@@ -163,6 +166,7 @@ impl Compiled {
             lanes: self.slots.map(|s| s.bonus),
             skills: self.slots.map(|s| s.skill),
             accessories: self.slots.map(|s| s.accessory),
+            members: self.slots.map(|s| s.member),
         }
     }
 }
@@ -194,12 +198,13 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
     let mut out = Compiled::default();
     let mut sums = [Sums::default(); LANES];
     let mut chars = [None; LANES];
+    let mut years = [None; LANES];
     let mut all = [0_u32; 3];
     let mut grouped = false;
     let mut center = None;
 
-    for (lane, ((dst, lane_sums), who)) in
-        out.slots.iter_mut().zip(&mut sums).zip(&mut chars).enumerate()
+    for (lane, (((dst, lane_sums), who), year)) in
+        out.slots.iter_mut().zip(&mut sums).zip(&mut chars).zip(&mut years).enumerate()
     {
         let Some(slot) = team.slot(lane) else {
             continue;
@@ -244,6 +249,19 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
         dst.accessory = slot
             .accessory()
             .map_or(AccessorySkill::NONE, |worn| resolve_accessory(worn, ctx, dst.sis));
+        if dst.skill.trigger == TriggerType::YearGroup {
+            *year = year_group(card, ctx.cards);
+        }
+    }
+
+    // I hate the name seats but slots is taken and year group cards (and other skill effects in the future)
+    // need to track "Which characters are on this team".
+    let seats = seats(&chars);
+    for (((dst, &seat), who), year) in out.slots.iter_mut().zip(&seats).zip(chars).zip(years) {
+        dst.member = seat;
+        if let (Some(who), Some(year)) = (who, year) {
+            dst.skill.threshold = waits_for(year, who, &chars, &seats);
+        }
     }
 
     if grouped && out.characters.0.count_ones() == u32::try_from(LANES).unwrap_or(u32::MAX) {
@@ -328,6 +346,41 @@ fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> AccessorySki
         chance: rate(ctx.acc_db.skills.chance(def, level)),
         effect: def.effect,
     }
+}
+
+fn year_group(card: &Card, cards: &CardDb) -> Option<CharacterSet> {
+    let def = cards.skills.def(card.skill?)?;
+    cards.skill_targets.set(def.target?)
+}
+
+/// Each lane's character as the bit of the first lane that character is in.
+fn seats(chars: &[Option<CharacterId>; LANES]) -> [u16; LANES] {
+    chars.map(|who| {
+        let first = (0_u32..).zip(chars).find(|&(_, &o)| who.is_some() && o == who);
+        first.map_or(0, |(lane, _)| 1_u16.checked_shl(lane).unwrap_or(0))
+    })
+}
+
+/// The seats aka lanes a year group card needs to "wait for" to activate.
+/// 0 if the team lacks the characters for the skill to roll at all.
+fn waits_for(
+    year: CharacterSet,
+    own: CharacterId,
+    chars: &[Option<CharacterId>; LANES],
+    seats: &[u16; LANES],
+) -> u16 {
+    let others = year.0 & !bit(own);
+    let mut fielded = 0;
+    let mut need = 0;
+    for (who, &seat) in chars.iter().zip(seats) {
+        if let Some(c) = *who
+            && others & bit(c) != 0
+        {
+            fielded |= bit(c);
+            need |= seat;
+        }
+    }
+    if fielded == others { need } else { 0 }
 }
 
 #[expect(clippy::integer_division, reason = "they're both constants")]
@@ -433,7 +486,7 @@ fn bit(c: CharacterId) -> u128 {
 mod tests {
     use super::{
         BOTH_MATCH, Compiled, MAX_TABLE_HP, MIN_TABLE_HP, NO_MATCH, ONE_MATCH, compile,
-        heart_bonus, max_hearts,
+        heart_bonus, max_hearts, seats, waits_for,
     };
     use crate::accessory::{Accessories, tests::accessories};
     use crate::card::{Deck, Gallery, tests::cards};
@@ -672,6 +725,40 @@ mod tests {
         team.equip_accessory(0, low, f.ctx()).unwrap();
 
         assert_eq!(f.run(&team).slots[0].accessory.value, 3000, "300_000 Centi at level 3");
+    }
+
+    #[test]
+    fn check_seats() {
+        let (riko, you) = (Some(CharacterId(7)), Some(CharacterId(3)));
+        let chars = [None, riko, you, riko, None, you, None, None, riko];
+        assert_eq!(seats(&chars), [0, 1 << 1, 1 << 2, 1 << 1, 0, 1 << 2, 0, 0, 1 << 1]);
+    }
+
+    /// Riko waits for Chika and You. Team without You means Riko can't proc.
+    #[test]
+    fn check_chain_needs_the_rest_of_its_year() {
+        let (chika, you, riko, dia) =
+            (CharacterId(1), CharacterId(2), CharacterId(3), CharacterId(9));
+        let year = CharacterSet((1 << 1) | (1 << 2) | (1 << 3));
+        let chars = [
+            Some(riko),
+            Some(dia),
+            Some(chika),
+            Some(riko),
+            Some(you),
+            Some(chika),
+            None,
+            None,
+            None,
+        ];
+        let seated = seats(&chars);
+        assert_eq!(waits_for(year, riko, &chars, &seated), (1 << 2) | (1 << 4), "first Chika, You");
+        assert_eq!(waits_for(year, you, &chars, &seated), (1 << 2) | 1, "first Chika, first Riko");
+
+        let no_you = chars.map(|c| c.filter(|&c| c != you));
+        assert_eq!(waits_for(year, riko, &no_you, &seats(&no_you)), 0);
+        let only_riko = CharacterSet(1 << 3);
+        assert_eq!(waits_for(only_riko, riko, &chars, &seated), 0, "誰もいない");
     }
 
     #[test]
