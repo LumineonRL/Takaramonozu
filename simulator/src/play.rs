@@ -900,10 +900,6 @@ mod tests {
         assert_eq!(points_per_note(100_000), 1250);
 
         // Checks that the int and float versions give the same resolve.
-        #[expect(
-            clippy::float_cmp,
-            reason = "comparing to more intuitive way to understand formula"
-        )]
         for team_strength in [1_u32, 999, 12_345, 250_000, 1_000_000, 2_700_000] {
             let float = (f64::from(team_strength) * 0.0125).floor();
             assert_eq!(f64::from(points_per_note(team_strength)), float, "at {team_strength}");

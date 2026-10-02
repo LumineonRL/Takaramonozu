@@ -218,7 +218,7 @@ mod tests {
         let c = cards.iter_mut().find(|c| c.card_id == 66).expect("card 66");
         c.stats.idolized.sis_max += 1;
         let err = rejected(&cards, "the layout no longer matches the card's rarity");
-        assert_matches!(err, LoadError { culprit: Culprit::Card(66), field: "sis_max", .. });
+        assert_matches!(err, LoadError { culprit: Culprit::Card(66), field: "sis_max", kind: _ });
     }
 
     #[test]
@@ -227,7 +227,7 @@ mod tests {
         let c = cards.iter_mut().find(|c| c.card_id == 66).expect("card 66");
         (c.is_promo, c.is_preidolized_non_promo) = (false, true);
         let err = rejected(&cards, "pre-idolized non-promo implies promo");
-        assert_matches!(err, LoadError { field: "is_preidolized_non_promo", .. });
+        assert_matches!(err, LoadError { field: "is_preidolized_non_promo", culprit: _, kind: _ });
     }
 
     #[test]
@@ -240,6 +240,6 @@ mod tests {
         c.stats.idolized.smile += 530;
         let id = c.card_id;
         let err = rejected(&cards, "a promo can not idolize again");
-        assert_matches!(err, LoadError { culprit: Culprit::Card(got), field: "stats", .. } if got == id);
+        assert_matches!(err, LoadError { culprit: Culprit::Card(got), field: "stats", kind: _ } if got == id);
     }
 }

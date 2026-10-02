@@ -256,7 +256,7 @@ mod tests {
         let mut raw = sis();
         raw[0].target = "all".to_owned();
         let err = rejected(&raw, "`target` is only redundant while it agrees");
-        assert_matches!(err, LoadError { culprit: Culprit::Sis(1), field: "target", .. });
+        assert_matches!(err, LoadError { culprit: Culprit::Sis(1), field: "target", kind: _ });
     }
 
     #[test]
@@ -266,7 +266,11 @@ mod tests {
         let err = rejected(&raw, "only a Charm or a Heal restricts by attribute");
         assert_matches!(
             err,
-            LoadError { field: "equip_restriction", kind: ErrorKind::Invariant, .. }
+            LoadError {
+                field: "equip_restriction",
+                kind: ErrorKind::Invariant,
+                culprit: _
+            }
         );
     }
 
@@ -278,7 +282,7 @@ mod tests {
         let Err(err) = build(&sis(), &map, &groups(), &roster()) else {
             panic!("built anyway: the year map lost a key")
         };
-        assert_matches!(err, LoadError { field: "equip_restriction", kind: ErrorKind::Unknown(s), .. }
+        assert_matches!(err, LoadError { field: "equip_restriction", kind: ErrorKind::Unknown(s), culprit: _ }
             if &*s == "1st years");
     }
 }

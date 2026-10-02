@@ -401,7 +401,7 @@ mod tests {
     #[test]
     fn check_errors_carry_the_card_and_field() {
         let err = pct(0.935).at(Culprit::Card(66), "chance").expect_err("not fixed point");
-        assert_matches!(err, LoadError { culprit: Culprit::Card(66), field: "chance", .. });
+        assert_matches!(err, LoadError { culprit: Culprit::Card(66), field: "chance", kind: _ });
         assert_eq!(err.to_string(), "card 66, field `chance`: 0.935 is not exact in this unit");
 
         let wide = pct(3.0).at(Culprit::Card(66), "chance").expect_err("out of range");

@@ -379,7 +379,10 @@ mod tests {
         let mut raw = accessories();
         raw.get_mut(&217).expect("acc 217").stats[ROWS][0] += 1;
         let err = rejected(&raw, "a stat table past row 8 is never read");
-        assert_matches!(err, LoadError { culprit: Culprit::Accessory(217), field: "stats", .. });
+        assert_matches!(
+            err,
+            LoadError { culprit: Culprit::Accessory(217), field: "stats", kind: _ }
+        );
     }
 
     #[test]
@@ -387,7 +390,7 @@ mod tests {
         let mut raw = accessories();
         raw.get_mut(&217).expect("acc 217").skill.trigger.values[ROWS] += 1;
         let err = rejected(&raw, "only the first threshold row is stored");
-        assert_matches!(err, LoadError { field: "trigger.values", .. });
+        assert_matches!(err, LoadError { field: "trigger.values", culprit: _, kind: _ });
     }
 
     #[test]
@@ -395,6 +398,6 @@ mod tests {
         let mut raw = accessories();
         raw.get_mut(&217).expect("acc 217").skill.trigger.chances.truncate(LAST_BASE);
         let err = rejected(&raw, "a short column cannot fill the trigger half");
-        assert_matches!(err, LoadError { field: "rows", kind: ErrorKind::Invariant, .. });
+        assert_matches!(err, LoadError { field: "rows", kind: ErrorKind::Invariant, culprit: _ });
     }
 }

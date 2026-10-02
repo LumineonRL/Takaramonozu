@@ -344,7 +344,7 @@ mod tests {
         let Err(err) = build(&raw, &groups(), &roster()) else {
             panic!("built anyway: a title carries one attribute")
         };
-        assert_matches!(err, LoadError { field: "title", kind: ErrorKind::Invariant, .. });
+        assert_matches!(err, LoadError { field: "title", kind: ErrorKind::Invariant, culprit: _ });
     }
 
     #[test]
@@ -354,6 +354,9 @@ mod tests {
         let Err(err) = build(&raw, &groups(), &roster()) else {
             panic!("built anyway: lane 10 does not exist")
         };
-        assert_matches!(err, LoadError { field: "position", kind: ErrorKind::Invariant, .. });
+        assert_matches!(
+            err,
+            LoadError { field: "position", kind: ErrorKind::Invariant, culprit: _ }
+        );
     }
 }

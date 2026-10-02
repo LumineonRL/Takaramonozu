@@ -225,7 +225,7 @@ mod tests {
         let err = Table::default()
             .insert(c.card_id, &c.skill, &map(), &roster)
             .expect_err("not in year_group_target.json");
-        assert_matches!(err, LoadError { field: "target", kind: ErrorKind::Unknown(s), .. }
+        assert_matches!(err, LoadError { field: "target", kind: ErrorKind::Unknown(s), culprit: _ }
             if &*s == "A-RISE");
     }
 
