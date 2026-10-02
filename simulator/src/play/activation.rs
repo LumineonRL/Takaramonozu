@@ -1,5 +1,7 @@
 //! Skill activation trigger conditions e.g. rhythm icons, combo, etc.
 
+use core::num::NonZeroU8;
+
 use super::{Outcome, Queue, Scoring};
 use crate::rng::Rng;
 use crate::scalar::{Centi, Rate};
@@ -15,6 +17,8 @@ pub struct Skill {
     pub threshold: u16,
     pub effect: SkillEffect,
     pub trigger: TriggerType,
+    /// The 4 score-based scorer SRs were nerfed into the ground and had an activation limit put on them.
+    pub limit: Option<NonZeroU8>,
 }
 
 impl Skill {
@@ -24,6 +28,7 @@ impl Skill {
         threshold: 0,
         effect: SkillEffect::Scorer,
         trigger: TriggerType::RhythmIcons,
+        limit: None,
     };
 }
 
@@ -247,6 +252,8 @@ fn pay(effect: SkillEffect, value: Centi, out: &mut Outcome) {
 
 #[cfg(test)]
 mod tests {
+    use core::num::NonZeroU8;
+
     use super::{Skill, Triggers};
     use crate::play::tests::{
         ALWAYS, arena, at, config, fifty_one, only, play, scorer, seeded, tap, worn,
@@ -859,5 +866,111 @@ mod tests {
         let out = play(&queue, &scoring);
         assert_eq!((out.activations, out.accessory_activations), (0, 7));
         assert_eq!(out.skill, 7 * 9000);
+    }
+
+    fn limited(threshold: u16, chance: Rate, value: u32, limit: u8) -> Skill {
+        Skill {
+            limit: NonZeroU8::new(limit),
+            ..laddered(threshold, chance, value)
+        }
+    }
+
+    /// 34 thresholds of 1500 on `fifty_one`, makes sure that it stops activating.
+    #[test]
+    fn check_a_score_trigger_stops_at_its_limit() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        for (limit, want) in [(0, 34), (1, 1), (5, 5), (33, 33), (34, 34), (200, 34)] {
+            let mut scoring = Scoring::flat(80_000);
+            scoring.skills[4] = limited(1500, ALWAYS, 0, limit);
+            assert_eq!(play(&queue, &scoring).activations, want, "limit {limit}");
+        }
+    }
+
+    /// I wanted to write an entire paragraph for the skill function but I'll just put it in a comment instead.
+    /// This checks that a score-based scorer only has its activation limit consumed when a skill succeeds, either
+    /// the card's skill or its accessory.
+    #[test]
+    fn check_score_activation_only_use_on_activation() {
+        const LIMIT: u64 = 5;
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(80_000);
+        scoring.skills[0] = clocked(TriggerType::Time, 7, FLIP, 1);
+        scoring.skills[4] = limited(1500, FLIP, 0, 5);
+
+        let (mut drawing, mut charged) = (false, false);
+        for seed in 0..64 {
+            let d = draws(seed, 40);
+            let (mut i, mut hits) = (0, 0);
+            while i < 33 && hits < LIMIT {
+                hits += d[i];
+                i += 1;
+            }
+            let timer = d[i];
+            if hits < LIMIT {
+                hits += d[i + 1];
+            }
+
+            let out = seeded(&queue, &scoring, seed);
+            assert_eq!(out.skill, timer, "seed {seed}: {d:?}");
+            assert_eq!(u64::from(out.activations), hits + timer, "seed {seed}: {d:?}");
+            drawing |= timer != d[33];
+            charged |= timer != d[5];
+        }
+        assert!(drawing, "couldn't differentiate");
+        assert!(charged, "still activating");
+    }
+
+    #[test]
+    fn check_an_accessory_spends_the_cards_activatiion_limit() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(80_000);
+        scoring.skills[4] = limited(1500, 0, 0, 5);
+        scoring.accessories[4] = worn(ALWAYS, 0);
+        let missed = play(&queue, &scoring);
+        assert_eq!((missed.activations, missed.accessory_activations), (0, 5));
+
+        scoring.skills[4].chance = ALWAYS;
+        let hit = play(&queue, &scoring);
+        assert_eq!((hit.activations, hit.accessory_activations), (5, 0));
+
+        scoring.skills[4].chance = FLIP;
+        scoring.accessories[4] = worn(FLIP, 0);
+        let mut mixed = false;
+        for seed in 0..32 {
+            let d = draws(seed, 80);
+            let (mut i, mut card, mut acc) = (0, 0, 0);
+            for _ in 0..34 {
+                if card + acc == 5 {
+                    break;
+                }
+                if d[i] == 1 {
+                    card += 1;
+                } else {
+                    i += 1;
+                    acc += d[i];
+                }
+                i += 1;
+            }
+            let out = seeded(&queue, &scoring, seed);
+            let got = (u64::from(out.activations), u64::from(out.accessory_activations));
+            assert_eq!(got, (card, acc), "seed {seed}");
+            mixed |= card + acc == 5 && acc > 0;
+        }
+        assert!(mixed, "accessory never activated before limit reached");
+    }
+
+    #[test]
+    fn check_activation_limit_is_per_lane() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(80_000);
+        scoring.skills[2] = limited(1500, ALWAYS, 0, 3);
+        scoring.skills[6] = limited(1500, ALWAYS, 0, 7);
+        scoring.skills[8] = laddered(1500, ALWAYS, 0);
+        assert_eq!(play(&queue, &scoring).activations, 3 + 7 + 34);
     }
 }

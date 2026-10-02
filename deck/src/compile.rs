@@ -19,6 +19,7 @@ use simulator::sis::SisEffect;
 use simulator::skill::{SkillEffect, SkillRows};
 use simulator::song::Matching;
 
+use crate::activation_limit;
 use crate::card::DeckEntry;
 use crate::level_cap::LevelCaps;
 use crate::manager::{EntryId, Manager};
@@ -300,6 +301,7 @@ fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> Skil
         threshold: trigger.threshold,
         effect: def.effect,
         trigger: def.trigger_type,
+        limit: activation_limit::of(entry.card_id()),
     }
 }
 

@@ -526,7 +526,11 @@ const fn frame_start(k: u32) -> Time {
 /// So if a lane to the left of a score-based scorer sets it over the score threshold to activate, it will technically break
 /// order and trigger immediately, even before more-left skills activate on that same event.
 ///
-/// TODO: Activation cap. I need to research what the actual limits were.
+/// And the big reason nothing matters is these cards were nerfed into irrelevancy. They have an activation
+/// limit placed on them that ranges from 8 to 13 (some cards have different limits) which applies to both their
+/// cards skills and accessory skills combined. Well, when they were first nerfed it only applied to the card and
+/// not the accessory, but they ended up effectively being a buff in live arena mode so they have to be nerfed
+/// again to include the accessory activation count in the total.
 #[expect(clippy::doc_markdown, reason = "SIFCord doesn't need backticks.")]
 struct Ladder {
     /// Lowest threshold
@@ -544,6 +548,12 @@ struct Rungs {
     /// Lanes that rolled in `frame`.
     spent: u16,
     frame: u32,
+    /// Activations left, for the lanes in `limited`.
+    /// I wasn't sure what else to call this but I'm a little worried it might conflict with
+    /// Spark down the line since the official term for that is charge and here charge is just my
+    /// best attempt at a noun to describe how many activations a card has before it hits its activation limit.
+    charges: [u8; LANES],
+    limited: u16,
 }
 
 impl Ladder {
@@ -558,15 +568,22 @@ impl Ladder {
                 lanes,
                 spent: 0,
                 frame: 0,
+                charges: [0; LANES],
+                limited: 0,
             },
         };
         let mut bits = lanes;
         while let Some(lane) = bits.lowest_one() {
-            bits ^= bits.isolate_lowest_one();
-            let step = scoring.skills[lane as usize].threshold;
-            ladder.rungs.step[lane as usize] = step;
-            ladder.rungs.next[lane as usize] = u64::from(step);
-            ladder.low = ladder.low.min(u64::from(step));
+            let bit = bits.isolate_lowest_one();
+            bits ^= bit;
+            let skill = scoring.skills[lane as usize];
+            ladder.rungs.step[lane as usize] = skill.threshold;
+            ladder.rungs.next[lane as usize] = u64::from(skill.threshold);
+            ladder.low = ladder.low.min(u64::from(skill.threshold));
+            if let Some(limit) = skill.limit {
+                ladder.rungs.charges[lane as usize] = limit.get();
+                ladder.rungs.limited |= bit;
+            }
         }
         ladder
     }
@@ -670,10 +687,49 @@ impl Rungs {
             if due == 0 {
                 return (rng, out, low, pending);
             }
-            fire(due, scoring, &mut rng, &mut out);
+            let landed = fire_landed(due, scoring, &mut rng, &mut out);
+            if self.spend(landed) {
+                low = 0;
+            }
             due = 0;
         }
     }
+
+    /// Spends a usage of a lane with an activation limit and retires lanes that hit the limit.
+    #[inline]
+    #[expect(clippy::indexing_slicing, reason = "`We control the lane bits")]
+    fn spend(&mut self, landed: u16) -> bool {
+        let mut retired = false;
+        let mut bits = landed & self.limited;
+        while let Some(lane) = bits.lowest_one() {
+            let bit = bits.isolate_lowest_one();
+            bits ^= bit;
+            let charges = &mut self.charges[lane as usize];
+            *charges = charges.saturating_sub(1);
+            if *charges == 0 {
+                self.lanes ^= bit;
+                self.limited ^= bit;
+                retired = true;
+            }
+        }
+        retired
+    }
+}
+
+#[inline]
+fn fire_landed(due: u16, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) -> u16 {
+    let mut landed = 0;
+    let mut bits = due;
+    while bits != 0 {
+        let bit = bits.isolate_highest_one();
+        bits ^= bit;
+        let before = (out.activations, out.accessory_activations);
+        fire(bit, scoring, rng, out);
+        if (out.activations, out.accessory_activations) != before {
+            landed |= bit;
+        }
+    }
+    landed
 }
 
 /// For skill trigger conditions that we need to actively track e.g. perfects, star notes.
@@ -794,6 +850,7 @@ mod tests {
             threshold,
             effect: SkillEffect::Scorer,
             trigger: TriggerType::RhythmIcons,
+            limit: None,
         }
     }
 
