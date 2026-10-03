@@ -2,7 +2,7 @@
 
 use simulator::accessory::{Accessory, AccessoryDb};
 use simulator::card::{Card, CardDb, LeaderId};
-use simulator::sis::{Sis, SisDb, SisEffect};
+use simulator::sis::{Sis, SisDb};
 
 use crate::accessory::Accessories;
 use crate::card::{Deck, DeckEntry};
@@ -74,7 +74,7 @@ impl<'a> Context<'a> {
     /// Equipping a SIS that it shouldn't be able to do so I guess
     /// it would need to be something outside of `sis.rkyv`.
     fn sis_equips(self, sis: Sis, equipped_by: &Card) -> Result<bool, Problem> {
-        if matches!(sis.effect, SisEffect::Charm | SisEffect::Heal) {
+        if sis.effect.restricts_by_attribute() {
             return Ok(sis.attribute == equipped_by.attribute);
         }
         match sis.restriction {
@@ -503,18 +503,19 @@ mod tests {
         team.equip_sis(0, mine, f.ctx()).unwrap();
         assert_eq!(team.equip_sis(0, theirs, f.ctx()), Err(Problem::Restricted));
 
-        // Charm/Heal's restriction is an attribute. Like everything else is a character set.
+        // Charm/Heal/Trick's restriction is an attribute. Everything else is a character set.
         let (smile, cool) = (f.owns(15), f.owns(17));
         assert_eq!(team.equip_sis(0, cool, f.ctx()), Err(Problem::Restricted));
         team.equip_sis(0, smile, f.ctx()).unwrap();
         assert_eq!(team.slot(0).unwrap().sis().count(), 2);
+        assert_eq!(team.equip_sis(0, f.owns(25), f.ctx()), Err(Problem::Restricted));
     }
 
     #[test]
     fn check_equipment_character_mask() {
         let mut f = fixture();
         let card = f.card(true, 8);
-        let owned: Vec<EntryId> = [7, 9, 11, 13, 15, 17].map(|id| f.owns(id)).into();
+        let owned: Vec<EntryId> = [7, 9, 11, 13, 15, 17, 23, 25].map(|id| f.owns(id)).into();
         let mut team = Team::default();
 
         // Nothing can be equipped in a lane with no card,
@@ -523,9 +524,10 @@ mod tests {
 
         team.equip_card(0, card, f.ctx()).unwrap();
         let legal: Vec<EntryId> = team.sis_choices(0, f.ctx()).collect();
-        assert_eq!(legal.len(), 4, "13 is another char's, 17 another attribute's");
+        assert_eq!(legal.len(), 5, "13 is another char's, 17 and 25 another attribute's");
         assert!(!legal.contains(&owned[3]));
         assert!(!legal.contains(&owned[5]));
+        assert!(!legal.contains(&owned[7]));
 
         for (id, _) in f.inventory.entries() {
             assert_eq!(team.can_equip_sis(0, id, f.ctx()).is_ok(), legal.contains(&id));

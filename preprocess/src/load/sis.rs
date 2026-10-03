@@ -89,16 +89,20 @@ fn restriction(
     years: &RawTargetMap,
     roster: &Roster,
 ) -> Result<Option<TargetId>, LoadError> {
-    let Some(name) = s.restriction() else {
-        return Ok(None);
-    };
-    if let Ok(restricted) = convert::attribute(name) {
-        let own = restricted == attribute && matches!(effect, SisEffect::Charm | SisEffect::Heal);
+    let name = s.restriction();
+    if effect.restricts_by_attribute() {
+        let own = name.and_then(|n| convert::attribute(n).ok()) == Some(attribute);
         return if own {
             Ok(None)
         } else {
             Err(ErrorKind::Invariant).at(Culprit::Sis(s.id), "equip_restriction")
         };
+    }
+    let Some(name) = name else {
+        return Ok(None);
+    };
+    if convert::attribute(name).is_ok() {
+        return Err(ErrorKind::Invariant).at(Culprit::Sis(s.id), "equip_restriction");
     }
     let id = if YEARS.contains(&name) {
         targets.intern(name, || convert::character_set(name, years, roster))
@@ -183,9 +187,9 @@ mod tests {
             kinds[case] += 1;
             // The attribute kind is the one that resolves to nothing stored.
             assert_eq!(s.restriction.is_some(), case != 2 && case != 3, "sis {}", raw.id);
-            assert_eq!(matches!(s.effect, SisEffect::Charm | SisEffect::Heal), case == 2);
+            assert_eq!(s.effect.restricts_by_attribute(), case == 2);
         }
-        assert_eq!(kinds, [468, 27, 6, 45]);
+        assert_eq!(kinds, [468, 27, 9, 42]);
 
         // year groups don't need to be from the same group. e.g. Aqours 2nd year
         // and Niji second year are both second year.

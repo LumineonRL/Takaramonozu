@@ -110,6 +110,8 @@ pub(crate) mod tests {
                 Sis::new(SisEffect::Charm, Attribute::Cool, 4, 2500, None, None),
                 Sis::new(SisEffect::AllPercent, Attribute::Smile, 2, 15, None, None),
                 Sis::new(SisEffect::AllPercent, Attribute::Smile, 2, 42, None, Some(nine)),
+                Sis::new(SisEffect::Trick, Attribute::Smile, 4, 330, None, None),
+                Sis::new(SisEffect::Trick, Attribute::Cool, 4, 330, None, None),
             ],
             meta: vec![
                 SisMeta { sis_id: 7, name: "Smile Kiss".into() },
@@ -120,6 +122,8 @@ pub(crate) mod tests {
                 SisMeta { sis_id: 17, name: "Cool Charm".into() },
                 SisMeta { sis_id: 19, name: "Smile Aura".into() },
                 SisMeta { sis_id: 21, name: "Smile Nonet".into() },
+                SisMeta { sis_id: 23, name: "Smile Trick".into() },
+                SisMeta { sis_id: 25, name: "Cool Trick".into() },
             ],
             targets,
         }

@@ -19,6 +19,13 @@ pub enum SisEffect {
     Trick,
 }
 
+impl SisEffect {
+    #[must_use]
+    pub const fn restricts_by_attribute(self) -> bool {
+        matches!(self, Self::Charm | Self::Heal | Self::Trick)
+    }
+}
+
 /// What team compilation reads.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(C)]
@@ -132,6 +139,7 @@ mod tests {
         write(&path, &db).expect("write");
         // SAFETY: `write` just produced this file and nothing else touches it.
         let mapped: Mapped<SisDb> = unsafe { Mapped::open(&path) }.expect("open");
+        // `SisDb` has no `Debug`, so this cannot be `assert_eq!`.
         assert!(mapped.root() == &db, "the archive is not the database it was built from");
 
         drop(mapped);

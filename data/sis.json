@@ -358,7 +358,7 @@
         "slots": 4,
         "attribute": "Smile",
         "group": "",
-        "equip_restriction": "",
+        "equip_restriction": "Smile",
         "target": "self",
         "value": 0.33
     },
@@ -391,7 +391,7 @@
         "slots": 4,
         "attribute": "Pure",
         "group": "",
-        "equip_restriction": "",
+        "equip_restriction": "Pure",
         "target": "self",
         "value": 0.33
     },
@@ -424,7 +424,7 @@
         "slots": 4,
         "attribute": "Cool",
         "group": "",
-        "equip_restriction": "",
+        "equip_restriction": "Cool",
         "target": "self",
         "value": 0.33
     },
