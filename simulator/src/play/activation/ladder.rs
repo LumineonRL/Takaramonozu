@@ -2,6 +2,7 @@
 
 use super::chain::Chain;
 use super::fire;
+use crate::play::effect::Lasting;
 use crate::play::rng::Rng;
 use crate::play::{Outcome, Scoring};
 use crate::song::{LANES, Time};
@@ -127,14 +128,16 @@ impl Ladder {
         rng: &mut Rng,
         out: &mut Outcome,
         chain: &mut Chain,
+        expiry: &mut impl Lasting,
     ) {
         if out.score() >= self.low {
-            self.climb::<YEAR>(0, now, scoring, rng, out, chain);
+            self.climb::<YEAR>(0, now, scoring, rng, out, chain, expiry);
         }
     }
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "I benchmarked")]
+    #[expect(clippy::too_many_arguments, reason = "the trial's state")]
     pub(in crate::play) fn climb<const YEAR: bool>(
         &mut self,
         first: u16,
@@ -143,8 +146,10 @@ impl Ladder {
         rng: &mut Rng,
         out: &mut Outcome,
         chain: &mut Chain,
+        expiry: &mut impl Lasting,
     ) {
-        let climbed = self.rungs.climb::<YEAR>(first, now, scoring, rng.clone(), *out, chain);
+        let climbed =
+            self.rungs.climb::<YEAR>(first, now, scoring, rng.clone(), *out, chain, expiry);
         (*rng, *out, self.low, self.pending) = climbed;
     }
 
@@ -157,10 +162,18 @@ impl Ladder {
         rng: &mut Rng,
         out: &mut Outcome,
         chain: &mut Chain,
+        expiry: &mut impl Lasting,
     ) {
         if self.pending < until {
-            let owed =
-                self.rungs.owe::<YEAR>(self.pending, until, scoring, rng.clone(), *out, chain);
+            let owed = self.rungs.owe::<YEAR>(
+                self.pending,
+                until,
+                scoring,
+                rng.clone(),
+                *out,
+                chain,
+                expiry,
+            );
             (*rng, *out, self.low, self.pending) = owed;
         }
     }
@@ -199,6 +212,7 @@ impl Rungs {
 
     /// For when a score-based scorer is "owed" an activation on a later frame.
     #[inline(never)]
+    #[expect(clippy::too_many_arguments, reason = "the trial's state")]
     fn owe<const YEAR: bool>(
         &mut self,
         mut pending: Time,
@@ -207,16 +221,19 @@ impl Rungs {
         mut rng: Rng,
         mut out: Outcome,
         chain: &mut Chain,
+        expiry: &mut impl Lasting,
     ) -> (Rng, Outcome, u64, Time) {
         let mut low = 0;
         while pending < until {
-            (rng, out, low, pending) = self.climb::<YEAR>(0, pending, scoring, rng, out, chain);
+            (rng, out, low, pending) =
+                self.climb::<YEAR>(0, pending, scoring, rng, out, chain, expiry);
         }
         (rng, out, low, pending)
     }
 
     /// increments the score counter for score-based scorers.
     #[inline(never)]
+    #[expect(clippy::too_many_arguments, reason = "the trial's state")]
     fn climb<const YEAR: bool>(
         &mut self,
         first: u16,
@@ -225,6 +242,7 @@ impl Rungs {
         mut rng: Rng,
         mut out: Outcome,
         chain: &mut Chain,
+        expiry: &mut impl Lasting,
     ) -> (Rng, Outcome, u64, Time) {
         let (mut due, mut low, mut pending) = (first, 0, NO_PASS);
         loop {
@@ -235,12 +253,12 @@ impl Rungs {
             if due == 0 {
                 return (rng, out, low, pending);
             }
-            let landed = fire_landed(due, scoring, &mut rng, &mut out);
+            let landed = fire_landed(due, now, scoring, &mut rng, &mut out, expiry);
             if self.spend(landed) {
                 low = 0;
             }
             if YEAR {
-                chain.after(landed, scoring, &mut rng, &mut out);
+                chain.after(landed, now, scoring, &mut rng, &mut out, expiry);
             }
             due = 0;
         }
@@ -268,14 +286,21 @@ impl Rungs {
 }
 
 #[inline]
-fn fire_landed(due: u16, scoring: &Scoring, rng: &mut Rng, out: &mut Outcome) -> u16 {
+fn fire_landed(
+    due: u16,
+    now: Time,
+    scoring: &Scoring,
+    rng: &mut Rng,
+    out: &mut Outcome,
+    expiry: &mut impl Lasting,
+) -> u16 {
     let mut landed = 0;
     let mut bits = due;
     while bits != 0 {
         let bit = bits.isolate_highest_one();
         bits ^= bit;
         let before = (out.activations, out.accessory_activations);
-        fire::<false>(bit, scoring, rng, out);
+        fire::<false>(bit, now, scoring, rng, out, expiry);
         if (out.activations, out.accessory_activations) != before {
             landed |= bit;
         }

@@ -14,7 +14,9 @@ use simulator::accessory::AccessoryRows;
 use simulator::card::{Card, CardDb, LeaderSkill, LeaderTargets};
 use simulator::play::Scoring;
 use simulator::play::activation::{AccessorySkill, Skill};
-use simulator::scalar::{Attribute, Centi, CharacterId, CharacterSet, Milli, Pct, RATE_UNIT, Rate};
+use simulator::scalar::{
+    Attribute, Centi, CharacterId, CharacterSet, Milli, Ms, Pct, RATE_UNIT, Rate,
+};
 use simulator::sis::SisEffect;
 use simulator::skill::{SkillEffect, SkillRows, TriggerType};
 use simulator::song::Matching;
@@ -124,6 +126,8 @@ pub struct Slot {
     pub bonus: u16,
     /// See `Scoring::members`.
     pub member: u16,
+    /// See `Scoring::durations`.
+    pub durations: [Ms; 2],
     pub sis: SisFlags,
     _pad: [u8; 3],
 }
@@ -136,6 +140,7 @@ impl Default for Slot {
             accessory: AccessorySkill::NONE,
             bonus: NO_MATCH,
             member: 0,
+            durations: [0; 2],
             sis: SisFlags(0),
             _pad: [0; 3],
         }
@@ -167,6 +172,7 @@ impl Compiled {
             skills: self.slots.map(|s| s.skill),
             accessories: self.slots.map(|s| s.accessory),
             members: self.slots.map(|s| s.member),
+            durations: self.slots.map(|s| s.durations),
         }
     }
 }
@@ -245,10 +251,11 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
             }
         }
 
-        dst.skill = resolve(card, entry, ctx.cards, dst.sis);
-        dst.accessory = slot
+        let (skill, duration) = resolve(card, entry, ctx.cards, dst.sis);
+        let (accessory, worn_duration) = slot
             .accessory()
-            .map_or(AccessorySkill::NONE, |worn| resolve_accessory(worn, ctx, dst.sis));
+            .map_or((AccessorySkill::NONE, 0), |worn| resolve_accessory(worn, ctx, dst.sis));
+        (dst.skill, dst.accessory, dst.durations) = (skill, accessory, [duration, worn_duration]);
         if dst.skill.trigger == TriggerType::YearGroup {
             *year = year_group(card, ctx.cards);
         }
@@ -300,16 +307,16 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
 /// Trying to do some future proofing for Amplify skills where the skill level a skill gets resolved at can change.
 ///
 /// TODO: Amplify. I'll be saving that for near the end though.
-fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> Skill {
+fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> (Skill, Ms) {
     let Some(def) = card.skill.and_then(|id| cards.skills.def(id)) else {
-        return Skill::NONE;
+        return (Skill::NONE, 0);
     };
     let level = entry.skill_level();
     let trigger = cards.skills.trigger(def, level);
-    let (value, _duration) = cards.skills.payload(def, level);
+    let (value, duration) = cards.skills.payload(def, level);
 
     // TODO: Every other effect
-    Skill {
+    let skill = Skill {
         value: if def.effect == SkillEffect::Scorer {
             payout(value, sis)
         } else {
@@ -320,24 +327,25 @@ fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> Skil
         effect: def.effect,
         trigger: def.trigger_type,
         limit: activation_limit::of(entry.card_id()),
-    }
+    };
+    (skill, duration)
 }
 
-/// TODO: Spark. Durations. I'd prefer for this to also be generic enough to not need to reimplement every skill effect
+/// TODO: Spark. I'd prefer for this to also be generic enough to not need to reimplement every skill effect
 /// since accs have the same exact effects as cards besides spark.
-fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> AccessorySkill {
+fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> (AccessorySkill, Ms) {
     let Some((accessory, level)) = ctx.accessory(worn) else {
-        return AccessorySkill::NONE;
+        return (AccessorySkill::NONE, 0);
     };
     let Some(def) = ctx.acc_db.skills.def(accessory.skill) else {
-        return AccessorySkill::NONE;
+        return (AccessorySkill::NONE, 0);
     };
     if def.effect == SkillEffect::Spark {
-        return AccessorySkill::NONE;
+        return (AccessorySkill::NONE, 0);
     }
-    let (value, _duration) = ctx.acc_db.skills.payload(def, level);
+    let (value, duration) = ctx.acc_db.skills.payload(def, level);
 
-    AccessorySkill {
+    let skill = AccessorySkill {
         value: if def.effect == SkillEffect::Scorer {
             payout(value, sis)
         } else {
@@ -345,7 +353,8 @@ fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> AccessorySki
         },
         chance: rate(ctx.acc_db.skills.chance(def, level)),
         effect: def.effect,
-    }
+    };
+    (skill, duration)
 }
 
 fn year_group(card: &Card, cards: &CardDb) -> Option<CharacterSet> {

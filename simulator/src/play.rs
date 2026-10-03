@@ -8,11 +8,13 @@ pub mod queue;
 pub mod rng;
 pub mod tap;
 
+use crate::scalar::Ms;
 use crate::song::{EventKind, LANES, Time};
 use activation::chain::Chain;
 use activation::ladder::Ladder;
 use activation::{AccessorySkill, Skill, Tally, Triggers, fire};
 use config::PlayConfig;
+use effect::{Expiry, Instant, Lasting};
 use judgement::Judgements;
 use queue::Queue;
 use rng::Rng;
@@ -27,6 +29,7 @@ pub struct Scoring {
     /// For Year-Group triggers, although effects like sync will probably steal this too. Or something similar.
     /// One bit for each lane's character. The bit of the first lane that character is in.
     pub members: [u16; LANES],
+    pub durations: [[Ms; 2]; LANES],
 }
 
 impl Scoring {
@@ -38,6 +41,7 @@ impl Scoring {
             skills: [Skill::NONE; LANES],
             accessories: [AccessorySkill::NONE; LANES],
             members: [0; LANES],
+            durations: [[0; 2]; LANES],
         }
     }
 }
@@ -71,21 +75,57 @@ pub fn run(
     triggers: &Triggers,
     judgements: &Judgements,
 ) -> Outcome {
+    if triggers.lasting() != 0 {
+        return lasting(queue, config, scoring, triggers, judgements);
+    }
     // Only one card has a star note skill trigger and it's a very old SR that's not very good.
     // So this has const generics since, in almost every case, we can completely ignore star notes pre-trial.
     if triggers.year() != 0 {
-        return chained(queue, config, scoring, triggers, judgements);
+        return chained::<Instant>(queue, config, scoring, triggers, judgements);
     }
     match (!triggers.stars().is_empty(), triggers.score() != 0) {
-        (false, false) => walk::<false, false, false>(queue, config, scoring, triggers, judgements),
-        (false, true) => walk::<false, true, false>(queue, config, scoring, triggers, judgements),
+        (false, false) => {
+            walk::<false, false, false, Instant>(queue, config, scoring, triggers, judgements)
+        }
+        (false, true) => {
+            walk::<false, true, false, Instant>(queue, config, scoring, triggers, judgements)
+        }
         (true, false) => {
             core::hint::cold_path();
-            walk::<true, false, false>(queue, config, scoring, triggers, judgements)
+            walk::<true, false, false, Instant>(queue, config, scoring, triggers, judgements)
         }
         (true, true) => {
             core::hint::cold_path();
-            walk::<true, true, false>(queue, config, scoring, triggers, judgements)
+            walk::<true, true, false, Instant>(queue, config, scoring, triggers, judgements)
+        }
+    }
+}
+
+#[inline(never)]
+fn lasting(
+    queue: &Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome {
+    if triggers.year() != 0 {
+        return chained::<Expiry>(queue, config, scoring, triggers, judgements);
+    }
+    match (!triggers.stars().is_empty(), triggers.score() != 0) {
+        (false, false) => {
+            walk::<false, false, false, Expiry>(queue, config, scoring, triggers, judgements)
+        }
+        (false, true) => {
+            walk::<false, true, false, Expiry>(queue, config, scoring, triggers, judgements)
+        }
+        (true, false) => {
+            core::hint::cold_path();
+            walk::<true, false, false, Expiry>(queue, config, scoring, triggers, judgements)
+        }
+        (true, true) => {
+            core::hint::cold_path();
+            walk::<true, true, false, Expiry>(queue, config, scoring, triggers, judgements)
         }
     }
 }
@@ -93,23 +133,28 @@ pub fn run(
 /// Really don't think there's a clean way to integrate year-group triggers / chain scorers into what exists
 /// so it gets its own bespoke handling.
 #[inline(never)]
-fn chained(
+fn chained<E>(
     queue: &Queue,
     config: &PlayConfig,
     scoring: &Scoring,
     triggers: &Triggers,
     judgements: &Judgements,
-) -> Outcome {
+) -> Outcome
+where
+    E: Lasting,
+{
     match (!triggers.stars().is_empty(), triggers.score() != 0) {
-        (false, false) => walk::<false, false, true>(queue, config, scoring, triggers, judgements),
-        (false, true) => walk::<false, true, true>(queue, config, scoring, triggers, judgements),
+        (false, false) => {
+            walk::<false, false, true, E>(queue, config, scoring, triggers, judgements)
+        }
+        (false, true) => walk::<false, true, true, E>(queue, config, scoring, triggers, judgements),
         (true, false) => {
             core::hint::cold_path();
-            walk::<true, false, true>(queue, config, scoring, triggers, judgements)
+            walk::<true, false, true, E>(queue, config, scoring, triggers, judgements)
         }
         (true, true) => {
             core::hint::cold_path();
-            walk::<true, true, true>(queue, config, scoring, triggers, judgements)
+            walk::<true, true, true, E>(queue, config, scoring, triggers, judgements)
         }
     }
 }
@@ -117,13 +162,17 @@ fn chained(
 #[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
 #[expect(clippy::else_if_without_else, reason = "lazy")]
 #[expect(clippy::too_many_lines, reason = "Benchmarked. Splitting it moved what LLVM inlined.")]
-fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool>(
+#[inline(never)]
+fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool, E>(
     queue: &Queue,
     config: &PlayConfig,
     scoring: &Scoring,
     triggers: &Triggers,
     judgements: &Judgements,
-) -> Outcome {
+) -> Outcome
+where
+    E: Lasting,
+{
     debug_assert_eq!(judgements.records(), queue.events().len(), "judgements of another chart");
     debug_assert_eq!(judgements.seed(), config.seed, "judgements of another trial");
 
@@ -146,6 +195,7 @@ fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool>(
     let mut perfects = Tally::new(triggers.perfects());
     let mut stars = Tally::new(triggers.stars());
     let mut star_perfects = 0_u32;
+    let mut expiry = E::new(queue.last_judgement());
     let mut timer_cursor = 0_usize;
     let mut next_timer = Time(timer_at[0]);
     let mut ladder = Ladder::new(scoring, if SCORE { triggers.score() } else { 0 });
@@ -156,11 +206,13 @@ fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool>(
 
         // Spawns and taps processed before time. Actually unsure if this is how
         // it works in-game, but it is how burrito's sim does it.
-        while next_timer <= time {
+        // Duration skills follow the same principle, actually, which gives some
+        // credence to that assumption.
+        while next_timer.min(expiry.next()) <= time {
             // timer skills really don't roll very often
             core::hint::cold_path();
-            let at = next_timer;
-            spawns.drain::<SCORE, YEAR>(
+            let at = next_timer.min(expiry.next());
+            spawns.drain::<SCORE, YEAR, E>(
                 at,
                 offset,
                 scoring,
@@ -168,18 +220,39 @@ fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool>(
                 &mut out,
                 &mut ladder,
                 &mut chain,
+                &mut expiry,
             );
-            if SCORE {
-                ladder.catch_up::<YEAR>(at, scoring, &mut rng, &mut out, &mut chain);
+            if E::ANY && expiry.next() <= at {
+                (rng, out) = release::<SCORE, YEAR>(
+                    at,
+                    scoring,
+                    rng,
+                    out,
+                    &mut ladder,
+                    &mut chain,
+                    &mut expiry,
+                );
+                continue;
             }
-            moment::<YEAR>(timer_lanes[timer_cursor], scoring, &mut rng, &mut out, &mut chain);
+            if SCORE {
+                ladder.catch_up::<YEAR>(at, scoring, &mut rng, &mut out, &mut chain, &mut expiry);
+            }
+            moment::<YEAR>(
+                timer_lanes[timer_cursor],
+                at,
+                scoring,
+                &mut rng,
+                &mut out,
+                &mut chain,
+                &mut expiry,
+            );
             timer_cursor = timer_cursor.saturating_add(1);
             next_timer = Time(timer_at[timer_cursor]);
             if SCORE {
-                ladder.settle::<YEAR>(at, scoring, &mut rng, &mut out, &mut chain);
+                ladder.settle::<YEAR>(at, scoring, &mut rng, &mut out, &mut chain, &mut expiry);
             }
         }
-        spawns.drain::<SCORE, YEAR>(
+        spawns.drain::<SCORE, YEAR, E>(
             time,
             offset,
             scoring,
@@ -187,6 +260,7 @@ fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool>(
             &mut out,
             &mut ladder,
             &mut chain,
+            &mut expiry,
         );
 
         let event = queue.events()[tap];
@@ -201,20 +275,27 @@ fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool>(
 
             kind @ (EventKind::Tap | EventKind::HoldRelease) => {
                 if SCORE {
-                    ladder.catch_up::<YEAR>(time, scoring, &mut rng, &mut out, &mut chain);
+                    ladder.catch_up::<YEAR>(
+                        time,
+                        scoring,
+                        &mut rng,
+                        &mut out,
+                        &mut chain,
+                        &mut expiry,
+                    );
                 }
                 let tail = judgements.at(tap);
                 let head = (kind == EventKind::Tap) | heads.get(lane).copied().unwrap_or(true);
+                let locked = E::ANY && expiry.locked(time);
                 out.tap = out.tap.saturating_add(note_score(
                     scoring.team_strength,
                     queue.combo()[tap],
                     scoring.lanes.get(lane).copied().unwrap_or(UNIT),
                     note_multiplier(event),
-                    JUDGEMENT[usize::from(head)][usize::from(tail)],
+                    JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
                 ));
                 out.notes = out.notes.saturating_add(1);
-                // TODO: PL converted GREATs count towards PERFECT total
-                let perfect = head & tail;
+                let perfect = locked || (head & tail);
                 out.perfects = out.perfects.saturating_add(u32::from(perfect));
 
                 // Shoutouts to Snow Maiden Umi. I wonder why they gave a skill to one card and then just never again.
@@ -233,6 +314,7 @@ fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool>(
                         &mut out,
                         &mut ladder,
                         &mut chain,
+                        &mut expiry,
                     );
                 } else if out.notes == combo.next()
                     || out.perfects == perfects.next()
@@ -247,6 +329,7 @@ fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool>(
                         &mut out,
                         &mut ladder,
                         &mut chain,
+                        &mut expiry,
                     );
                 }
             }
@@ -264,6 +347,10 @@ fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool>(
     clippy::inline_always,
     reason = "I benchmarked and it didn't get inlined with regular inline."
 )]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "don't feel like splitting it up. Not even sure if that would affect performance."
+)]
 fn hit<const SCORE: bool, const YEAR: bool>(
     due: u16,
     now: Time,
@@ -272,15 +359,16 @@ fn hit<const SCORE: bool, const YEAR: bool>(
     out: &mut Outcome,
     ladder: &mut Ladder,
     chain: &mut Chain,
+    expiry: &mut impl Lasting,
 ) {
     // tldr here. Score-based scorers can activate once per frame, so this banks
     // their trigger for the next frame after they activate.
     if SCORE && out.score() >= ladder.low() {
-        ladder.climb::<YEAR>(due, now, scoring, rng, out, chain);
+        ladder.climb::<YEAR>(due, now, scoring, rng, out, chain, expiry);
     } else {
-        moment::<YEAR>(due, scoring, rng, out, chain);
+        moment::<YEAR>(due, now, scoring, rng, out, chain, expiry);
         if SCORE {
-            ladder.settle::<YEAR>(now, scoring, rng, out, chain);
+            ladder.settle::<YEAR>(now, scoring, rng, out, chain, expiry);
         }
     }
 }
@@ -296,17 +384,42 @@ fn hit<const SCORE: bool, const YEAR: bool>(
 )]
 fn moment<const YEAR: bool>(
     mask: u16,
+    now: Time,
     scoring: &Scoring,
     rng: &mut Rng,
     out: &mut Outcome,
     chain: &mut Chain,
+    expiry: &mut impl Lasting,
 ) {
     if YEAR {
-        let landed = fire::<true>(mask, scoring, rng, out);
-        chain.after(landed, scoring, rng, out);
+        let landed = fire::<true>(mask, now, scoring, rng, out, expiry);
+        chain.after(landed, now, scoring, rng, out, expiry);
     } else {
-        fire::<false>(mask, scoring, rng, out);
+        fire::<false>(mask, now, scoring, rng, out, expiry);
     }
+}
+
+/// Ends a duration effect.
+#[inline(never)]
+fn release<const SCORE: bool, const YEAR: bool>(
+    at: Time,
+    scoring: &Scoring,
+    mut rng: Rng,
+    mut out: Outcome,
+    ladder: &mut Ladder,
+    chain: &mut Chain,
+    expiry: &mut impl Lasting,
+) -> (Rng, Outcome) {
+    if SCORE {
+        ladder.catch_up::<YEAR>(at, scoring, &mut rng, &mut out, chain, expiry);
+    }
+    let due = expiry.release(at);
+    if SCORE {
+        ladder.climb::<YEAR>(due, at, scoring, &mut rng, &mut out, chain, expiry);
+    } else {
+        moment::<YEAR>(due, at, scoring, &mut rng, &mut out, chain, expiry);
+    }
+    (rng, out)
 }
 
 struct Spawns<'a> {
@@ -326,7 +439,7 @@ impl Spawns<'_> {
         clippy::too_many_arguments,
         reason = "Legit trying to fix this lead to a +7% performance regression. `offset` as a field of `Spawns` moved register allocation to all of `walk`."
     )]
-    fn drain<const SCORE: bool, const YEAR: bool>(
+    fn drain<const SCORE: bool, const YEAR: bool, E>(
         &mut self,
         bound: Time,
         offset: u32,
@@ -335,21 +448,37 @@ impl Spawns<'_> {
         out: &mut Outcome,
         ladder: &mut Ladder,
         chain: &mut Chain,
-    ) {
-        while self.icon < self.icons.len() && self.icons[self.icon].spawn(offset) < bound {
-            self.icon = self.icon.saturating_add(1);
-            if self.icon == self.next {
-                let now = self.icons[self.icon.saturating_sub(1)].spawn(offset);
-                if SCORE {
-                    ladder.catch_up::<YEAR>(now, scoring, rng, out, chain);
-                }
-                moment::<YEAR>(self.lanes[self.cursor], scoring, rng, out, chain);
-                self.cursor = self.cursor.saturating_add(1);
-                self.next = self.at[self.cursor] as usize;
-                if SCORE {
-                    ladder.settle::<YEAR>(now, scoring, rng, out, chain);
+        expiry: &mut E,
+    ) where
+        E: Lasting,
+    {
+        let mut stop = bound;
+        loop {
+            while self.icon < self.icons.len() && self.icons[self.icon].spawn(offset) < stop {
+                self.icon = self.icon.saturating_add(1);
+                if self.icon == self.next {
+                    let now = self.icons[self.icon.saturating_sub(1)].spawn(offset);
+                    if SCORE {
+                        ladder.catch_up::<YEAR>(now, scoring, rng, out, chain, expiry);
+                    }
+                    moment::<YEAR>(self.lanes[self.cursor], now, scoring, rng, out, chain, expiry);
+                    self.cursor = self.cursor.saturating_add(1);
+                    self.next = self.at[self.cursor] as usize;
+                    if SCORE {
+                        ladder.settle::<YEAR>(now, scoring, rng, out, chain, expiry);
+                    }
+                    if E::ANY {
+                        stop = stop.min(expiry.next());
+                    }
                 }
             }
+            if !E::ANY || stop == bound {
+                return;
+            }
+            core::hint::cold_path();
+            (*rng, *out) =
+                release::<SCORE, YEAR>(stop, scoring, rng.clone(), *out, ladder, chain, expiry);
+            stop = bound.min(expiry.next());
         }
     }
 }

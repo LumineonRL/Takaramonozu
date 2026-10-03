@@ -29,7 +29,15 @@ const GREAT: u16 = 550;
 
 /// A hold GREAT at both ends: 484/625 = 0.7744
 const GREAT_GREAT: u16 = 484;
-pub(super) const JUDGEMENT: [[u16; 2]; 2] = [[GREAT_GREAT, GREAT], [GREAT, PERFECT]];
+
+/// A true Perfect under a Perfect Lock. I can't believe this works with the 625 denominator too.
+/// 675/625 = 1.08.
+const LOCKED_PERFECT: u16 = 675;
+
+pub(super) const JUDGEMENT: [[[u16; 2]; 2]; 2] = [
+    [[GREAT_GREAT, GREAT], [GREAT, PERFECT]],
+    [[PERFECT, PERFECT], [PERFECT, LOCKED_PERFECT]],
+];
 
 const DIVISOR: u64 = BASE * 100 * 100 * 1000 * JUDGEMENT_UNIT as u64;
 
@@ -152,8 +160,21 @@ mod tests {
             "multiply both greats of the hold, 0.88 * 0.88 = 0.7744"
         );
         assert_eq!(
-            super::JUDGEMENT,
+            super::JUDGEMENT[0],
             [[super::GREAT_GREAT, super::GREAT], [super::GREAT, super::PERFECT]]
+        );
+        assert_eq!(
+            u32::from(super::LOCKED_PERFECT) * 100,
+            u32::from(super::JUDGEMENT_UNIT) * 108,
+            "1.08x"
+        );
+        assert_eq!(
+            super::JUDGEMENT[1],
+            [
+                [super::PERFECT, super::PERFECT],
+                [super::PERFECT, super::LOCKED_PERFECT]
+            ],
+            "PL converts into perfects, gives multiplier when true perfect."
         );
 
         assert_eq!(11 * 100 * 100 * 100, 800 * TABLE_PERFECT * 110);
@@ -163,6 +184,11 @@ mod tests {
             assert_eq!(
                 super::note_score(team_strength, 135, 121, 1250, super::PERFECT),
                 u64::from(team_strength) * 135 * 121 * 1250 / 800_000_000,
+            );
+            assert_eq!(
+                super::note_score(team_strength, 135, 121, 1250, super::LOCKED_PERFECT),
+                u64::from(team_strength) * 135 * 121 * 1250 * 108 / 80_000_000_000,
+                "the widest possible product jere would not saturate"
             );
         }
     }

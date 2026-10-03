@@ -5,7 +5,7 @@ pub(super) mod ladder;
 
 use core::num::NonZeroU8;
 
-use super::effect::pay;
+use super::effect::{Lasting, lasts, pay};
 use super::queue::Queue;
 use super::rng::Rng;
 use super::{Outcome, Scoring};
@@ -146,6 +146,7 @@ pub struct Triggers {
     stars: Schedule,
     score: u16,
     year: u16,
+    lasting: u16,
 }
 
 impl Triggers {
@@ -161,6 +162,7 @@ impl Triggers {
             stars: Schedule::build(queue.stars(), 1, skills, TriggerType::StarNotes),
             score: lanes_on(skills, TriggerType::Score),
             year: lanes_on(skills, TriggerType::YearGroup),
+            lasting: lasting(scoring),
         }
     }
 
@@ -199,6 +201,12 @@ impl Triggers {
         self.year
     }
 
+    /// Lanes whose card or accessory has an effect with a duration.
+    #[must_use]
+    pub const fn lasting(&self) -> u16 {
+        self.lasting
+    }
+
     #[must_use]
     pub fn rolls(&self) -> u32 {
         self.all().iter().map(|s| s.rolls()).sum()
@@ -224,6 +232,16 @@ fn lanes_on(skills: &[Skill; LANES], clock: TriggerType) -> u16 {
     (0_u32..)
         .zip(skills)
         .filter(|(_, skill)| skill.trigger == clock && skill.threshold != 0)
+        .fold(0, |mask, (lane, _)| mask | 1_u16.checked_shl(lane).unwrap_or(0))
+}
+
+fn lasting(scoring: &Scoring) -> u16 {
+    (0_u32..)
+        .zip(scoring.skills.iter().zip(&scoring.accessories))
+        .filter(|(_, (skill, worn))| {
+            skill.threshold != 0
+                && (lasts(skill.effect) || (!worn.is_inert() && lasts(worn.effect)))
+        })
         .fold(0, |mask, (lane, _)| mask | 1_u16.checked_shl(lane).unwrap_or(0))
 }
 
@@ -269,21 +287,25 @@ impl<'a> Tally<'a> {
 #[expect(clippy::inline_always, reason = "I benchmarked.")]
 pub(super) fn fire<const LANDED: bool>(
     mask: u16,
+    now: Time,
     scoring: &Scoring,
     rng: &mut Rng,
     out: &mut Outcome,
+    expiry: &mut impl Lasting,
 ) -> u16 {
     let mut landed = 0;
-    let mut bits = mask;
+    let mut bits = expiry.admit(mask, now);
     while let Some(lane) = bits.highest_one() {
         let bit = bits.isolate_highest_one();
         bits ^= bit;
         let Some(skill) = scoring.skills.get(lane as usize) else {
             continue;
         };
+        let [duration, worn_duration] =
+            scoring.durations.get(lane as usize).copied().unwrap_or_default();
         if rng.roll(skill.chance) {
             out.activations = out.activations.saturating_add(1);
-            pay(skill.effect, skill.value, out);
+            pay(lane, skill.effect, skill.value, duration, now, out, expiry);
             if LANDED {
                 landed |= bit;
             }
@@ -297,7 +319,7 @@ pub(super) fn fire<const LANDED: bool>(
             continue;
         }
         out.accessory_activations = out.accessory_activations.saturating_add(1);
-        pay(accessory.effect, accessory.value, out);
+        pay(lane, accessory.effect, accessory.value, worn_duration, now, out, expiry);
         if LANDED {
             landed |= bit;
         }

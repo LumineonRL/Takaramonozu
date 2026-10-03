@@ -1,9 +1,10 @@
 //! Year Group triggers, aka chain scorers.
 
 use super::fire;
+use crate::play::effect::Lasting;
 use crate::play::rng::Rng;
 use crate::play::{Outcome, Scoring};
-use crate::song::LANES;
+use crate::song::{LANES, Time};
 
 /// Year Group aka chain scorers (Year Group is a trigger condition, but every card with it is also a scorer).
 /// Requires every other member of the same year group to activate. e.g. Riko needs both Chika and You cards to activate
@@ -24,9 +25,11 @@ impl Chain {
     pub(in crate::play) fn after(
         &mut self,
         landed: u16,
+        now: Time,
         scoring: &Scoring,
         rng: &mut Rng,
         out: &mut Outcome,
+        expiry: &mut impl Lasting,
     ) {
         let mut members = 0;
         let mut landings = landed;
@@ -49,7 +52,7 @@ impl Chain {
             }
         }
         if due != 0 {
-            (*rng, *out) = self.round(due, scoring, rng.clone(), *out);
+            (*rng, *out) = self.round(due, now, scoring, rng.clone(), *out, expiry);
         }
     }
 
@@ -58,15 +61,17 @@ impl Chain {
     fn round(
         &mut self,
         due: u16,
+        now: Time,
         scoring: &Scoring,
         mut rng: Rng,
         mut out: Outcome,
+        expiry: &mut impl Lasting,
     ) -> (Rng, Outcome) {
         let mut bits = due;
         while let Some(lane) = bits.highest_one() {
             let bit = bits.isolate_highest_one();
             bits ^= bit;
-            if fire::<true>(bit, scoring, &mut rng, &mut out) != 0 {
+            if fire::<true>(bit, now, scoring, &mut rng, &mut out, expiry) != 0 {
                 let member = scoring.members[lane as usize];
                 let mut others = self.lanes;
                 while let Some(other) = others.lowest_one() {
