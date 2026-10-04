@@ -290,16 +290,23 @@ pub(crate) mod tests {
     use crate::level_cap::{self, tests::corpus, tests::meta};
     use crate::manager::{EntryId, Manager, Repaired, Repairs};
     use crate::skill_level;
-    use core::num::{NonZeroU8, NonZeroU16};
+    use core::num::NonZeroU8;
     use simulator::card::{Card, CardDb, LeaderId, LeaderSkill, LeaderTargets};
     use simulator::scalar::{Attribute, CharacterId, Form, Rarity, Roster, Stats};
-    use simulator::skill::{SkillArena, SkillId, Targets};
+    use simulator::skill::{SkillArena, SkillEffect, Targets, Trigger, TriggerType};
 
     fn entry(card_id: u16) -> DeckEntry {
         DeckEntry::new(card_id, true, 8, 8, 500)
     }
 
+    /// Card 1 is a Scorer, card 2 has no skill, card 3 does not exist, and card 4 is a Healer.
     pub(crate) fn cards() -> CardDb {
+        let mut skills = SkillArena::default();
+        let mut trigger = Trigger::default();
+        (trigger.threshold, trigger.chance) = (10, 30);
+        let icons = TriggerType::RhythmIcons;
+        let scorer = skills.push(SkillEffect::Scorer, icons, None, &[trigger; 8], &[(100_000, 0)]);
+        let healer = skills.push(SkillEffect::Healer, icons, None, &[trigger; 8], &[(400, 0)]);
         let card = Card {
             stats: [Stats([1, 2, 3]), Stats([1021, 2, 315])],
             skill: None,
@@ -307,11 +314,14 @@ pub(crate) mod tests {
             character: CharacterId(0),
             attribute: Attribute::Smile,
         };
-        let skilled = Card { skill: Some(SkillId(NonZeroU16::new(1).unwrap())), ..card };
         CardDb {
-            cards: vec![skilled, card],
-            meta: vec![meta(1, false), meta(2, true)],
-            skills: SkillArena::default(),
+            cards: vec![
+                Card { skill: Some(scorer), ..card },
+                card,
+                Card { skill: Some(healer), ..card },
+            ],
+            meta: vec![meta(1, false), meta(2, true), meta(4, false)],
+            skills,
             skill_targets: Targets::default(),
             leaders: vec![LeaderSkill {
                 attribute: Attribute::Smile,

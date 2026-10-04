@@ -3,6 +3,7 @@
 use simulator::accessory::{Accessory, AccessoryDb};
 use simulator::card::{Card, CardDb, LeaderId};
 use simulator::sis::{Sis, SisDb};
+use simulator::skill::SkillRows;
 
 use crate::accessory::Accessories;
 use crate::card::{Deck, DeckEntry};
@@ -30,7 +31,7 @@ pub enum Problem {
     Duplicate,
     /// Out of SIS capacity.
     NoRoom,
-    /// The accessory's `card_id`/character restriction.
+    /// An equip restriction, whether it's `card_id`/char or Charm/Heal for Scorers/Healers
     Restricted,
     Unknown,
 }
@@ -74,6 +75,12 @@ impl<'a> Context<'a> {
     /// Equipping a SIS that it shouldn't be able to do so I guess
     /// it would need to be something outside of `sis.rkyv`.
     fn sis_equips(self, sis: Sis, equipped_by: &Card) -> Result<bool, Problem> {
+        if let Some(effect) = sis.effect.requires() {
+            let carries = equipped_by.skill.and_then(|id| self.cards.skills.def(id));
+            if carries.is_none_or(|def| def.effect != effect) {
+                return Ok(false);
+            }
+        }
         if sis.effect.restricts_by_attribute() {
             return Ok(sis.attribute == equipped_by.attribute);
         }
@@ -509,6 +516,33 @@ mod tests {
         team.equip_sis(0, smile, f.ctx()).unwrap();
         assert_eq!(team.slot(0).unwrap().sis().count(), 2);
         assert_eq!(team.equip_sis(0, f.owns(25), f.ctx()), Err(Problem::Restricted));
+    }
+
+    /// Charm goes only on a Scorer and Heal only on a Healer
+    #[test]
+    fn check_charm_and_heal_restricted() {
+        let mut f = fixture();
+        let [scorer, bare, healer] =
+            [1, 2, 4].map(|id| f.deck.add(&f.cards, id, true, 1, 8, 100).unwrap().0);
+        let (pin, clef) = (f.acc(11), f.acc(15));
+        let (charm, heal) = (f.owns(15), f.owns(27));
+        let mut team = Team::default();
+        for (lane, card) in [scorer, bare, healer].into_iter().enumerate() {
+            team.equip_card(lane, card, f.ctx()).unwrap();
+        }
+        team.equip_accessory(0, clef, f.ctx()).unwrap();
+        team.equip_accessory(2, pin, f.ctx()).unwrap();
+
+        assert_eq!(team.can_equip_sis(0, heal, f.ctx()), Err(Problem::Restricted), "Healer acc");
+        assert_eq!(team.can_equip_sis(2, charm, f.ctx()), Err(Problem::Restricted), "Scorer acc");
+        for sis in [charm, heal] {
+            assert_eq!(team.can_equip_sis(1, sis, f.ctx()), Err(Problem::Restricted), "no skill");
+        }
+        let legal = |lane| team.sis_choices(lane, f.ctx()).collect::<Vec<_>>();
+        assert_eq!([legal(0), legal(1), legal(2)], [vec![charm], vec![], vec![heal]]);
+
+        team.equip_sis(0, charm, f.ctx()).unwrap();
+        team.equip_sis(2, heal, f.ctx()).unwrap();
     }
 
     #[test]

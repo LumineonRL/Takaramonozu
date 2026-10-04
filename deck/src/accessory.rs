@@ -123,6 +123,11 @@ pub(crate) mod tests {
         });
         let scorer = skills.push(SkillEffect::Scorer, None, 0, &[31; 8], &payload);
         let spark = skills.push(SkillEffect::Spark, None, 5, &[11; 8], &payload);
+        // 1 HP a level.
+        let hp: [(u32, u16); 8] = core::array::from_fn(|i| {
+            (u32::try_from(i).unwrap().saturating_add(1).saturating_mul(100), 0)
+        });
+        let healer = skills.push(SkillEffect::Healer, None, 0, &[30; 8], &hp);
         let mut stats = StatArena::default();
 
         let ladder = |base: u16| {
@@ -142,6 +147,7 @@ pub(crate) mod tests {
                 Accessory { skill, stats: second },
                 Accessory { skill: scorer, stats: second },
                 Accessory { skill: spark, stats: second },
+                Accessory { skill: healer, stats: first },
             ],
             // Just a random selection of accessories to use for testing skill level lookups.
             meta: vec![
@@ -168,6 +174,13 @@ pub(crate) mod tests {
                     card_id: None,
                     character: None,
                     name: "UR Medal".into(),
+                },
+                // this one's to test healing.
+                AccessoryMeta {
+                    acc_id: 15,
+                    card_id: None,
+                    character: None,
+                    name: "UR Clef".into(),
                 },
             ],
             skills,

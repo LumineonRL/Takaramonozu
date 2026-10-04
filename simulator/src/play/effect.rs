@@ -304,11 +304,18 @@ pub(super) fn pay(
     out: &mut Outcome,
     expiry: &mut impl Lasting,
 ) {
+    // Select was faster than a match arm for Heal SIS.
+    let paid = if matches!(effect, SkillEffect::Scorer | SkillEffect::Healer) {
+        value
+    } else {
+        0
+    };
+    out.skill = out.skill.saturating_add(u64::from(paid));
     match effect {
-        SkillEffect::Scorer => out.skill = out.skill.saturating_add(u64::from(value)),
         SkillEffect::PerfectLock => expiry.lock(lane, now, duration),
         SkillEffect::TotalTrick => expiry.trick(lane, now, duration),
-        SkillEffect::Healer
+        SkillEffect::Scorer
+        | SkillEffect::Healer
         | SkillEffect::Encore
         | SkillEffect::Amplify
         | SkillEffect::PerfectScoreUp
@@ -325,7 +332,9 @@ mod tests {
     use crate::play::activation::{AccessorySkill, Skill, Triggers};
     use crate::play::judgement::Judgements;
     use crate::play::queue::Queue;
-    use crate::play::tests::{ALWAYS, arena, at, fifty_one, only, play, scorer, sloppy, tap};
+    use crate::play::tests::{
+        ALWAYS, arena, at, fifty_one, only, play, scorer, seeded, sloppy, tap, worn,
+    };
     use crate::play::{Outcome, Scoring, run};
     use crate::scalar::{Ms, RATE_UNIT, Rate};
     use crate::skill::{SkillEffect, TriggerType};
@@ -727,5 +736,38 @@ mod tests {
         scoring.skills[4].chance = ALWAYS;
         let alone = play(&queue, &scoring);
         assert_eq!((alone.activations, alone.tap), (13, 51_100));
+    }
+
+    /// 480 * heal value
+    #[test]
+    fn check_heal_sis() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut healed = Scoring::flat(TEAM);
+        healed.skills[3] = Skill { effect: SkillEffect::Healer, ..scorer(5, FLIP, 4 * 480) };
+        healed.accessories[3] =
+            AccessorySkill { effect: SkillEffect::Healer, ..worn(FLIP, 8 * 480) };
+        let mut scored = healed;
+        scored.skills[3].effect = SkillEffect::Scorer;
+        scored.accessories[3].effect = SkillEffect::Scorer;
+
+        let mut seen = [0; 2];
+        for seed in 0..32 {
+            let out = seeded(&queue, &healed, seed);
+            assert_eq!(out, seeded(&queue, &scored, seed), "seed {seed}");
+            let want = out.activations * 4 * 480 + out.accessory_activations * 8 * 480;
+            assert_eq!(out.skill, u64::from(want), "seed {seed}");
+            seen[0] += out.activations;
+            seen[1] += out.accessory_activations;
+        }
+        assert!(seen[0] > 0 && seen[1] > 0, "{seen:?}");
+
+        // No Heal SIS. Healer does nothing for now but this will be outdated as soon as
+        // I get around to overheal.
+        healed.skills[3].value = 0;
+        healed.accessories[3].value = 0;
+        let bare = seeded(&queue, &healed, 0);
+        assert_eq!(bare, Outcome { skill: 0, ..seeded(&queue, &scored, 0) });
+        assert!(bare.activations > 0);
     }
 }

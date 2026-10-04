@@ -44,6 +44,7 @@ const BOTH_MATCH: u16 = 121;
 const MILLI_UNIT: u32 = 1000;
 const PAYOUT_DIVISOR: u64 = MILLI_UNIT as u64 * 100;
 const CHARM: u32 = 2500;
+const HEAL: u32 = 480_000;
 
 /// 9 cards w/ 1 HP,
 const MIN_TABLE_HP: u8 = 9;
@@ -329,11 +330,7 @@ fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> (Ski
 
     // TODO: Every other effect
     let skill = Skill {
-        value: if def.effect == SkillEffect::Scorer {
-            payout(value, sis)
-        } else {
-            value
-        },
+        value: points(def.effect, value, sis),
         chance: rate(trigger.chance),
         threshold: trigger.threshold,
         effect: def.effect,
@@ -358,11 +355,7 @@ fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> (AccessorySk
     let (value, duration) = ctx.acc_db.skills.payload(def, level);
 
     let skill = AccessorySkill {
-        value: if def.effect == SkillEffect::Scorer {
-            payout(value, sis)
-        } else {
-            value
-        },
+        value: points(def.effect, value, sis),
         chance: rate(ctx.acc_db.skills.chance(def, level)),
         effect: def.effect,
     };
@@ -409,11 +402,27 @@ const fn rate(chance: Pct) -> Rate {
     (chance as Rate).saturating_mul(RATE_UNIT / 100)
 }
 
-/// The points that a scorer skill adds to the score total.
+/// Scorer's points with Charm or Healer's points with Heal.
+fn points(effect: SkillEffect, value: Centi, sis: SisFlags) -> Centi {
+    match effect {
+        SkillEffect::Scorer => payout(value, if sis.charm() { CHARM } else { MILLI_UNIT }),
+        SkillEffect::Healer => payout(value, if sis.heal() { HEAL } else { 0 }),
+        SkillEffect::PerfectLock
+        | SkillEffect::Encore
+        | SkillEffect::Amplify
+        | SkillEffect::TotalTrick
+        | SkillEffect::PerfectScoreUp
+        | SkillEffect::SkillRateUp
+        | SkillEffect::AppealBoost
+        | SkillEffect::ComboBonusUp
+        | SkillEffect::Sync
+        | SkillEffect::Spark => value,
+    }
+}
+
 #[expect(clippy::integer_division, reason = "Game mechanic.")]
-fn payout(value: Centi, sis: SisFlags) -> Centi {
-    let charm = if sis.charm() { CHARM } else { MILLI_UNIT };
-    let scaled = u64::from(value).saturating_mul(u64::from(charm)) / PAYOUT_DIVISOR;
+fn payout(value: Centi, factor: Milli) -> Centi {
+    let scaled = u64::from(value).saturating_mul(u64::from(factor)) / PAYOUT_DIVISOR;
     u32::try_from(scaled).unwrap_or(u32::MAX)
 }
 
@@ -766,6 +775,36 @@ mod tests {
         assert_eq!(charmed.value, 20_000);
         assert_eq!(charmed.chance, bare.chance);
         assert_eq!(f.run(&team).scoring().accessories[0], charmed);
+        assert_eq!(f.run(&team).slots[0].skill.value, 2500, "and the card's own 1000");
+    }
+
+    /// card heals 4, acc 8.
+    /// So 1920 and 3840 points respectively with Heal SIS.
+    #[test]
+    fn check_heal_sis() {
+        let mut f = fixture();
+        let card = f.card(4, true, 8);
+        let clef = f.accessories.add(&f.acc_db, 15, 8).unwrap().0;
+        let heal = f.owns(27);
+        let mut team = Team::default();
+        team.equip_card(0, card, f.ctx()).unwrap();
+        team.equip_accessory(0, clef, f.ctx()).unwrap();
+
+        let bare = f.run(&team).slots[0];
+        assert_eq!((bare.skill.effect, bare.skill.value), (SkillEffect::Healer, 0));
+        assert_eq!((bare.accessory.effect, bare.accessory.value), (SkillEffect::Healer, 0));
+        assert_eq!((bare.skill.chance, bare.accessory.chance), (3000, 3000), "both still roll");
+
+        team.equip_sis(0, heal, f.ctx()).unwrap();
+        let healed = f.run(&team).slots[0];
+        assert!(healed.sis.heal() && !healed.sis.charm());
+        assert_eq!(healed.skill.value, 4 * 480);
+        assert_eq!(healed.accessory.value, 8 * 480, "acc inherits Heal SIS");
+
+        team.unequip_accessory(0).unwrap();
+        let pin = f.accessories.add(&f.acc_db, 11, 8).unwrap().0;
+        team.equip_accessory(0, pin, f.ctx()).unwrap();
+        assert_eq!(f.run(&team).slots[0].accessory.value, 8000, "Heal does not reach a Scorer");
     }
 
     /// It would be bad if accessories used the card's skill level because someone made an oopsie.

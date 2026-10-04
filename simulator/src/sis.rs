@@ -2,7 +2,7 @@ use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::archive::{Kind, portable};
 use crate::scalar::{Attribute, Milli};
-use crate::skill::{self, TargetId};
+use crate::skill::{self, SkillEffect, TargetId};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(transparent)]
@@ -23,6 +23,16 @@ impl SisEffect {
     #[must_use]
     pub const fn restricts_by_attribute(self) -> bool {
         matches!(self, Self::Charm | Self::Heal | Self::Trick)
+    }
+
+    /// The skill effect a card must have to wear this SIS.
+    #[must_use]
+    pub const fn requires(self) -> Option<SkillEffect> {
+        match self {
+            Self::Charm => Some(SkillEffect::Scorer),
+            Self::Heal => Some(SkillEffect::Healer),
+            Self::SelfFlat | Self::SelfPercent | Self::AllPercent | Self::Trick => None,
+        }
     }
 }
 
