@@ -147,6 +147,7 @@ pub struct Triggers {
     score: u16,
     year: u16,
     lasting: u16,
+    tricks: u16,
 }
 
 impl Triggers {
@@ -162,7 +163,8 @@ impl Triggers {
             stars: Schedule::build(queue.stars(), 1, skills, TriggerType::StarNotes),
             score: lanes_on(skills, TriggerType::Score),
             year: lanes_on(skills, TriggerType::YearGroup),
-            lasting: lasting(scoring),
+            lasting: lasting(scoring, lasts),
+            tricks: lasting(scoring, |effect| effect == SkillEffect::TotalTrick),
         }
     }
 
@@ -207,6 +209,12 @@ impl Triggers {
         self.lasting
     }
 
+    /// Lanes whose card or accessory is a Total Trick (although no Total Trick acc exists).
+    #[must_use]
+    pub const fn tricks(&self) -> u16 {
+        self.tricks
+    }
+
     #[must_use]
     pub fn rolls(&self) -> u32 {
         self.all().iter().map(|s| s.rolls()).sum()
@@ -235,12 +243,13 @@ fn lanes_on(skills: &[Skill; LANES], clock: TriggerType) -> u16 {
         .fold(0, |mask, (lane, _)| mask | 1_u16.checked_shl(lane).unwrap_or(0))
 }
 
-fn lasting(scoring: &Scoring) -> u16 {
+/// Lanes with duration effects that can trigger. An N wearing a PL accessory wouldn't go here
+/// since its skill can't roll.
+fn lasting(scoring: &Scoring, pred: impl Fn(SkillEffect) -> bool) -> u16 {
     (0_u32..)
         .zip(scoring.skills.iter().zip(&scoring.accessories))
         .filter(|(_, (skill, worn))| {
-            skill.threshold != 0
-                && (lasts(skill.effect) || (!worn.is_inert() && lasts(worn.effect)))
+            skill.threshold != 0 && (pred(skill.effect) || (!worn.is_inert() && pred(worn.effect)))
         })
         .fold(0, |mask, (lane, _)| mask | 1_u16.checked_shl(lane).unwrap_or(0))
 }

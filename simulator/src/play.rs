@@ -14,7 +14,7 @@ use activation::chain::Chain;
 use activation::ladder::Ladder;
 use activation::{AccessorySkill, Skill, Tally, Triggers, fire};
 use config::PlayConfig;
-use effect::{Expiry, Instant, Lasting};
+use effect::{Expiry, Instant, Lasting, Tricked};
 use judgement::Judgements;
 use queue::Queue;
 use rng::Rng;
@@ -111,6 +111,9 @@ fn lasting(
     triggers: &Triggers,
     judgements: &Judgements,
 ) -> Outcome {
+    if triggers.tricks() != 0 {
+        return tricked(queue, config, scoring, triggers, judgements);
+    }
     if triggers.year() != 0 {
         return chained::<Expiry>(queue, config, scoring, triggers, judgements);
     }
@@ -128,6 +131,37 @@ fn lasting(
         (true, true) => {
             core::hint::cold_path();
             walk::<true, true, false, Expiry>(queue, config, scoring, triggers, judgements)
+        }
+    }
+}
+
+/// I wanted to just roll this into the existing perfect lock code since it's nearly identical
+/// but making it its own arm was better for performance.
+#[inline(never)]
+fn tricked(
+    queue: &Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome {
+    if triggers.year() != 0 {
+        return chained::<Tricked>(queue, config, scoring, triggers, judgements);
+    }
+    match (!triggers.stars().is_empty(), triggers.score() != 0) {
+        (false, false) => {
+            walk::<false, false, false, Tricked>(queue, config, scoring, triggers, judgements)
+        }
+        (false, true) => {
+            walk::<false, true, false, Tricked>(queue, config, scoring, triggers, judgements)
+        }
+        (true, false) => {
+            core::hint::cold_path();
+            walk::<true, false, false, Tricked>(queue, config, scoring, triggers, judgements)
+        }
+        (true, true) => {
+            core::hint::cold_path();
+            walk::<true, true, false, Tricked>(queue, config, scoring, triggers, judgements)
         }
     }
 }
@@ -198,7 +232,7 @@ where
     let mut perfects = Tally::new(triggers.perfects());
     let mut stars = Tally::new(triggers.stars());
     let mut star_perfects = 0_u32;
-    let mut expiry = E::new(queue.last_judgement());
+    let mut expiry = E::new(queue.last_judgement(), scoring);
     let mut timer_cursor = 0_usize;
     let mut next_timer = Time(timer_at[0]);
     let mut ladder = Ladder::new(scoring, if SCORE { triggers.score() } else { 0 });
@@ -289,20 +323,32 @@ where
                 }
                 let tail = judgements.at(tap);
                 let head = (kind == EventKind::Tap) | heads.get(lane).copied().unwrap_or(true);
+                let converted = E::ANY && expiry.converted(time);
                 let locked = E::ANY && expiry.locked(time);
-                out.tap = out.tap.saturating_add(note_score(
-                    if locked {
-                        tricked
-                    } else {
-                        scoring.team_strength
-                    },
-                    queue.combo()[tap],
-                    scoring.lanes.get(lane).copied().unwrap_or(UNIT),
-                    note_multiplier(event),
-                    JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
-                ));
+                out.tap = out.tap.saturating_add(if E::TRICKS {
+                    expiry.tap(
+                        time,
+                        head,
+                        tail,
+                        queue.combo()[tap],
+                        scoring.lanes.get(lane).copied().unwrap_or(UNIT),
+                        note_multiplier(event),
+                    )
+                } else {
+                    note_score(
+                        if locked {
+                            tricked
+                        } else {
+                            scoring.team_strength
+                        },
+                        queue.combo()[tap],
+                        scoring.lanes.get(lane).copied().unwrap_or(UNIT),
+                        note_multiplier(event),
+                        JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
+                    )
+                });
                 out.notes = out.notes.saturating_add(1);
-                let perfect = locked || (head & tail);
+                let perfect = converted || (head & tail);
                 out.perfects = out.perfects.saturating_add(u32::from(perfect));
 
                 // Shoutouts to Snow Maiden Umi. I wonder why they gave a skill to one card and then just never again.

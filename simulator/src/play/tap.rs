@@ -34,12 +34,49 @@ const GREAT_GREAT: u16 = 484;
 /// 675/625 = 1.08.
 const LOCKED_PERFECT: u16 = 675;
 
+/// `[locked][head][tail]`.
 pub(super) const JUDGEMENT: [[[u16; 2]; 2]; 2] = [
     [[GREAT_GREAT, GREAT], [GREAT, PERFECT]],
     [[PERFECT, PERFECT], [PERFECT, LOCKED_PERFECT]],
 ];
 
+/// For total trick. Converts everything to a perfect without a true perfect bonus.
+const CONVERTED: [[u16; 2]; 2] = [[PERFECT; 2]; 2];
+
 const DIVISOR: u64 = BASE * 100 * 100 * 1000 * JUDGEMENT_UNIT as u64;
+
+/// For teams with total trick. the ppn times every judgements, so converted * locked * head * tail.
+#[derive(Default)]
+pub(super) struct Worth([[[[u64; 2]; 2]; 2]; 2]);
+
+impl Worth {
+    pub(super) fn new(team_strength: u32, trick: u32) -> Self {
+        let strengths = [team_strength, team_strength.saturating_add(trick)].map(u64::from);
+        let tables = [[JUDGEMENT[0], JUDGEMENT[1]], [CONVERTED, JUDGEMENT[1]]];
+        let mut out = Self::default();
+        for ((dst, rows), strength) in out.0.iter_mut().zip(tables).zip(strengths) {
+            *dst = rows.map(|by_head| {
+                by_head.map(|by_tail| by_tail.map(|j| strength.saturating_mul(u64::from(j))))
+            });
+        }
+        out
+    }
+
+    /// `[head][tail]`.
+    #[inline]
+    #[expect(clippy::indexing_slicing, reason = "by bool")]
+    pub(super) fn row(&self, converted: bool, locked: bool) -> &[[u64; 2]; 2] {
+        &self.0[usize::from(converted)][usize::from(locked)]
+    }
+}
+
+/// `note_score` with the strength and judgement already multiplied.
+#[expect(clippy::integer_division, reason = "Game mechanic.")]
+pub(super) fn worth_score(worth: u64, combo: u16, lane: u16, note: u16) -> u64 {
+    let factor =
+        u64::from(u32::from(combo).saturating_mul(u32::from(lane))).saturating_mul(u64::from(note));
+    worth.saturating_mul(factor) / DIVISOR
+}
 
 /// Transcription of `combo_bonuses.json`.
 ///
@@ -169,6 +206,11 @@ mod tests {
             "1.08x"
         );
         assert_eq!(
+            super::CONVERTED,
+            [[super::PERFECT; 2]; 2],
+            "Total Trick converts greats into perfects with no additional multiplier."
+        );
+        assert_eq!(
             super::JUDGEMENT[1],
             [
                 [super::PERFECT, super::PERFECT],
@@ -209,6 +251,43 @@ mod tests {
         }
         let widest = u128::from(u32::MAX) * 135 * 121 * 1250 * 675;
         assert!(widest > u128::from(u64::MAX), "saturated");
+    }
+
+    #[test]
+    fn check_total_trick_ppn() {
+        let rows = [
+            (false, false, super::JUDGEMENT[0]),
+            (true, false, super::CONVERTED),
+            (true, true, super::JUDGEMENT[1]),
+        ];
+        for (team_strength, trick) in
+            [(0, 0), (1, 7), (80_400, 26_532), (16_000_000, 1), (u32::MAX, 9)]
+        {
+            let worth = super::Worth::new(team_strength, trick);
+            for (converted, locked, judgements) in rows {
+                let strength = if converted {
+                    team_strength.saturating_add(trick)
+                } else {
+                    team_strength
+                };
+                for (head, tail) in [(false, false), (false, true), (true, false), (true, true)] {
+                    let judgement = judgements[usize::from(head)][usize::from(tail)];
+                    for (combo, lane, note) in [(100, 100, 1000), (135, 121, 1250), (110, 110, 500)]
+                    {
+                        assert_eq!(
+                            super::worth_score(
+                                worth.row(converted, locked)[usize::from(head)][usize::from(tail)],
+                                combo,
+                                lane,
+                                note
+                            ),
+                            super::note_score(strength, combo, lane, note, judgement),
+                            "{team_strength} {converted} {locked} {head} {tail} {combo} {note}"
+                        );
+                    }
+                }
+            }
+        }
     }
 
     #[test]

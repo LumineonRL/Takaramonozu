@@ -1,6 +1,7 @@
 //! Skill effects. What a skill does once it activates.
 
-use super::Outcome;
+use super::tap::{Worth, worth_score};
+use super::{Outcome, Scoring};
 use crate::scalar::{Centi, Ms};
 use crate::skill::SkillEffect;
 use crate::song::{LANES, Time};
@@ -8,14 +9,16 @@ use crate::song::{LANES, Time};
 /// No lane is waiting to roll.
 const NEVER: Time = Time(u32::MAX);
 
-// For Duration effects. For now, just Perfect Lock, but SRU, CBU, etc will
+// For Duration effects. For now, just Perfect Lock and Total Trick, but SRU, CBU, etc will
 /// likely utilize this too.
 pub(in crate::play) trait Lasting {
     /// Whether anything on the team is active.
     const ANY: bool;
+    /// Whether a Total Trick may run
+    const TRICKS: bool;
 
     /// `last` is the final judgement aka end of song.
-    fn new(last: Time) -> Self;
+    fn new(last: Time, scoring: &Scoring) -> Self;
 
     /// So a PL can't activate if that lane is already active. Instead it holds the
     /// activation until the active on expires.
@@ -26,18 +29,29 @@ pub(in crate::play) trait Lasting {
     fn next(&self) -> Time;
     fn release(&mut self, at: Time) -> u16;
 
+    /// A Perfect Lock or a Total Trick is running. Every note is a PERFECT, and the Trick SIS can work.
+    fn converted(&self, now: Time) -> bool;
+    /// A Perfect Lock is running. True PERFECTs score 1.08x.
     fn locked(&self, now: Time) -> bool;
     fn lock(&mut self, lane: u32, now: Time, duration: Ms);
+    fn trick(&mut self, lane: u32, now: Time, duration: Ms);
+
+    /// PPN with tricks.
+    fn tap(&self, _: Time, _: bool, _: bool, _: u16, _: u16, _: u16) -> u64 {
+        debug_assert!(false, "a tap scored as if a Total Trick could run");
+        0
+    }
 }
 
 pub(in crate::play) struct Instant;
 
 impl Lasting for Instant {
     const ANY: bool = false;
+    const TRICKS: bool = false;
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "nothing")]
-    fn new(_: Time) -> Self {
+    fn new(_: Time, _: &Scoring) -> Self {
         Self
     }
 
@@ -61,6 +75,12 @@ impl Lasting for Instant {
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "nothing")]
+    fn converted(&self, _: Time) -> bool {
+        false
+    }
+
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "nothing")]
     fn locked(&self, _: Time) -> bool {
         false
     }
@@ -69,6 +89,12 @@ impl Lasting for Instant {
     #[expect(clippy::inline_always, reason = "nothing")]
     fn lock(&mut self, _: u32, _: Time, _: Ms) {
         debug_assert!(false, "A PL did not schedule an expiration event.");
+    }
+
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "nothing")]
+    fn trick(&mut self, _: u32, _: Time, _: Ms) {
+        debug_assert!(false, "A Total Trick did not schedule an expiration event.");
     }
 }
 
@@ -121,9 +147,10 @@ impl Expiry {
 
 impl Lasting for Expiry {
     const ANY: bool = true;
+    const TRICKS: bool = false;
 
     #[inline]
-    fn new(last: Time) -> Self {
+    fn new(last: Time, _: &Scoring) -> Self {
         Self {
             until: [Time(0); LANES],
             open: 0,
@@ -170,6 +197,11 @@ impl Lasting for Expiry {
     }
 
     #[inline]
+    fn converted(&self, now: Time) -> bool {
+        self.locked(now)
+    }
+
+    #[inline]
     fn locked(&self, now: Time) -> bool {
         now < self.lock
     }
@@ -179,11 +211,85 @@ impl Lasting for Expiry {
         let end = self.start(lane, now, duration);
         self.lock = self.lock.max(end);
     }
+
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "nothing")]
+    fn trick(&mut self, _: u32, _: Time, _: Ms) {
+        debug_assert!(false, "A Total Trick needs to schedule a duration end.");
+    }
+}
+
+pub(in crate::play) struct Tricked {
+    expiry: Expiry,
+    /// The latest end of a Perfect Lock or a Total Trick.
+    convert: Time,
+    worth: Worth,
+}
+
+impl Lasting for Tricked {
+    const ANY: bool = true;
+    const TRICKS: bool = true;
+
+    #[inline]
+    fn new(last: Time, scoring: &Scoring) -> Self {
+        Self {
+            expiry: Expiry::new(last, scoring),
+            convert: Time(0),
+            worth: Worth::new(scoring.team_strength, scoring.trick),
+        }
+    }
+
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "as `Expiry`'s")]
+    fn admit(&mut self, mask: u16, now: Time) -> u16 {
+        self.expiry.admit(mask, now)
+    }
+
+    #[inline]
+    fn next(&self) -> Time {
+        self.expiry.next()
+    }
+
+    #[inline]
+    fn release(&mut self, at: Time) -> u16 {
+        self.expiry.release(at)
+    }
+
+    #[inline]
+    fn converted(&self, now: Time) -> bool {
+        now < self.convert
+    }
+
+    #[inline]
+    fn locked(&self, now: Time) -> bool {
+        self.expiry.locked(now)
+    }
+
+    #[inline]
+    fn lock(&mut self, lane: u32, now: Time, duration: Ms) {
+        let end = self.expiry.start(lane, now, duration);
+        self.expiry.lock = self.expiry.lock.max(end);
+        self.convert = self.convert.max(end);
+    }
+
+    #[inline]
+    fn trick(&mut self, lane: u32, now: Time, duration: Ms) {
+        let end = self.expiry.start(lane, now, duration);
+        self.convert = self.convert.max(end);
+    }
+
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "benchmarked")]
+    #[expect(clippy::indexing_slicing, reason = "bool")]
+    fn tap(&self, now: Time, head: bool, tail: bool, combo: u16, lane: u16, note: u16) -> u64 {
+        let row = self.worth.row(self.converted(now), self.locked(now));
+        worth_score(row[usize::from(head)][usize::from(tail)], combo, lane, note)
+    }
 }
 
 /// TODO: every effect with a duration.
 pub(super) const fn lasts(effect: SkillEffect) -> bool {
-    matches!(effect, SkillEffect::PerfectLock)
+    matches!(effect, SkillEffect::PerfectLock | SkillEffect::TotalTrick)
 }
 
 /// TODO: every other effect.
@@ -200,12 +306,11 @@ pub(super) fn pay(
 ) {
     match effect {
         SkillEffect::Scorer => out.skill = out.skill.saturating_add(u64::from(value)),
-        // TODO: Total Trick. TIL Total Trick procs Trick SIS.
         SkillEffect::PerfectLock => expiry.lock(lane, now, duration),
+        SkillEffect::TotalTrick => expiry.trick(lane, now, duration),
         SkillEffect::Healer
         | SkillEffect::Encore
         | SkillEffect::Amplify
-        | SkillEffect::TotalTrick
         | SkillEffect::PerfectScoreUp
         | SkillEffect::SkillRateUp
         | SkillEffect::AppealBoost
@@ -221,7 +326,7 @@ mod tests {
     use crate::play::judgement::Judgements;
     use crate::play::queue::Queue;
     use crate::play::tests::{ALWAYS, arena, at, fifty_one, only, play, scorer, sloppy, tap};
-    use crate::play::{Scoring, run};
+    use crate::play::{Outcome, Scoring, run};
     use crate::scalar::{Ms, RATE_UNIT, Rate};
     use crate::skill::{SkillEffect, TriggerType};
     use crate::song::{Event, EventKind, Time};
@@ -238,6 +343,19 @@ mod tests {
         Skill { trigger, ..scorer(threshold, chance, value) }
     }
 
+    fn lasting(
+        scoring: &mut Scoring,
+        lane: usize,
+        effect: SkillEffect,
+        trigger: TriggerType,
+        threshold: u16,
+        chance: Rate,
+        duration: Ms,
+    ) {
+        scoring.skills[lane] = Skill { effect, ..clocked(trigger, threshold, chance, 0) };
+        scoring.durations[lane][0] = duration;
+    }
+
     fn lock(
         scoring: &mut Scoring,
         lane: usize,
@@ -246,11 +364,18 @@ mod tests {
         chance: Rate,
         duration: Ms,
     ) {
-        scoring.skills[lane] = Skill {
-            effect: SkillEffect::PerfectLock,
-            ..clocked(trigger, threshold, chance, 0)
-        };
-        scoring.durations[lane][0] = duration;
+        lasting(scoring, lane, SkillEffect::PerfectLock, trigger, threshold, chance, duration);
+    }
+
+    fn trick(
+        scoring: &mut Scoring,
+        lane: usize,
+        trigger: TriggerType,
+        threshold: u16,
+        chance: Rate,
+        duration: Ms,
+    ) {
+        lasting(scoring, lane, SkillEffect::TotalTrick, trigger, threshold, chance, duration);
     }
 
     #[test]
@@ -296,6 +421,9 @@ mod tests {
 
         lock(&mut scoring, 8, TriggerType::Time, 1, ALWAYS, 5000);
         assert_eq!(at(&queue, &scoring, &sloppy(0, 0)).skill, 3, "three perfects on stars");
+
+        trick(&mut scoring, 8, TriggerType::Time, 1, ALWAYS, 5000);
+        assert_eq!(at(&queue, &scoring, &sloppy(0, 0)).skill, 3, "Total Trick converts them too");
     }
 
     /// This was a big edge case for me that required a lot of searching random videos on Youtube
@@ -319,6 +447,12 @@ mod tests {
         lock(&mut scoring, 8, TriggerType::Time, 3, ALWAYS, 1000);
         let triggers = Triggers::build(&queue, &scoring);
         assert_eq!(triggers.time().columns().0, [3000, u32::MAX]);
+        let mut total = scoring;
+        total.skills[8].effect = SkillEffect::TotalTrick;
+        let total_triggers = Triggers::build(&queue, &total);
+        assert_eq!(total_triggers.time(), triggers.time());
+        assert_eq!((total_triggers.lasting(), total_triggers.tricks()), (1 << 8, 1 << 8));
+        assert_eq!(triggers.tricks(), 0);
 
         let mut seen = [[false; 4]; 2];
         for seed in 0..128 {
@@ -338,6 +472,10 @@ mod tests {
             assert_eq!(out.perfects, 1 + u32::from(b == (true, true)), "seed {seed}");
             seen[0][usize::from(a.0) * 2 + usize::from(a.1)] = true;
             seen[1][usize::from(b.0) * 2 + usize::from(b.1)] = true;
+
+            let tricked = run(&queue, &config, &total, &total_triggers, &judged);
+            assert_eq!(tricked.tap, 12_500 + free_b, "seed {seed}: converted, never 1.08x");
+            assert_eq!(Outcome { tap: out.tap, ..tricked }, out, "seed {seed}");
         }
         assert_eq!(seen, [[true; 4]; 2], "something wasn't tested properly.");
     }
@@ -430,6 +568,7 @@ mod tests {
         plain.skills[6] = clocked(TriggerType::Time, 1, FLIP, 7);
         plain.skills[7] = clocked(TriggerType::Perfects, 2, FLIP, 3);
         plain.skills[8] = scorer(5, 0, 0);
+        plain.skills[0] = clocked(TriggerType::Time, 2, 0, 0);
         let mut laddered = plain;
         laddered.skills[1] = clocked(TriggerType::Score, 1500, FLIP, 50);
 
@@ -437,7 +576,8 @@ mod tests {
             let mut locked = team;
             locked.trick = 9_999;
             lock(&mut locked, 8, TriggerType::RhythmIcons, 5, 0, 2000);
-            assert_eq!(Triggers::build(&queue, &locked).lasting(), 1 << 8);
+            trick(&mut locked, 0, TriggerType::Time, 2, 0, 1500);
+            assert_eq!(Triggers::build(&queue, &locked).lasting(), (1 << 8) | 1);
             for accuracy in [ALWAYS, 8000, 0] {
                 for seed in 0..32 {
                     let config = sloppy(accuracy, seed);
@@ -449,5 +589,143 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn check_total_trick_doesnt_give_true_perfect_bonus() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        trick(&mut scoring, 4, TriggerType::RhythmIcons, 51, ALWAYS, 1000);
+        assert_eq!(Triggers::build(&queue, &scoring).lasting(), 1 << 4);
+
+        let out = play(&queue, &scoring);
+        assert_eq!((out.activations, out.skill), (1, 0));
+        assert_eq!(out.tap, 50 * 1000 + 1100, "no 1.08x");
+        assert_eq!(out.perfects, 51);
+
+        scoring.skills[7] = clocked(TriggerType::Perfects, 1, ALWAYS, 1);
+        for seed in 0..8 {
+            let greats = at(&queue, &scoring, &sloppy(0, seed));
+            assert_eq!(greats.tap, 45 * 880 + 5 * 1000 + 1100, "seed {seed}: greats converted");
+            assert_eq!(greats.perfects, 6, "seed {seed}: only converted notes");
+            assert_eq!(greats.skill, 6, "seed {seed}: converted notes count for Perfects");
+        }
+    }
+
+    #[test]
+    fn check_total_trick_switches_the_trick_sis_on() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        scoring.trick = 8_000;
+        trick(&mut scoring, 4, TriggerType::RhythmIcons, 51, ALWAYS, 1000);
+        assert_eq!(play(&queue, &scoring).tap, 45 * 1000 + 5 * 1100 + 1210, "88,000, no 1.08x");
+        for seed in 0..8 {
+            let out = at(&queue, &scoring, &sloppy(0, seed));
+            assert_eq!(out.tap, 45 * 880 + 5 * 1100 + 1210, "seed {seed}");
+        }
+    }
+
+    #[test]
+    fn check_pl_and_a_trick_overlap() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        // A Total Trick at 3s and 6s for 2s, a pl at 4s for 0.5s.
+        // 2.0-2.9 none, 3.0-3.9 trick, 4.0-4.4 both, 4.5-4.9 trick, 5.0-5.9 none, 6.0-7.0 trick.
+        let mut scoring = Scoring::flat(TEAM);
+        trick(&mut scoring, 2, TriggerType::Time, 3, ALWAYS, 2000);
+        lock(&mut scoring, 6, TriggerType::Time, 4, ALWAYS, 500);
+        let inside = play(&queue, &scoring);
+        assert_eq!(inside.activations, 3);
+        assert_eq!(inside.tap, 50 * 1000 + 1100 + 5 * 80, "five notes with the pl");
+        let inside_greats = at(&queue, &scoring, &sloppy(0, 0));
+        assert_eq!(inside_greats.tap, 20 * 880 + 30 * 1000 + 1100);
+        assert_eq!(inside_greats.perfects, 31);
+
+        scoring.trick = 8_000;
+        let tricked = play(&queue, &scoring);
+        assert_eq!(tricked.tap, 20 * 1000 + 25 * 1100 + 1210 + 5 * 1188);
+
+        // A lock at 3s and 6s for 2s, a Total Trick at 4s for 1.5s.
+        // 2.0-2.9 none, 3.0-4.9 lock (and trick from 4.0), 5.0-5.4 trick, 5.5-5.9 none, 6.0-7.0 lock.
+        let mut outlasting = Scoring::flat(TEAM);
+        lock(&mut outlasting, 2, TriggerType::Time, 3, ALWAYS, 2000);
+        trick(&mut outlasting, 6, TriggerType::Time, 4, ALWAYS, 1500);
+        let after = play(&queue, &outlasting);
+        assert_eq!(after.tap, 15 * 1000 + 5 * 1000 + 30 * 1080 + 1188, "trick drops no 1.08x");
+        let after_greats = at(&queue, &outlasting, &sloppy(0, 0));
+        assert_eq!(after_greats.tap, 15 * 880 + 35 * 1000 + 1100);
+        assert_eq!(after_greats.perfects, 36);
+    }
+
+    /// Swaps lanes between a total trick and pl to make sure the result is otherwise the same.
+    #[test]
+    fn check_trick_is_pl_without_bonus() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut locks = Scoring::flat(TEAM);
+        locks.trick = 5_000;
+        lock(&mut locks, 8, TriggerType::RhythmIcons, 7, FLIP, 600);
+        lock(&mut locks, 3, TriggerType::Time, 2, FLIP, 900);
+        locks.skills[5] = clocked(TriggerType::Perfects, 3, FLIP, 10);
+        locks.skills[1] = scorer(4, FLIP, 100);
+        let mut tricks = locks;
+        for lane in [8, 3] {
+            tricks.skills[lane].effect = SkillEffect::TotalTrick;
+        }
+
+        let mut cheaper = 0;
+        for accuracy in [ALWAYS, 8000, FLIP, 0] {
+            for seed in 0..32 {
+                let config = sloppy(accuracy, seed);
+                let (lock, trick) = (at(&queue, &locks, &config), at(&queue, &tricks, &config));
+                assert_eq!(Outcome { tap: lock.tap, ..trick }, lock, "seed {seed}");
+                assert!(trick.tap <= lock.tap, "seed {seed}");
+                if accuracy == 0 {
+                    assert_eq!(trick, lock, "seed {seed}: no true PERFECT to pay");
+                }
+                cheaper += u32::from(trick.tap < lock.tap);
+            }
+        }
+        assert!(cheaper > 0, "no lock gave 1.08x");
+    }
+
+    /// This actually affects every double duration combo between a card and an accessory but this
+    /// is the first time it's relevant.
+    /// So imagine a perfect lock accessory on a total trick card (because of course there's no total trick)
+    /// accessory. Only one duration effect can be active at a time. So every roll in this test will proc one or the other, so the
+    /// lane holds as a lock alone would. Only the accessory's windows give the 1.08x bonus.
+    #[test]
+    fn check_a_trick_card_wearing_a_lock() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        trick(&mut scoring, 4, TriggerType::RhythmIcons, 1, FLIP, 450);
+        scoring.accessories[4] =
+            AccessorySkill { value: 0, chance: ALWAYS, effect: SkillEffect::PerfectLock };
+        scoring.durations[4][1] = 450;
+        assert_eq!(Triggers::build(&queue, &scoring).lasting(), 1 << 4);
+
+        let mut seen = [false; 2];
+        for seed in 0..32 {
+            let out = at(&queue, &scoring, &sloppy(ALWAYS, seed));
+            assert_eq!(out.activations + out.accessory_activations, 13, "seed {seed}");
+            assert_eq!(out.tap == 51_100, out.accessory_activations == 0, "seed {seed}");
+            assert_eq!(out.tap == ALL_LOCKED, out.activations == 0, "seed {seed}");
+            assert!((51_100..=ALL_LOCKED).contains(&out.tap), "seed {seed}");
+            seen[0] |= out.activations > 0;
+            seen[1] |= out.accessory_activations > 0;
+
+            let greats = at(&queue, &scoring, &sloppy(0, seed));
+            assert_eq!(greats.tap, 51_100, "seed {seed}: every note converted");
+        }
+        assert_eq!(seen, [true; 2]);
+
+        scoring.accessories[4] = AccessorySkill::NONE;
+        scoring.skills[4].chance = ALWAYS;
+        let alone = play(&queue, &scoring);
+        assert_eq!((alone.activations, alone.tap), (13, 51_100));
     }
 }
