@@ -23,6 +23,7 @@ use tap::{JUDGEMENT, UNIT, note_multiplier, note_score};
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Scoring {
     pub team_strength: u32,
+    pub trick: u32,
     pub lanes: [u16; LANES],
     pub skills: [Skill; LANES],
     pub accessories: [AccessorySkill; LANES],
@@ -37,6 +38,7 @@ impl Scoring {
     pub const fn flat(team_strength: u32) -> Self {
         Self {
             team_strength,
+            trick: 0,
             lanes: [UNIT; LANES],
             skills: [Skill::NONE; LANES],
             accessories: [AccessorySkill::NONE; LANES],
@@ -177,6 +179,7 @@ where
     debug_assert_eq!(judgements.seed(), config.seed, "judgements of another trial");
 
     let offset = config.speed.offset();
+    let tricked = scoring.team_strength.saturating_add(scoring.trick);
     let mut out = Outcome::default();
     let mut rng = Rng::new(config.seed, Rng::SKILLS);
     let mut heads = [false; LANES];
@@ -288,7 +291,11 @@ where
                 let head = (kind == EventKind::Tap) | heads.get(lane).copied().unwrap_or(true);
                 let locked = E::ANY && expiry.locked(time);
                 out.tap = out.tap.saturating_add(note_score(
-                    scoring.team_strength,
+                    if locked {
+                        tricked
+                    } else {
+                        scoring.team_strength
+                    },
                     queue.combo()[tap],
                     scoring.lanes.get(lane).copied().unwrap_or(UNIT),
                     note_multiplier(event),

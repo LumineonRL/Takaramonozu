@@ -83,7 +83,6 @@ pub(super) const fn note_multiplier(event: Event) -> u16 {
 }
 
 /// `floor(team_strength * combo * lane * note * judgement / 500_000_000_000)`.
-/// TODO: Trick SIS.
 #[expect(clippy::integer_division, reason = "Game mechanic.")]
 pub(super) fn note_score(
     team_strength: u32,

@@ -200,7 +200,7 @@ pub(super) fn pay(
 ) {
     match effect {
         SkillEffect::Scorer => out.skill = out.skill.saturating_add(u64::from(value)),
-        // TODO: Total Trick will work, but without the 1.08x or Trick SIS.
+        // TODO: Total Trick. TIL Total Trick procs Trick SIS.
         SkillEffect::PerfectLock => expiry.lock(lane, now, duration),
         SkillEffect::Healer
         | SkillEffect::Encore
@@ -342,6 +342,23 @@ mod tests {
         assert_eq!(seen, [[true; 4]; 2], "something wasn't tested properly.");
     }
 
+    /// Trick raises the team's strength during a PL / modifies the PPN calc.
+    #[test]
+    fn check_trick_sis_stat_recalc() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        scoring.trick = 8_000;
+        assert_eq!(play(&queue, &scoring).tap, 50 * 1000 + 1100, "no lock, no Trick SIS");
+
+        lock(&mut scoring, 4, TriggerType::RhythmIcons, 51, ALWAYS, 1000);
+        assert_eq!(play(&queue, &scoring).tap, 45 * 1000 + 5 * 1188 + 1306, "88,000 * 1.08");
+        for seed in 0..8 {
+            let out = at(&queue, &scoring, &sloppy(0, seed));
+            assert_eq!(out.tap, 45 * 880 + 5 * 1100 + 1210, "seed {seed}");
+        }
+    }
+
     #[test]
     fn check_pl_duration() {
         let arena = fifty_one();
@@ -418,6 +435,7 @@ mod tests {
 
         for team in [plain, laddered] {
             let mut locked = team;
+            locked.trick = 9_999;
             lock(&mut locked, 8, TriggerType::RhythmIcons, 5, 0, 2000);
             assert_eq!(Triggers::build(&queue, &locked).lasting(), 1 << 8);
             for accuracy in [ALWAYS, 8000, 0] {

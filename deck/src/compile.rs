@@ -121,6 +121,7 @@ impl SisFlags {
 #[repr(C)]
 pub struct Slot {
     pub stats: [u32; 3],
+    pub trick: [u32; 3],
     pub skill: Skill,
     pub accessory: AccessorySkill,
     pub bonus: u16,
@@ -136,6 +137,7 @@ impl Default for Slot {
     fn default() -> Self {
         Self {
             stats: [0; 3],
+            trick: [0; 3],
             skill: Skill::NONE,
             accessory: AccessorySkill::NONE,
             bonus: NO_MATCH,
@@ -152,6 +154,7 @@ pub struct Compiled {
     pub slots: [Slot; LANES],
     pub totals: [u32; 3],
     pub team_strength: u32,
+    pub trick: u32,
     pub max_hp: u8,
     pub per_heart: u16,
     pub max_hearts: u16,
@@ -168,6 +171,7 @@ impl Compiled {
     pub fn scoring(&self) -> Scoring {
         Scoring {
             team_strength: self.team_strength,
+            trick: self.trick,
             lanes: self.slots.map(|s| s.bonus),
             skills: self.slots.map(|s| s.skill),
             accessories: self.slots.map(|s| s.accessory),
@@ -186,6 +190,8 @@ struct Sums {
     flat: [u32; 3],
     /// Raw card stat
     base: [u32; 3],
+    /// Trick SIS
+    trick: [u32; 3],
 }
 
 /// Each lane's initial tap multiplier.
@@ -247,7 +253,7 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
                 SisEffect::AllPercent => add(&mut all, sis.attribute, sis.value),
                 SisEffect::Charm => dst.sis.0 |= SisFlags::CHARM,
                 SisEffect::Heal => dst.sis.0 |= SisFlags::HEAL,
-                SisEffect::Trick => {}
+                SisEffect::Trick => add(&mut lane_sums.trick, sis.attribute, sis.value),
             }
         }
 
@@ -291,12 +297,18 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
         for (s, b) in dst.stats.iter_mut().zip(bonus) {
             *s = s.saturating_add(b);
         }
+
+        // Trick SIS
+        for ((t, s), sum) in dst.trick.iter_mut().zip(dst.stats).zip(lane_sums.trick) {
+            *t = portion(s, sum);
+        }
     }
 
     for slot in &out.slots {
         for (t, s) in out.totals.iter_mut().zip(slot.stats) {
             *t = t.saturating_add(s);
         }
+        out.trick = out.trick.saturating_add(pick(slot.trick, song.attribute));
     }
     out.team_strength = pick(out.totals, song.attribute);
     out.per_heart = heart_bonus(out.max_hp);
@@ -639,6 +651,39 @@ mod tests {
         assert_eq!(bare, 1021 + 103, "ceil(1021 *.10");
         assert_eq!(with, 1221 + 123, "should read post-percent vals");
         assert_eq!(with - bare, 220, "flat applies more than its value");
+    }
+
+    #[test]
+    fn check_trick_sis() {
+        let mut f = fixture();
+        f.cards.leaders.push(LeaderSkill {
+            attribute: Attribute::Smile,
+            secondary: None,
+            value: 10,
+            extra: None,
+        });
+        f.cards.cards[0].leader = LeaderId(1);
+        let card = f.card(1, true, 8); // idolized, 1021 Smile
+        let (kiss, trick) = (f.owns(7), f.owns(23)); // 200 flat Smile, +33% Smile
+        let mut team = Team::default();
+        team.equip_card(CENTER, card, f.ctx()).unwrap();
+        team.equip_sis(CENTER, kiss, f.ctx()).unwrap();
+        let smile = Matching { attribute: Attribute::Smile, group: None };
+        let bare = f.against(&team, smile);
+        assert_eq!(bare.trick, 0);
+
+        team.equip_sis(CENTER, trick, f.ctx()).unwrap();
+        let out = f.against(&team, smile);
+        assert_eq!(out.slots[CENTER].stats, bare.slots[CENTER].stats);
+        assert_eq!(out.slots[CENTER].stats[0], 1221 + 123);
+        assert_eq!(out.slots[CENTER].trick, [444, 0, 0], "ceil(1344 * .33)");
+        assert_eq!(out.trick, 444);
+        assert_eq!(out.scoring().trick, out.trick);
+        assert_eq!(out.team_strength, bare.team_strength);
+
+        let cool = f.run(&team);
+        assert_eq!(cool.slots[CENTER].trick, [444, 0, 0]);
+        assert_eq!(cool.trick, 0, "Smile Trick does nothing on cool song.");
     }
 
     #[test]
