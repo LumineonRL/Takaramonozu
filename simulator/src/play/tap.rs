@@ -83,6 +83,7 @@ pub(super) const fn note_multiplier(event: Event) -> u16 {
 }
 
 /// `floor(team_strength * combo * lane * note * judgement / 500_000_000_000)`.
+/// Apparently putting the judgement first makes the code faster without changing the result.
 #[expect(clippy::integer_division, reason = "Game mechanic.")]
 pub(super) fn note_score(
     team_strength: u32,
@@ -91,11 +92,11 @@ pub(super) fn note_score(
     note: u16,
     judgement: u16,
 ) -> u64 {
+    let factor = u32::from(note).saturating_mul(u32::from(judgement));
     u64::from(team_strength)
         .saturating_mul(u64::from(combo))
         .saturating_mul(u64::from(lane))
-        .saturating_mul(u64::from(note))
-        .saturating_mul(u64::from(judgement))
+        .saturating_mul(u64::from(factor))
         / DIVISOR
 }
 
@@ -190,6 +191,24 @@ mod tests {
                 "the widest possible product jere would not saturate"
             );
         }
+    }
+
+    #[test]
+    fn check_ppn_calc() {
+        let judgements = [super::GREAT_GREAT, super::PERFECT, super::LOCKED_PERFECT];
+        for team_strength in [0, 1, 80_400, 16_000_000, u32::MAX] {
+            for (note, judgement) in [625, 1000, 1250].into_iter().zip(judgements) {
+                let whole = u128::from(team_strength)
+                    * 135
+                    * 121
+                    * u128::from(note)
+                    * u128::from(judgement);
+                let want = u64::try_from(whole).unwrap_or(u64::MAX) / super::DIVISOR;
+                assert_eq!(super::note_score(team_strength, 135, 121, note, judgement), want);
+            }
+        }
+        let widest = u128::from(u32::MAX) * 135 * 121 * 1250 * 675;
+        assert!(widest > u128::from(u64::MAX), "saturated");
     }
 
     #[test]
