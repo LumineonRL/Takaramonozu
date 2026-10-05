@@ -148,6 +148,7 @@ pub struct Triggers {
     year: u16,
     lasting: u16,
     tricks: u16,
+    heals: u16,
 }
 
 impl Triggers {
@@ -163,8 +164,13 @@ impl Triggers {
             stars: Schedule::build(queue.stars(), 1, skills, TriggerType::StarNotes),
             score: lanes_on(skills, TriggerType::Score),
             year: lanes_on(skills, TriggerType::YearGroup),
-            lasting: lasting(scoring, lasts),
-            tricks: lasting(scoring, |effect| effect == SkillEffect::TotalTrick),
+            lasting: lanes_with(scoring, lasts),
+            tricks: lanes_with(scoring, |effect| effect == SkillEffect::TotalTrick),
+            heals: if scoring.max_hearts == 0 {
+                0
+            } else {
+                lanes_with(scoring, |effect| effect == SkillEffect::Healer)
+            },
         }
     }
 
@@ -215,6 +221,12 @@ impl Triggers {
         self.tricks
     }
 
+    /// Lanes whose card or accessory is a Healer.
+    #[must_use]
+    pub const fn heals(&self) -> u16 {
+        self.heals
+    }
+
     #[must_use]
     pub fn rolls(&self) -> u32 {
         self.all().iter().map(|s| s.rolls()).sum()
@@ -243,9 +255,9 @@ fn lanes_on(skills: &[Skill; LANES], clock: TriggerType) -> u16 {
         .fold(0, |mask, (lane, _)| mask | 1_u16.checked_shl(lane).unwrap_or(0))
 }
 
-/// Lanes with duration effects that can trigger. An N wearing a PL accessory wouldn't go here
-/// since its skill can't roll.
-fn lasting(scoring: &Scoring, pred: impl Fn(SkillEffect) -> bool) -> u16 {
+/// Lanes whose card or accessory has an effect that can roll. An N wearing a PL
+/// accessory wouldn't go here since its skill can't roll.
+fn lanes_with(scoring: &Scoring, pred: impl Fn(SkillEffect) -> bool) -> u16 {
     (0_u32..)
         .zip(scoring.skills.iter().zip(&scoring.accessories))
         .filter(|(_, (skill, worn))| {
@@ -312,9 +324,10 @@ pub(super) fn fire<const LANDED: bool>(
         };
         let [duration, worn_duration] =
             scoring.durations.get(lane as usize).copied().unwrap_or_default();
+        let [hp, worn_hp] = scoring.heals.get(lane as usize).copied().unwrap_or_default();
         if rng.roll(skill.chance) {
             out.activations = out.activations.saturating_add(1);
-            pay(lane, skill.effect, skill.value, duration, now, out, expiry);
+            pay(lane, skill.effect, skill.value, duration, hp, now, out, expiry);
             if LANDED {
                 landed |= bit;
             }
@@ -328,7 +341,7 @@ pub(super) fn fire<const LANDED: bool>(
             continue;
         }
         out.accessory_activations = out.accessory_activations.saturating_add(1);
-        pay(lane, accessory.effect, accessory.value, worn_duration, now, out, expiry);
+        pay(lane, accessory.effect, accessory.value, worn_duration, worn_hp, now, out, expiry);
         if LANDED {
             landed |= bit;
         }

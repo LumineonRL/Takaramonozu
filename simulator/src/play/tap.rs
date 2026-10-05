@@ -45,6 +45,36 @@ const CONVERTED: [[u16; 2]; 2] = [[PERFECT; 2]; 2];
 
 const DIVISOR: u64 = BASE * 100 * 100 * 1000 * JUDGEMENT_UNIT as u64;
 
+/// Base 1.00x overheal multiplier.
+pub(super) const HEART_UNIT: u16 = 10_000;
+
+/// The overheal bonus stops at +200%
+pub(super) const HEART_CAP: u16 = 20_000;
+
+/// Some performance hacking here because overheal was tanking performance by 20% even when no
+/// healers were on the team. So the fun part is rewriring already implemented mechanics to help the
+/// compiler out. All of these decisions were made by manually inspecting and comparing the compiled assembly.
+/// So since every combo multiplier is a multiple of 5 and every note multiplier of 125,
+/// the heart's extra factor fits a `u64` once those come out of both sides.
+const COMBO_STEP: u16 = 5;
+const NOTE_STEP: u16 = 125;
+#[expect(clippy::integer_division, reason = "Exact. See below.")]
+const OVERHEAL_DIVISOR: u64 = DIVISOR * HEART_UNIT as u64 / (COMBO_STEP as u64 * NOTE_STEP as u64);
+#[expect(clippy::indexing_slicing, reason = "bounded by the loop")]
+const _: () = {
+    let mut i = 0;
+    while i < COMBO_BONUS.len() {
+        assert!(COMBO_BONUS[i].1.is_multiple_of(COMBO_STEP), "combo multiplier of overheal stage.");
+        i += 1;
+    }
+    assert!(UNIT.is_multiple_of(COMBO_STEP), "lane's multiplier");
+    assert!(NOTE_UNIT.is_multiple_of(NOTE_STEP), "note's multiplier");
+    assert!(
+        OVERHEAL_DIVISOR * (COMBO_STEP as u64 * NOTE_STEP as u64) == DIVISOR * HEART_UNIT as u64,
+        "no remainder"
+    );
+};
+
 /// For teams with total trick. the ppn times every judgements, so converted * locked * head * tail.
 #[derive(Default)]
 pub(super) struct Worth([[[[u64; 2]; 2]; 2]; 2]);
@@ -119,6 +149,18 @@ pub(super) const fn note_multiplier(event: Event) -> u16 {
     }
 }
 
+/// This is part of the aforementioned performance hacking. `note_multiplier` to eighths
+/// to be used for `overheal_score`.
+#[expect(clippy::integer_division, reason = "exact")]
+pub(super) const fn note_eighths(event: Event) -> u16 {
+    match (matches!(event.kind(), EventKind::HoldRelease), event.is_swing()) {
+        (true, true) => 625 / NOTE_STEP,
+        (true, false) => 1250 / NOTE_STEP,
+        (false, true) => 500 / NOTE_STEP,
+        (false, false) => NOTE_UNIT / NOTE_STEP,
+    }
+}
+
 /// `floor(team_strength * combo * lane * note * judgement / 500_000_000_000)`.
 /// Apparently putting the judgement first makes the code faster without changing the result.
 #[expect(clippy::integer_division, reason = "Game mechanic.")]
@@ -135,6 +177,34 @@ pub(super) fn note_score(
         .saturating_mul(u64::from(lane))
         .saturating_mul(u64::from(factor))
         / DIVISOR
+}
+
+/// `note_score` * `overheal_multiplier`.
+/// `strength` = `strength` * `HEART_UNIT` multiplier.
+/// `note` = `note_eighths`.
+/// This is fine so long as the team strength stays below 27 million which should not be a problem. Hopefully.
+#[inline]
+#[expect(clippy::integer_division, reason = "exact`")]
+pub(super) fn overheal_score(
+    strength: u64,
+    combo: u16,
+    lane: u16,
+    note: u16,
+    judgement: u16,
+) -> u64 {
+    debug_assert!(combo.is_multiple_of(COMBO_STEP), "{combo}");
+    let factor = u64::from(u32::from(combo / COMBO_STEP).saturating_mul(u32::from(lane)))
+        .saturating_mul(u64::from(u32::from(note).saturating_mul(u32::from(judgement))));
+    strength.saturating_mul(factor) / OVERHEAL_DIVISOR
+}
+
+#[inline]
+#[expect(clippy::integer_division, reason = "exact")]
+pub(super) fn overheal_score_val(worth: u64, combo: u16, lane: u16, note: u16, heart: u16) -> u64 {
+    debug_assert!(combo.is_multiple_of(COMBO_STEP), "{combo}");
+    let factor = u64::from(u32::from(combo / COMBO_STEP).saturating_mul(u32::from(lane)))
+        .saturating_mul(u64::from(u32::from(note).saturating_mul(u32::from(heart))));
+    worth.saturating_mul(factor) / OVERHEAL_DIVISOR
 }
 
 #[cfg(test)]
@@ -291,6 +361,89 @@ mod tests {
     }
 
     #[test]
+    fn check_overheal_score() {
+        assert_eq!(super::OVERHEAL_DIVISOR, 8_000_000_000_000);
+        let judgements = [
+            super::GREAT_GREAT,
+            super::GREAT,
+            super::PERFECT,
+            super::LOCKED_PERFECT,
+        ];
+        let multipliers = [super::HEART_UNIT, 10_026, 13_380, 29_942, 30_000];
+        let with_hearts = |strength: u32, heart: u16| u64::from(strength) * u64::from(heart);
+        for team_strength in [0, 1, 999, 80_400, 2_700_000, 16_000_000, 27_000_000] {
+            for (combo, lane, note) in [(100, 100, 1000), (135, 121, 1250), (110, 110, 500)] {
+                let eighths = note / super::NOTE_STEP;
+                for judgement in judgements {
+                    let plain = super::note_score(team_strength, combo, lane, note, judgement);
+                    let unit = with_hearts(team_strength, super::HEART_UNIT);
+                    assert_eq!(
+                        super::overheal_score(unit, combo, lane, eighths, judgement),
+                        plain,
+                        "{team_strength} {combo} {note} {judgement}"
+                    );
+                    for heart in multipliers {
+                        let whole = u128::from(team_strength)
+                            * u128::from(combo)
+                            * u128::from(lane)
+                            * u128::from(note)
+                            * u128::from(judgement)
+                            * u128::from(heart);
+                        let want = whole / u128::from(super::DIVISOR * 10_000);
+                        let strength = with_hearts(team_strength, heart);
+                        assert_eq!(
+                            u128::from(super::overheal_score(
+                                strength, combo, lane, eighths, judgement
+                            )),
+                            want,
+                            "{team_strength} {combo} {lane} {note} {judgement} {heart}"
+                        );
+                    }
+                }
+            }
+        }
+        let widest = super::overheal_score(with_hearts(u32::MAX, 30_000), 135, 121, 10, 675);
+        assert_eq!(widest, u64::MAX / super::OVERHEAL_DIVISOR, "saturates, never wraps");
+        assert!(
+            widest >= super::overheal_score(with_hearts(27_000_000, 30_000), 135, 121, 10, 675)
+        );
+    }
+
+    #[test]
+    fn check_overheal_score_val() {
+        let rows = [
+            (false, false, super::JUDGEMENT[0]),
+            (true, false, super::CONVERTED),
+            (true, true, super::JUDGEMENT[1]),
+        ];
+        for (team_strength, trick) in [(0, 0), (1, 7), (80_400, 26_532), (16_000_000, 1)] {
+            let worth = super::Worth::new(team_strength, trick);
+            for (converted, locked, judgements) in rows {
+                let strength = if converted {
+                    team_strength.saturating_add(trick)
+                } else {
+                    team_strength
+                };
+                for (head, tail) in [(false, false), (false, true), (true, false), (true, true)] {
+                    let judgement = judgements[usize::from(head)][usize::from(tail)];
+                    let row = worth.row(converted, locked)[usize::from(head)][usize::from(tail)];
+                    for heart in [super::HEART_UNIT, 13_380, 30_000] {
+                        let with_hearts = u64::from(strength) * u64::from(heart);
+                        for (combo, lane, note) in [(100, 100, 1000), (135, 121, 1250)] {
+                            let eighths = note / super::NOTE_STEP;
+                            assert_eq!(
+                                super::overheal_score_val(row, combo, lane, eighths, heart),
+                                super::overheal_score(with_hearts, combo, lane, eighths, judgement),
+                                "{team_strength} {converted} {locked} {head} {tail} {heart}"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn check_score_floor() {
         let stream = [tap(2000, 0), tap(2500, 1), tap(3000, 2)];
         let arena = arena(&stream);
@@ -346,6 +499,9 @@ mod tests {
 
         let both = Event::new(0, EventKind::HoldRelease, false, true);
         assert_eq!(super::note_multiplier(both), 625, "1.25 * 0.5");
+        for event in [regular, star, swing, start, release, both] {
+            assert_eq!(super::note_eighths(event) * 125, super::note_multiplier(event));
+        }
     }
 
     #[test]

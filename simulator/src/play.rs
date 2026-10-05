@@ -14,11 +14,11 @@ use activation::chain::Chain;
 use activation::ladder::Ladder;
 use activation::{AccessorySkill, Skill, Tally, Triggers, fire};
 use config::PlayConfig;
-use effect::{Expiry, Instant, Lasting, Tricked};
+use effect::{Expiry, Healing, Instant, Lasting, Tricked};
 use judgement::Judgements;
 use queue::Queue;
 use rng::Rng;
-use tap::{JUDGEMENT, UNIT, note_multiplier, note_score};
+use tap::{JUDGEMENT, UNIT, note_eighths, note_multiplier, note_score, overheal_score};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Scoring {
@@ -31,6 +31,12 @@ pub struct Scoring {
     /// One bit for each lane's character. The bit of the first lane that character is in.
     pub members: [u16; LANES],
     pub durations: [[Ms; 2]; LANES],
+    /// HP each lane's card and accessory heal. 0 unless a Healer.
+    pub heals: [[u8; 2]; LANES],
+    pub max_hp: u8,
+    /// Tap bonus per heart
+    pub per_heart: u16,
+    pub max_hearts: u16,
 }
 
 impl Scoring {
@@ -44,6 +50,10 @@ impl Scoring {
             accessories: [AccessorySkill::NONE; LANES],
             members: [0; LANES],
             durations: [[0; 2]; LANES],
+            heals: [[0; 2]; LANES],
+            max_hp: 0,
+            per_heart: 0,
+            max_hearts: 0,
         }
     }
 }
@@ -77,8 +87,11 @@ pub fn run(
     triggers: &Triggers,
     judgements: &Judgements,
 ) -> Outcome {
+    if triggers.heals() != 0 {
+        return healing(queue, config, scoring, triggers, judgements);
+    }
     if triggers.lasting() != 0 {
-        return lasting(queue, config, scoring, triggers, judgements);
+        return lasting::<Expiry, Tricked>(queue, config, scoring, triggers, judgements);
     }
     // Only one card has a star note skill trigger and it's a very old SR that's not very good.
     // So this has const generics since, in almost every case, we can completely ignore star notes pre-trial.
@@ -104,33 +117,76 @@ pub fn run(
 }
 
 #[inline(never)]
-fn lasting(
+fn healing(
     queue: &Queue,
     config: &PlayConfig,
     scoring: &Scoring,
     triggers: &Triggers,
     judgements: &Judgements,
 ) -> Outcome {
-    if triggers.tricks() != 0 {
-        return tricked(queue, config, scoring, triggers, judgements);
+    if triggers.lasting() != 0 {
+        return lasting::<Healing<Expiry>, Healing<Tricked>>(
+            queue, config, scoring, triggers, judgements,
+        );
     }
     if triggers.year() != 0 {
-        return chained::<Expiry>(queue, config, scoring, triggers, judgements);
+        return chained::<Healing<Instant>>(queue, config, scoring, triggers, judgements);
     }
     match (!triggers.stars().is_empty(), triggers.score() != 0) {
-        (false, false) => {
-            walk::<false, false, false, Expiry>(queue, config, scoring, triggers, judgements)
-        }
-        (false, true) => {
-            walk::<false, true, false, Expiry>(queue, config, scoring, triggers, judgements)
-        }
+        (false, false) => walk::<false, false, false, Healing<Instant>>(
+            queue, config, scoring, triggers, judgements,
+        ),
+        (false, true) => walk::<false, true, false, Healing<Instant>>(
+            queue, config, scoring, triggers, judgements,
+        ),
         (true, false) => {
             core::hint::cold_path();
-            walk::<true, false, false, Expiry>(queue, config, scoring, triggers, judgements)
+            walk::<true, false, false, Healing<Instant>>(
+                queue, config, scoring, triggers, judgements,
+            )
         }
         (true, true) => {
             core::hint::cold_path();
-            walk::<true, true, false, Expiry>(queue, config, scoring, triggers, judgements)
+            walk::<true, true, false, Healing<Instant>>(
+                queue, config, scoring, triggers, judgements,
+            )
+        }
+    }
+}
+
+/// `X` is the duration table and `T` the same with a Total Trick.
+#[inline(never)]
+fn lasting<X, T>(
+    queue: &Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    X: Lasting,
+    T: Lasting,
+{
+    if triggers.tricks() != 0 {
+        return tricked::<T>(queue, config, scoring, triggers, judgements);
+    }
+    if triggers.year() != 0 {
+        return chained::<X>(queue, config, scoring, triggers, judgements);
+    }
+    match (!triggers.stars().is_empty(), triggers.score() != 0) {
+        (false, false) => {
+            walk::<false, false, false, X>(queue, config, scoring, triggers, judgements)
+        }
+        (false, true) => {
+            walk::<false, true, false, X>(queue, config, scoring, triggers, judgements)
+        }
+        (true, false) => {
+            core::hint::cold_path();
+            walk::<true, false, false, X>(queue, config, scoring, triggers, judgements)
+        }
+        (true, true) => {
+            core::hint::cold_path();
+            walk::<true, true, false, X>(queue, config, scoring, triggers, judgements)
         }
     }
 }
@@ -138,30 +194,33 @@ fn lasting(
 /// I wanted to just roll this into the existing perfect lock code since it's nearly identical
 /// but making it its own arm was better for performance.
 #[inline(never)]
-fn tricked(
+fn tricked<T>(
     queue: &Queue,
     config: &PlayConfig,
     scoring: &Scoring,
     triggers: &Triggers,
     judgements: &Judgements,
-) -> Outcome {
+) -> Outcome
+where
+    T: Lasting,
+{
     if triggers.year() != 0 {
-        return chained::<Tricked>(queue, config, scoring, triggers, judgements);
+        return chained::<T>(queue, config, scoring, triggers, judgements);
     }
     match (!triggers.stars().is_empty(), triggers.score() != 0) {
         (false, false) => {
-            walk::<false, false, false, Tricked>(queue, config, scoring, triggers, judgements)
+            walk::<false, false, false, T>(queue, config, scoring, triggers, judgements)
         }
         (false, true) => {
-            walk::<false, true, false, Tricked>(queue, config, scoring, triggers, judgements)
+            walk::<false, true, false, T>(queue, config, scoring, triggers, judgements)
         }
         (true, false) => {
             core::hint::cold_path();
-            walk::<true, false, false, Tricked>(queue, config, scoring, triggers, judgements)
+            walk::<true, false, false, T>(queue, config, scoring, triggers, judgements)
         }
         (true, true) => {
             core::hint::cold_path();
-            walk::<true, true, false, Tricked>(queue, config, scoring, triggers, judgements)
+            walk::<true, true, false, T>(queue, config, scoring, triggers, judgements)
         }
     }
 }
@@ -332,7 +391,19 @@ where
                         tail,
                         queue.combo()[tap],
                         scoring.lanes.get(lane).copied().unwrap_or(UNIT),
-                        note_multiplier(event),
+                        if E::HEARTS {
+                            note_eighths(event)
+                        } else {
+                            note_multiplier(event)
+                        },
+                    )
+                } else if E::HEARTS {
+                    overheal_score(
+                        expiry.overheal_strength(locked),
+                        queue.combo()[tap],
+                        scoring.lanes.get(lane).copied().unwrap_or(UNIT),
+                        note_eighths(event),
+                        JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
                     )
                 } else {
                     note_score(

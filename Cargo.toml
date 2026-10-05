@@ -62,3 +62,4 @@ missing_asserts_for_indexing = "allow" # false positive on `windows(2)`
 non_ascii_literal = "allow"            # μ's
 std_instead_of_alloc = "allow" # Using HashMap and BTreeMap in preprocessor.
 unneeded_field_pattern = "allow" # Contradicts `rest_pattern_accessible_field`
+inline_always = "allow"

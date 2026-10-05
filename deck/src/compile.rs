@@ -27,7 +27,7 @@ use crate::level_cap::LevelCaps;
 use crate::manager::{EntryId, Manager};
 use crate::team::{CENTER, Context, LANES, Team};
 
-/// The tap-score total the heart count is capped one step past.
+/// The tap bonus the heart count is capped one step past.
 const OVERHEAL_TARGET: u32 = 20_000;
 
 /// A given lane's tap score multiplier.
@@ -130,8 +130,10 @@ pub struct Slot {
     pub member: u16,
     /// See `Scoring::durations`.
     pub durations: [Ms; 2],
+    /// See `Scoring::heals`.
+    pub heals: [u8; 2],
     pub sis: SisFlags,
-    _pad: [u8; 3],
+    _pad: u8,
 }
 
 impl Default for Slot {
@@ -144,8 +146,9 @@ impl Default for Slot {
             bonus: NO_MATCH,
             member: 0,
             durations: [0; 2],
+            heals: [0; 2],
             sis: SisFlags(0),
-            _pad: [0; 3],
+            _pad: 0,
         }
     }
 }
@@ -178,6 +181,10 @@ impl Compiled {
             accessories: self.slots.map(|s| s.accessory),
             members: self.slots.map(|s| s.member),
             durations: self.slots.map(|s| s.durations),
+            heals: self.slots.map(|s| s.heals),
+            max_hp: self.max_hp,
+            per_heart: self.per_heart,
+            max_hearts: self.max_hearts,
         }
     }
 }
@@ -258,11 +265,12 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
             }
         }
 
-        let (skill, duration) = resolve(card, entry, ctx.cards, dst.sis);
-        let (accessory, worn_duration) = slot
+        let (skill, duration, hp) = resolve(card, entry, ctx.cards, dst.sis);
+        let (accessory, worn_duration, worn_hp) = slot
             .accessory()
-            .map_or((AccessorySkill::NONE, 0), |worn| resolve_accessory(worn, ctx, dst.sis));
-        (dst.skill, dst.accessory, dst.durations) = (skill, accessory, [duration, worn_duration]);
+            .map_or((AccessorySkill::NONE, 0, 0), |worn| resolve_accessory(worn, ctx, dst.sis));
+        (dst.skill, dst.accessory) = (skill, accessory);
+        (dst.durations, dst.heals) = ([duration, worn_duration], [hp, worn_hp]);
         if dst.skill.trigger == TriggerType::YearGroup {
             *year = year_group(card, ctx.cards);
         }
@@ -320,9 +328,9 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
 /// Trying to do some future proofing for Amplify skills where the skill level a skill gets resolved at can change.
 ///
 /// TODO: Amplify. I'll be saving that for near the end though.
-fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> (Skill, Ms) {
+fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> (Skill, Ms, u8) {
     let Some(def) = card.skill.and_then(|id| cards.skills.def(id)) else {
-        return (Skill::NONE, 0);
+        return (Skill::NONE, 0, 0);
     };
     let level = entry.skill_level();
     let trigger = cards.skills.trigger(def, level);
@@ -337,20 +345,20 @@ fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> (Ski
         trigger: def.trigger_type,
         limit: activation_limit::of(entry.card_id()),
     };
-    (skill, duration)
+    (skill, duration, heal(def.effect, value))
 }
 
 /// TODO: Spark. I'd prefer for this to also be generic enough to not need to reimplement every skill effect
 /// since accs have the same exact effects as cards besides spark.
-fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> (AccessorySkill, Ms) {
+fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> (AccessorySkill, Ms, u8) {
     let Some((accessory, level)) = ctx.accessory(worn) else {
-        return (AccessorySkill::NONE, 0);
+        return (AccessorySkill::NONE, 0, 0);
     };
     let Some(def) = ctx.acc_db.skills.def(accessory.skill) else {
-        return (AccessorySkill::NONE, 0);
+        return (AccessorySkill::NONE, 0, 0);
     };
     if def.effect == SkillEffect::Spark {
-        return (AccessorySkill::NONE, 0);
+        return (AccessorySkill::NONE, 0, 0);
     }
     let (value, duration) = ctx.acc_db.skills.payload(def, level);
 
@@ -359,7 +367,7 @@ fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> (AccessorySk
         chance: rate(ctx.acc_db.skills.chance(def, level)),
         effect: def.effect,
     };
-    (skill, duration)
+    (skill, duration, heal(def.effect, value))
 }
 
 fn year_group(card: &Card, cards: &CardDb) -> Option<CharacterSet> {
@@ -417,6 +425,15 @@ fn points(effect: SkillEffect, value: Centi, sis: SisFlags) -> Centi {
         | SkillEffect::ComboBonusUp
         | SkillEffect::Sync
         | SkillEffect::Spark => value,
+    }
+}
+
+#[expect(clippy::integer_division, reason = "exact")]
+fn heal(effect: SkillEffect, value: Centi) -> u8 {
+    if effect == SkillEffect::Healer {
+        u8::try_from(value / 100).unwrap_or(u8::MAX)
+    } else {
+        0
     }
 }
 
@@ -807,6 +824,30 @@ mod tests {
         assert_eq!(f.run(&team).slots[0].accessory.value, 8000, "Heal does not reach a Scorer");
     }
 
+    /// The fixture's card 4 heals 4 HP and accessory 15 heals 8 at level 8.
+    /// Two idolized fixture cards are 6 HP each, summing to 12. 0.34% per heart.
+    #[test]
+    fn check_overheal_inputs() {
+        let mut f = fixture();
+        let (healer, scorer) = (f.card(4, true, 8), f.card(1, true, 8));
+        let clef = f.accessories.add(&f.acc_db, 15, 8).unwrap().0;
+        let mut team = Team::default();
+        team.equip_card(0, healer, f.ctx()).unwrap();
+        team.equip_accessory(0, clef, f.ctx()).unwrap();
+        assert_eq!(f.run(&team).max_hearts, 0, "6 HP is not on heal table");
+
+        team.equip_card(1, scorer, f.ctx()).unwrap();
+        let out = f.run(&team);
+        assert_eq!(out.slots[0].heals, [4, 8]);
+        assert_eq!(out.slots[1].heals, [0, 0], "Scorers do not heal, silly");
+        assert_eq!((out.max_hp, out.per_heart, out.max_hearts), (12, 34, 589));
+
+        let scoring = out.scoring();
+        assert_eq!(scoring.heals[0], [4, 8]);
+        assert_eq!(scoring.heals[1], [0, 0]);
+        assert_eq!((scoring.max_hp, scoring.per_heart, scoring.max_hearts), (12, 34, 589));
+    }
+
     /// It would be bad if accessories used the card's skill level because someone made an oopsie.
     #[test]
     fn check_an_accessory_skill_level() {
@@ -859,7 +900,7 @@ mod tests {
         let bonus = heart_bonus(54);
         let cap = max_hearts(bonus);
         assert_eq!((bonus, cap), (338, 60), "54 max hp, +3.38% per heart");
-        assert_eq!(u32::from(cap) * u32::from(bonus), 20_280, "+202.8%");
+        assert_eq!(u32::from(cap) * u32::from(bonus), 20_280, "+202.8%, but clamped to +200%");
 
         for hp in MIN_TABLE_HP..=MAX_TABLE_HP {
             let (b, n) = (u32::from(heart_bonus(hp)), u32::from(max_hearts(heart_bonus(hp))));
