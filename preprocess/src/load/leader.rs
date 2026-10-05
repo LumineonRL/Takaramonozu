@@ -20,7 +20,7 @@ const IDENTITY: LeaderSkill = LeaderSkill {
 };
 
 pub struct Table {
-    /// Slot 0 is [`IDENTITY`], which is `leader_skill_id` 1 upstream.
+    /// Slot 0 is `IDENTITY`, which is `leader_skill_id` 1 upstream.
     pub by_id: Vec<LeaderSkill>,
     pub targets: LeaderTargets,
     seen: HashMap<LeaderSkill, LeaderId>,

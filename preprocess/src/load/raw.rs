@@ -253,7 +253,7 @@ pub fn parse_target_map(bytes: &[u8]) -> serde_json::Result<RawTargetMap> {
 }
 
 /// # Errors
-/// Any deviation from [`RawUAccessory`].
+/// Any deviation from [`RawAccessory`].
 pub fn parse_accessories(bytes: &[u8]) -> serde_json::Result<RawAccessories> {
     serde_json::from_slice(bytes)
 }
