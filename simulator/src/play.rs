@@ -14,7 +14,7 @@ use activation::chain::Chain;
 use activation::ladder::Ladder;
 use activation::{AccessorySkill, Skill, Tally, Triggers, fire};
 use config::PlayConfig;
-use effect::{Expiry, Healing, Instant, Lasting, Tricked};
+use effect::{Expiry, Fever, Healing, Instant, Lasting, Tricked};
 use judgement::Judgements;
 use queue::Queue;
 use rng::Rng;
@@ -156,16 +156,33 @@ fn healing(
 
 /// `X` is the duration table and `T` the same with a Total Trick.
 #[inline(never)]
-fn lasting<X, T>(
-    queue: &Queue,
+fn lasting<'q, X, T>(
+    queue: &'q Queue,
     config: &PlayConfig,
     scoring: &Scoring,
     triggers: &Triggers,
     judgements: &Judgements,
 ) -> Outcome
 where
-    X: Lasting,
-    T: Lasting,
+    X: Lasting<'q>,
+    T: Lasting<'q>,
+{
+    if triggers.fever() != 0 {
+        return durations::<Fever<X>, Fever<T>>(queue, config, scoring, triggers, judgements);
+    }
+    durations::<X, T>(queue, config, scoring, triggers, judgements)
+}
+
+fn durations<'q, X, T>(
+    queue: &'q Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    X: Lasting<'q>,
+    T: Lasting<'q>,
 {
     if triggers.tricks() != 0 {
         return tricked::<T>(queue, config, scoring, triggers, judgements);
@@ -194,15 +211,15 @@ where
 /// I wanted to just roll this into the existing perfect lock code since it's nearly identical
 /// but making it its own arm was better for performance.
 #[inline(never)]
-fn tricked<T>(
-    queue: &Queue,
+fn tricked<'q, T>(
+    queue: &'q Queue,
     config: &PlayConfig,
     scoring: &Scoring,
     triggers: &Triggers,
     judgements: &Judgements,
 ) -> Outcome
 where
-    T: Lasting,
+    T: Lasting<'q>,
 {
     if triggers.year() != 0 {
         return chained::<T>(queue, config, scoring, triggers, judgements);
@@ -228,15 +245,15 @@ where
 /// Really don't think there's a clean way to integrate year-group triggers / chain scorers into what exists
 /// so it gets its own bespoke handling.
 #[inline(never)]
-fn chained<E>(
-    queue: &Queue,
+fn chained<'q, E>(
+    queue: &'q Queue,
     config: &PlayConfig,
     scoring: &Scoring,
     triggers: &Triggers,
     judgements: &Judgements,
 ) -> Outcome
 where
-    E: Lasting,
+    E: Lasting<'q>,
 {
     match (!triggers.stars().is_empty(), triggers.score() != 0) {
         (false, false) => {
@@ -258,15 +275,15 @@ where
 #[expect(clippy::else_if_without_else, reason = "lazy")]
 #[expect(clippy::too_many_lines, reason = "Benchmarked. Splitting it moved what LLVM inlined.")]
 #[inline(never)]
-fn walk<const STARS: bool, const SCORE: bool, const YEAR: bool, E>(
-    queue: &Queue,
+fn walk<'q, const STARS: bool, const SCORE: bool, const YEAR: bool, E>(
+    queue: &'q Queue,
     config: &PlayConfig,
     scoring: &Scoring,
     triggers: &Triggers,
     judgements: &Judgements,
 ) -> Outcome
 where
-    E: Lasting,
+    E: Lasting<'q>,
 {
     debug_assert_eq!(judgements.records(), queue.events().len(), "judgements of another chart");
     debug_assert_eq!(judgements.seed(), config.seed, "judgements of another trial");
@@ -291,7 +308,10 @@ where
     let mut perfects = Tally::new(triggers.perfects());
     let mut stars = Tally::new(triggers.stars());
     let mut star_perfects = 0_u32;
-    let mut expiry = E::new(queue.last_judgement(), scoring);
+    let mut expiry = E::new(queue.last_judgement(), queue, scoring);
+    if E::FEVER && SCORE {
+        expiry.read_running();
+    }
     let mut timer_cursor = 0_usize;
     let mut next_timer = Time(timer_at[0]);
     let mut ladder = Ladder::new(scoring, if SCORE { triggers.score() } else { 0 });
@@ -419,6 +439,9 @@ where
                     )
                 });
                 out.notes = out.notes.saturating_add(1);
+                if E::FEVER && SCORE {
+                    out.skill = out.skill.saturating_add(expiry.fevered(time, out.notes));
+                }
                 let perfect = converted || (head & tail);
                 out.perfects = out.perfects.saturating_add(u32::from(perfect));
 
@@ -463,6 +486,9 @@ where
     }
 
     out.icons = u32::try_from(spawns.icon).unwrap_or(u32::MAX);
+    if E::FEVER && !SCORE {
+        out.skill = out.skill.saturating_add(expiry.fever_paid());
+    }
     out
 }
 
@@ -475,7 +501,7 @@ where
     clippy::too_many_arguments,
     reason = "don't feel like splitting it up. Not even sure if that would affect performance."
 )]
-fn hit<const SCORE: bool, const YEAR: bool>(
+fn hit<'q, const SCORE: bool, const YEAR: bool>(
     due: u16,
     now: Time,
     scoring: &Scoring,
@@ -483,7 +509,7 @@ fn hit<const SCORE: bool, const YEAR: bool>(
     out: &mut Outcome,
     ladder: &mut Ladder,
     chain: &mut Chain,
-    expiry: &mut impl Lasting,
+    expiry: &mut impl Lasting<'q>,
 ) {
     // tldr here. Score-based scorers can activate once per frame, so this banks
     // their trigger for the next frame after they activate.
@@ -506,14 +532,14 @@ fn hit<const SCORE: bool, const YEAR: bool>(
     clippy::inline_always,
     reason = "`fire` is inlined and this is all that gets added without YEAR"
 )]
-fn moment<const YEAR: bool>(
+fn moment<'q, const YEAR: bool>(
     mask: u16,
     now: Time,
     scoring: &Scoring,
     rng: &mut Rng,
     out: &mut Outcome,
     chain: &mut Chain,
-    expiry: &mut impl Lasting,
+    expiry: &mut impl Lasting<'q>,
 ) {
     if YEAR {
         let landed = fire::<true>(mask, now, scoring, rng, out, expiry);
@@ -525,14 +551,14 @@ fn moment<const YEAR: bool>(
 
 /// Ends a duration effect.
 #[inline(never)]
-fn release<const SCORE: bool, const YEAR: bool>(
+fn release<'q, const SCORE: bool, const YEAR: bool>(
     at: Time,
     scoring: &Scoring,
     mut rng: Rng,
     mut out: Outcome,
     ladder: &mut Ladder,
     chain: &mut Chain,
-    expiry: &mut impl Lasting,
+    expiry: &mut impl Lasting<'q>,
 ) -> (Rng, Outcome) {
     if SCORE {
         ladder.catch_up::<YEAR>(at, scoring, &mut rng, &mut out, chain, expiry);
@@ -563,7 +589,7 @@ impl Spawns<'_> {
         clippy::too_many_arguments,
         reason = "Legit trying to fix this lead to a +7% performance regression. `offset` as a field of `Spawns` moved register allocation to all of `walk`."
     )]
-    fn drain<const SCORE: bool, const YEAR: bool, E>(
+    fn drain<'q, const SCORE: bool, const YEAR: bool, E>(
         &mut self,
         bound: Time,
         offset: u32,
@@ -574,7 +600,7 @@ impl Spawns<'_> {
         chain: &mut Chain,
         expiry: &mut E,
     ) where
-        E: Lasting,
+        E: Lasting<'q>,
     {
         let mut stop = bound;
         loop {

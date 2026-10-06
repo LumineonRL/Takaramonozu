@@ -149,6 +149,7 @@ pub struct Triggers {
     lasting: u16,
     tricks: u16,
     heals: u16,
+    fever: u16,
 }
 
 impl Triggers {
@@ -171,6 +172,7 @@ impl Triggers {
             } else {
                 lanes_with(scoring, |effect| effect == SkillEffect::Healer)
             },
+            fever: lanes_with(scoring, |effect| effect == SkillEffect::ComboFever),
         }
     }
 
@@ -225,6 +227,12 @@ impl Triggers {
     #[must_use]
     pub const fn heals(&self) -> u16 {
         self.heals
+    }
+
+    /// Lanes whose card or accessory is a Combo Fever.
+    #[must_use]
+    pub const fn fever(&self) -> u16 {
+        self.fever
     }
 
     #[must_use]
@@ -306,13 +314,13 @@ impl<'a> Tally<'a> {
 /// Ties happen right to left. Actually there's a coinflip mechanic involving Amplify, but we'll worry about that once I get around to Amplify.
 #[inline(always)]
 #[expect(clippy::inline_always, reason = "I benchmarked.")]
-pub(super) fn fire<const LANDED: bool>(
+pub(super) fn fire<'q, const LANDED: bool>(
     mask: u16,
     now: Time,
     scoring: &Scoring,
     rng: &mut Rng,
     out: &mut Outcome,
-    expiry: &mut impl Lasting,
+    expiry: &mut impl Lasting<'q>,
 ) -> u16 {
     let mut landed = 0;
     let mut bits = expiry.admit(mask, now);

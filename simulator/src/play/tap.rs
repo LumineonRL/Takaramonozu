@@ -132,6 +132,24 @@ pub fn combo_bonus(combo: u32) -> u16 {
         .map_or(100, |&(_, mult)| mult)
 }
 
+/// Transcription of `combo_fever_map.json`,
+const FEVER: [u16; 23] = [
+    100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, // 1..=110
+    225, 250, 275, 300, 350, 400, 500, 600, 700, 800, 900,  // 111..=220
+    1000, // 221..
+];
+const LAST_FEVER: u32 = 22;
+const _: () = assert!(FEVER.len() == LAST_FEVER as usize + 1, "last row");
+pub(super) const FEVER_UNIT: u64 = UNIT as u64;
+
+/// Combo Fever's multiplier on the comboth note. Inclusive.
+#[must_use]
+#[expect(clippy::indexing_slicing, reason = "clamped")]
+#[expect(clippy::integer_division, reason = "dividing by 10")]
+pub fn fever_multiplier(combo: u32) -> u16 {
+    FEVER[(combo.saturating_sub(1) / 10).min(LAST_FEVER) as usize]
+}
+
 /// `floor(team_strength * 0.0125)`
 #[must_use]
 #[expect(clippy::integer_division, reason = "Game mechanic.")]
@@ -214,7 +232,7 @@ mod tests {
         reason = "Kind of need to verify that the things we're doing to avoid division still result in the same number."
     )]
 
-    use super::{combo_bonus, points_per_note};
+    use super::{combo_bonus, fever_multiplier, points_per_note};
     use crate::play::queue::Queue;
     use crate::play::tests::{arena, only, play, tap};
     use crate::play::{Outcome, Scoring};
@@ -234,6 +252,49 @@ mod tests {
         assert_eq!(combo_bonus(800), 130);
         assert_eq!(combo_bonus(801), 135);
         assert_eq!(combo_bonus(u32::MAX), 135);
+    }
+
+    #[test]
+    fn check_fever_table() {
+        assert_eq!(fever_multiplier(1), 100);
+        assert_eq!(fever_multiplier(10), 100);
+        assert_eq!(fever_multiplier(11), 110);
+        assert_eq!(fever_multiplier(110), 200);
+        assert_eq!(fever_multiplier(111), 225);
+        assert_eq!(fever_multiplier(220), 900);
+        assert_eq!(fever_multiplier(221), 1000);
+        assert_eq!(fever_multiplier(u32::MAX), 1000);
+
+        // From `getCFMultiplier`, `combo <= bound` from burrito's sim
+        let reference = [
+            (10, 100),
+            (20, 110),
+            (30, 120),
+            (40, 130),
+            (50, 140),
+            (60, 150),
+            (70, 160),
+            (80, 170),
+            (90, 180),
+            (100, 190),
+            (110, 200),
+            (120, 225),
+            (130, 250),
+            (140, 275),
+            (150, 300),
+            (160, 350),
+            (170, 400),
+            (180, 500),
+            (190, 600),
+            (200, 700),
+            (210, 800),
+            (220, 900),
+        ];
+        for combo in 1..=400 {
+            let want =
+                reference.iter().find(|&&(bound, _)| combo <= bound).map_or(1000, |&(_, m)| m);
+            assert_eq!(fever_multiplier(combo), want, "combo {combo}");
+        }
     }
 
     #[test]

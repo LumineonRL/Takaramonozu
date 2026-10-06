@@ -1,7 +1,7 @@
-//! The priority queue of events, in charge of determining what event comes next.
+//! The queues of events, in charge of determining what event comes next.
 //! other modules handle dispatching the event to its relevant handler.
 
-use super::tap::combo_bonus;
+use super::tap::{combo_bonus, fever_multiplier};
 use crate::song::{Chart, ChartRows, Event, EventKind, LANES, Time};
 
 /// Hold notes are two events but one combo. Actually they're 3 events
@@ -12,21 +12,43 @@ const fn scores(event: Event) -> bool {
     matches!(event.kind(), EventKind::Tap | EventKind::HoldRelease)
 }
 
+/// Each `Queue` gets its own `Bucket`. There are many different queues which all
+/// step in parallel and get processed a little bit differently.
+pub(super) const BUCKET: u32 = 6;
+
 const fn spawns_icon(event: Event) -> bool {
     matches!(event.kind(), EventKind::Tap | EventKind::HoldStart)
 }
 
 /// The big star of the show. This is the priority queue that drives the entire
 /// simulation.
+/// `repr(Rust)` was rearranging the fields in a way that was aversely affecting performance
+/// with the addition of combo fever. freezing them helped performance.
+/// TODO: Investigate further. Looking at this, it shouldn't be a huge deal because each field
+/// is relatively the same size. Vec is 24 bytes, u32 is 4 bytes, [u32; lanes] is 36 bytes and
+/// the largest field here. I just don't understand what the compiler could have done to make
+/// a more sensible ordering slower. Quick mafs this is 8 aligned and adding everything up
+/// is 196, padded to a multiple of 8 so it should be 200 bytes total.
+/// Actually it comes out to 200 with both repr(Rust) and repr(C) so it's not a size issue.
+/// It's probably cache line behavior. Everything at the beginning of the queue is hot and grouped together
+/// combo fever is only relevant when combo fever cards are on the team.
+/// repr(Rust) would force some of the combo fever fields to be brought in with more used
+/// generic fields, hurting cache locality. That's the working theory at least.
 #[derive(Clone, PartialEq, Eq, Debug)]
+#[repr(C)]
 pub struct Queue<'a> {
-    times: &'a [Time],
-    events: &'a [Event],
     icons: Vec<Time>,
     combo: Vec<u16>,
+    times: &'a [Time],
+    events: &'a [Event],
     lanes: [u32; LANES],
     notes: u32,
     stars: u32,
+    /// Time of every note that actually increases combo.
+    scored: Vec<Time>,
+    /// Running total of combo fever multiplier.
+    fever: Vec<u32>,
+    buckets: Vec<u32>,
 }
 
 impl<'a> Queue<'a> {
@@ -45,10 +67,17 @@ impl<'a> Queue<'a> {
         let mut lanes = [0_u32; LANES];
         let mut notes = 0_u32;
         let mut stars = 0_u32;
+        let mut scored = Vec::with_capacity(events.len());
+        let mut fever = Vec::with_capacity(events.len());
+        let mut sum = 0_u32;
+        fever.push(sum);
         for (&time, &event) in times.iter().zip(events) {
             if scores(event) {
                 notes = notes.saturating_add(1);
                 stars = stars.saturating_add(u32::from(event.is_star()));
+                sum = sum.saturating_add(u32::from(fever_multiplier(notes)));
+                scored.push(time);
+                fever.push(sum);
                 if let Some(n) = lanes.get_mut(event.lane() as usize) {
                     *n = n.saturating_add(1);
                 }
@@ -58,7 +87,19 @@ impl<'a> Queue<'a> {
             }
             combo.push(combo_bonus(notes));
         }
-        Some(Self { times, events, icons, combo, lanes, notes, stars })
+        let buckets = buckets(&scored);
+        Some(Self {
+            icons,
+            combo,
+            times,
+            events,
+            lanes,
+            notes,
+            stars,
+            scored,
+            fever,
+            buckets,
+        })
     }
 
     /// Tap event. So tap single note or hold start/end.
@@ -114,12 +155,40 @@ impl<'a> Queue<'a> {
     pub fn combo(&self) -> &[u16] {
         &self.combo
     }
+
+    pub(super) fn buckets(&self) -> &[u32] {
+        &self.buckets
+    }
+
+    pub(super) fn scored(&self) -> &[Time] {
+        &self.scored
+    }
+
+    /// One longer than `scored`, starting at 0.
+    pub(super) fn fever(&self) -> &[u32] {
+        &self.fever
+    }
+}
+
+fn buckets(scored: &[Time]) -> Vec<u32> {
+    let last = scored.last().map_or(0, |t| t.0 >> BUCKET);
+    let mut out = Vec::with_capacity(last as usize + 2);
+    let mut note = 0_u32;
+    for bucket in 0..=last.saturating_add(1) {
+        let start = bucket.checked_shl(BUCKET).unwrap_or(u32::MAX);
+        while scored.get(note as usize).is_some_and(|t| t.0 < start) {
+            note = note.saturating_add(1);
+        }
+        out.push(note);
+    }
+    out
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Queue;
+    use super::{BUCKET, Queue};
     use crate::play::Scoring;
+    use crate::play::tap::fever_multiplier;
     use crate::play::tests::{arena, only, play, tap};
     use crate::song::{Event, EventKind, Time};
 
@@ -155,5 +224,39 @@ mod tests {
 
         assert_eq!(queue.lanes(), [1, 0, 0, 3, 0, 0, 0, 0, 1]);
         assert_eq!(queue.lanes().iter().sum::<u32>(), queue.notes());
+    }
+
+    #[test]
+    fn check_the_fever_columns() {
+        let stream = [
+            tap(2000, 0),
+            tap(2000, 1),
+            (Time(2010), Event::new(2, EventKind::HoldStart, false, false)),
+            tap(2063, 3),
+            tap(2064, 4),
+            (Time(2500), Event::new(2, EventKind::HoldRelease, false, false)),
+            tap(9000, 5),
+        ];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let times: Vec<u32> = queue.scored().iter().map(|t| t.0).collect();
+        assert_eq!(times, [2000, 2000, 2063, 2064, 2500, 9000]);
+        let mut sum = 0;
+        let mut sums = vec![0];
+        for n in 1..=queue.notes() {
+            sum += u32::from(fever_multiplier(n));
+            sums.push(sum);
+        }
+        assert_eq!(queue.fever(), sums);
+
+        let buckets = queue.buckets();
+        assert_eq!(buckets.len(), (9000 >> BUCKET) + 2);
+        assert_eq!(buckets.last().copied(), Some(queue.notes()), "past the end");
+        for (b, &first) in (0_u32..).zip(buckets) {
+            let start = b << BUCKET;
+            let want = times.iter().position(|&t| t >= start).unwrap_or(times.len());
+            assert_eq!(first as usize, want, "bucket {b}");
+        }
     }
 }

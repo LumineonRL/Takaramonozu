@@ -30,7 +30,10 @@ pub enum SkillEffect {
     PerfectScoreUp,
     SkillRateUp,
     AppealBoost,
-    ComboBonusUp,
+    /// Schoolido.lu, which I grabbed much of my data from, called this "Combo Bonus Up".
+    /// The community refers to it as Combo Fever though.
+    /// I stopped playing EN so no idea what the EN name was in-game.
+    ComboFever,
     Sync,
     Spark,
 }

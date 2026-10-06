@@ -130,7 +130,7 @@ closed_set!(effect -> SkillEffect {
     "Perfect Score Up" => SkillEffect::PerfectScoreUp,
     "Skill Rate Up" => SkillEffect::SkillRateUp,
     "Appeal Boost" => SkillEffect::AppealBoost,
-    "Combo Bonus Up" => SkillEffect::ComboBonusUp,
+    "Combo Bonus Up" => SkillEffect::ComboFever,
     "Sync" => SkillEffect::Sync,
     "Spark" => SkillEffect::Spark,
 });

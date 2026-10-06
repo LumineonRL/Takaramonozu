@@ -1,6 +1,9 @@
 //! Skill effects. What a skill does once it activates.
 
-use super::tap::{HEART_CAP, HEART_UNIT, Worth, overheal_score_val, worth_score};
+use super::queue::{BUCKET, Queue};
+use super::tap::{
+    FEVER_UNIT, HEART_CAP, HEART_UNIT, Worth, fever_multiplier, overheal_score_val, worth_score,
+};
 use super::{Outcome, Scoring};
 use crate::scalar::{Centi, Ms};
 use crate::skill::SkillEffect;
@@ -9,9 +12,9 @@ use crate::song::{LANES, Time};
 /// No lane is waiting to roll.
 const NEVER: Time = Time(u32::MAX);
 
-// For Duration effects. For now, just Perfect Lock and Total Trick, but SRU, CBU, etc will
-/// likely utilize this too.
-pub(in crate::play) trait Lasting {
+/// For Duration effects. Perfect Lock, Total Trick and Combo Fever so far
+/// TODO: SRU, PSU, etc
+pub(in crate::play) trait Lasting<'q> {
     /// Whether anything on the team is active.
     const ANY: bool;
     /// Whether a Total Trick may run
@@ -19,8 +22,10 @@ pub(in crate::play) trait Lasting {
 
     const HEARTS: bool = false;
 
+    const FEVER: bool = false;
+
     /// `last` is the final judgement aka end of song.
-    fn new(last: Time, scoring: &Scoring) -> Self;
+    fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self;
 
     /// So a PL can't activate if that lane is already active. Instead it holds the
     /// activation until the active on expires.
@@ -37,6 +42,33 @@ pub(in crate::play) trait Lasting {
     fn locked(&self, now: Time) -> bool;
     fn lock(&mut self, lane: u32, now: Time, duration: Ms);
     fn trick(&mut self, lane: u32, now: Time, duration: Ms);
+
+    /// This is another mechanic that apparently does not work as I had remembered it working but
+    /// the docs say otherwise.
+    /// Lanes get blocked for a duration when a duration skills is active (I thought they would just overlap)
+    /// so this is used by duration skills to schedule when the lane is available for timed effects.
+    fn occupy(&mut self, _lane: u32, now: Time, _duration: Ms) -> Time {
+        debug_assert!(false, "no timed skills on this team, buddy.");
+        now
+    }
+
+    fn fever(&mut self, _lane: u32, _now: Time, _duration: Ms, _value: u32, _notes: u32) {
+        debug_assert!(false, "no combo fever on this team, buddy.");
+    }
+
+    fn fevered(&mut self, _now: Time, _combo: u32) -> u64 {
+        debug_assert!(false, "no combo fever on this team, buddy.");
+        0
+    }
+
+    /// Flips to reading fever note-by-note.
+    fn read_running(&mut self) {}
+
+    /// Total fever bonus for the whole song.  For teams that never look at the running score.
+    fn fever_paid(&self) -> u64 {
+        debug_assert!(false, "a trial paid as if a Combo Fever could run");
+        0
+    }
 
     /// PPN with tricks.
     fn tap(&self, _: Time, _: bool, _: bool, _: u16, _: u16, _: u16) -> u64 {
@@ -66,13 +98,13 @@ pub(in crate::play) trait Lasting {
 
 pub(in crate::play) struct Instant;
 
-impl Lasting for Instant {
+impl Lasting<'_> for Instant {
     const ANY: bool = false;
     const TRICKS: bool = false;
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "nothing")]
-    fn new(_: Time, _: &Scoring) -> Self {
+    fn new(_: Time, _: &Queue<'_>, _: &Scoring) -> Self {
         Self
     }
 
@@ -124,7 +156,7 @@ impl Lasting for Instant {
 /// its own lane, card and accessory both, until it runs out.
 pub(in crate::play) struct Expiry {
     until: [Time; LANES],
-    /// Lanes whose `until` hasn't been seen to pass.
+    /// Lanes whose `until` hasn't been reached yet.
     open: u16,
     /// Lanes that roll at their `until`.
     held: u16,
@@ -166,12 +198,12 @@ impl Expiry {
     }
 }
 
-impl Lasting for Expiry {
+impl Lasting<'_> for Expiry {
     const ANY: bool = true;
     const TRICKS: bool = false;
 
     #[inline]
-    fn new(last: Time, _: &Scoring) -> Self {
+    fn new(last: Time, _: &Queue<'_>, _: &Scoring) -> Self {
         Self {
             until: [Time(0); LANES],
             open: 0,
@@ -238,6 +270,11 @@ impl Lasting for Expiry {
     fn trick(&mut self, _: u32, _: Time, _: Ms) {
         debug_assert!(false, "A Total Trick needs to schedule a duration end.");
     }
+
+    #[inline]
+    fn occupy(&mut self, lane: u32, now: Time, duration: Ms) -> Time {
+        self.start(lane, now, duration)
+    }
 }
 
 pub(in crate::play) struct Tricked {
@@ -247,14 +284,14 @@ pub(in crate::play) struct Tricked {
     worth: Worth,
 }
 
-impl Lasting for Tricked {
+impl Lasting<'_> for Tricked {
     const ANY: bool = true;
     const TRICKS: bool = true;
 
     #[inline]
-    fn new(last: Time, scoring: &Scoring) -> Self {
+    fn new(last: Time, queue: &Queue<'_>, scoring: &Scoring) -> Self {
         Self {
-            expiry: Expiry::new(last, scoring),
+            expiry: Expiry::new(last, queue, scoring),
             convert: Time(0),
             worth: Worth::new(scoring.team_strength, scoring.trick),
         }
@@ -299,6 +336,11 @@ impl Lasting for Tricked {
         self.convert = self.convert.max(end);
     }
 
+    #[inline]
+    fn occupy(&mut self, lane: u32, now: Time, duration: Ms) -> Time {
+        self.expiry.start(lane, now, duration)
+    }
+
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "benchmarked")]
     fn tap(&self, now: Time, head: bool, tail: bool, combo: u16, lane: u16, note: u16) -> u64 {
@@ -319,17 +361,20 @@ pub(in crate::play) struct Healing<E> {
     hearts: Hearts,
 }
 
-impl<E> Lasting for Healing<E>
+impl<'q, E> Lasting<'q> for Healing<E>
 where
-    E: Lasting,
+    E: Lasting<'q>,
 {
     const ANY: bool = E::ANY;
     const TRICKS: bool = E::TRICKS;
     const HEARTS: bool = true;
 
     #[inline]
-    fn new(last: Time, scoring: &Scoring) -> Self {
-        Self { lasting: E::new(last, scoring), hearts: Hearts::new(scoring) }
+    fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self {
+        Self {
+            lasting: E::new(last, queue, scoring),
+            hearts: Hearts::new(scoring),
+        }
     }
 
     #[inline(always)]
@@ -368,6 +413,11 @@ where
     }
 
     #[inline(always)]
+    fn occupy(&mut self, lane: u32, now: Time, duration: Ms) -> Time {
+        self.lasting.occupy(lane, now, duration)
+    }
+
+    #[inline(always)]
     fn tap(&self, now: Time, head: bool, tail: bool, combo: u16, lane: u16, note: u16) -> u64 {
         let worth = self.lasting.worth(now, head, tail);
         overheal_score_val(worth, combo, lane, note, self.hearts.multiplier)
@@ -387,6 +437,182 @@ where
     #[expect(clippy::indexing_slicing, reason = "bool")]
     fn overheal_strength(&self, locked: bool) -> u64 {
         self.hearts.strength[usize::from(locked)]
+    }
+}
+
+/// PSU and Spark belong here too. Maybe it shouldn't be called Fever then?
+/// Eh, that can be dealt with in the future :)
+pub(in crate::play) struct Fever<'q, E> {
+    lasting: E,
+    times: &'q [Time],
+    sums: &'q [u32],
+    buckets: &'q [u32],
+    paid: u64,
+    running: bool,
+    sum: u32,
+    next: Time,
+    open: u16,
+    carry: u64,
+    until: [Time; LANES],
+    value: [u32; LANES],
+}
+
+impl<E> Fever<'_, E> {
+    /// Drops expired windows.
+    #[inline(never)]
+    #[expect(clippy::indexing_slicing, reason = "`open` is just lane bits")]
+    fn lapse(&mut self, now: Time) {
+        let mut next = NEVER;
+        let mut bits = self.open;
+        while let Some(lane) = bits.lowest_one() {
+            let bit = bits.isolate_lowest_one();
+            bits ^= bit;
+            let until = self.until[lane as usize];
+            if until <= now {
+                self.open ^= bit;
+                self.sum = self.sum.saturating_sub(self.value[lane as usize]);
+            } else {
+                next = next.min(until);
+            }
+        }
+        self.next = next;
+    }
+}
+
+impl<'q, E> Lasting<'q> for Fever<'q, E>
+where
+    E: Lasting<'q>,
+{
+    const ANY: bool = E::ANY;
+    const TRICKS: bool = E::TRICKS;
+    const HEARTS: bool = E::HEARTS;
+    const FEVER: bool = true;
+
+    #[inline]
+    fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self {
+        Self {
+            lasting: E::new(last, queue, scoring),
+            times: queue.scored(),
+            sums: queue.fever(),
+            buckets: queue.buckets(),
+            paid: 0,
+            running: false,
+            sum: 0,
+            next: NEVER,
+            open: 0,
+            carry: 0,
+            until: [Time(0); LANES],
+            value: [0; LANES],
+        }
+    }
+
+    #[inline(always)]
+    fn admit(&mut self, mask: u16, now: Time) -> u16 {
+        self.lasting.admit(mask, now)
+    }
+
+    #[inline(always)]
+    fn next(&self) -> Time {
+        self.lasting.next()
+    }
+
+    #[inline(always)]
+    fn release(&mut self, at: Time) -> u16 {
+        self.lasting.release(at)
+    }
+
+    #[inline(always)]
+    fn converted(&self, now: Time) -> bool {
+        self.lasting.converted(now)
+    }
+
+    #[inline(always)]
+    fn locked(&self, now: Time) -> bool {
+        self.lasting.locked(now)
+    }
+
+    #[inline(always)]
+    fn lock(&mut self, lane: u32, now: Time, duration: Ms) {
+        self.lasting.lock(lane, now, duration);
+    }
+
+    #[inline(always)]
+    fn trick(&mut self, lane: u32, now: Time, duration: Ms) {
+        self.lasting.trick(lane, now, duration);
+    }
+
+    #[inline(always)]
+    fn occupy(&mut self, lane: u32, now: Time, duration: Ms) -> Time {
+        self.lasting.occupy(lane, now, duration)
+    }
+
+    #[inline(always)]
+    fn tap(&self, now: Time, head: bool, tail: bool, combo: u16, lane: u16, note: u16) -> u64 {
+        self.lasting.tap(now, head, tail, combo, lane, note)
+    }
+
+    #[inline(always)]
+    fn worth(&self, now: Time, head: bool, tail: bool) -> u64 {
+        self.lasting.worth(now, head, tail)
+    }
+
+    #[inline(always)]
+    fn heal(&mut self, hp: u8) {
+        self.lasting.heal(hp);
+    }
+
+    #[inline(always)]
+    fn overheal_strength(&self, locked: bool) -> u64 {
+        self.lasting.overheal_strength(locked)
+    }
+
+    #[expect(clippy::indexing_slicing, reason = "is safe")]
+    fn fever(&mut self, lane: u32, now: Time, duration: Ms, value: u32, notes: u32) {
+        let end = self.lasting.occupy(lane, now, duration);
+        if self.running {
+            if now >= self.next {
+                self.lapse(now);
+            }
+            let bit = 1_u16.checked_shl(lane).unwrap_or(0);
+            self.until[lane as usize] = end;
+            self.value[lane as usize] = value;
+            self.open |= bit;
+            self.sum = self.sum.saturating_add(value);
+            self.next = self.next.min(end);
+            return;
+        }
+        let from = (notes as usize).min(self.times.len());
+        let bucket = ((end.0 >> BUCKET) as usize).min(self.buckets.len().saturating_sub(1));
+        let mut to = self.buckets.get(bucket).map_or(from, |&n| (n as usize).max(from));
+        while self.times.get(to).is_some_and(|&t| t < end) {
+            to = to.saturating_add(1);
+        }
+        let worth = self.sums[to].saturating_sub(self.sums[from]);
+        self.paid = self.paid.saturating_add(u64::from(value).saturating_mul(u64::from(worth)));
+    }
+
+    #[inline(always)]
+    #[expect(clippy::integer_division, reason = "game mechanic")]
+    fn fevered(&mut self, now: Time, combo: u32) -> u64 {
+        if now >= self.next {
+            self.lapse(now);
+        }
+        let due = self
+            .carry
+            .saturating_add(u64::from(self.sum).saturating_mul(u64::from(fever_multiplier(combo))));
+        self.carry = due % FEVER_UNIT;
+        due / FEVER_UNIT
+    }
+
+    #[inline(always)]
+    fn read_running(&mut self) {
+        self.running = true;
+    }
+
+    #[inline(always)]
+    #[expect(clippy::integer_division, reason = "game mechanic.")]
+    fn fever_paid(&self) -> u64 {
+        self.paid / FEVER_UNIT
     }
 }
 
@@ -455,7 +681,7 @@ impl Hearts {
 
 /// TODO: every effect with a duration.
 pub(super) const fn lasts(effect: SkillEffect) -> bool {
-    matches!(effect, SkillEffect::PerfectLock | SkillEffect::TotalTrick)
+    matches!(effect, SkillEffect::PerfectLock | SkillEffect::TotalTrick | SkillEffect::ComboFever)
 }
 
 /// TODO: every other effect.
@@ -464,7 +690,7 @@ pub(super) const fn lasts(effect: SkillEffect) -> bool {
     clippy::too_many_arguments,
     reason = "I like difficult to read code. (just kidding. Maybe can try to break it up as a todo)"
 )]
-pub(super) fn pay(
+pub(super) fn pay<'q>(
     lane: u32,
     effect: SkillEffect,
     value: Centi,
@@ -472,7 +698,7 @@ pub(super) fn pay(
     hp: u8,
     now: Time,
     out: &mut Outcome,
-    expiry: &mut impl Lasting,
+    expiry: &mut impl Lasting<'q>,
 ) {
     // Select was faster than a match arm for Heal SIS.
     let paid = if matches!(effect, SkillEffect::Scorer | SkillEffect::Healer) {
@@ -485,13 +711,13 @@ pub(super) fn pay(
         SkillEffect::PerfectLock => expiry.lock(lane, now, duration),
         SkillEffect::TotalTrick => expiry.trick(lane, now, duration),
         SkillEffect::Healer => expiry.heal(hp),
+        SkillEffect::ComboFever => expiry.fever(lane, now, duration, value, out.notes),
         SkillEffect::Scorer
         | SkillEffect::Encore
         | SkillEffect::Amplify
         | SkillEffect::PerfectScoreUp
         | SkillEffect::SkillRateUp
         | SkillEffect::AppealBoost
-        | SkillEffect::ComboBonusUp
         | SkillEffect::Sync
         | SkillEffect::Spark => {}
     }
@@ -1162,5 +1388,145 @@ mod tests {
             copies += 1;
         }
         assert_eq!(copies, 24, "all heal copies");
+    }
+
+    fn fever(
+        scoring: &mut Scoring,
+        lane: usize,
+        trigger: TriggerType,
+        threshold: u16,
+        chance: Rate,
+        value: u32,
+        duration: Ms,
+    ) {
+        lasting(scoring, lane, SkillEffect::ComboFever, trigger, threshold, chance, duration);
+        scoring.skills[lane].value = value;
+    }
+
+    fn ladder(scoring: &mut Scoring, lane: usize) {
+        scoring.skills[lane] = clocked(TriggerType::Score, 1500, 0, 0);
+    }
+
+    /// Fever multipliers of notes 11..=51
+    const ELEVEN_ON: u32 = 10 * 110 + 10 * 120 + 10 * 130 + 10 * 140 + 150;
+
+    #[test]
+    fn check_combo_fever() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        fever(&mut scoring, 4, TriggerType::Combo, 10, ALWAYS, 45, 10_000);
+        let triggers = Triggers::build(&queue, &scoring);
+        assert_eq!((triggers.fever(), triggers.lasting()), (1 << 4, 1 << 4));
+
+        let out = play(&queue, &scoring);
+        assert_eq!(ELEVEN_ON, 5150);
+        assert_eq!(out.skill, 2317, "45 * 51.5 = 2317.5");
+
+        let mut matched = scoring;
+        matched.lanes = [121; 9];
+        assert_eq!(play(&queue, &matched).skill, out.skill, "no lane bonus");
+        for seed in 0..8 {
+            assert_eq!(
+                at(&queue, &scoring, &sloppy(0, seed)).skill,
+                out.skill,
+                "acc don't matter for cf"
+            );
+        }
+
+        ladder(&mut scoring, 6);
+        let read = play(&queue, &scoring);
+        assert_eq!(Triggers::build(&queue, &scoring).score(), 1 << 6);
+        assert_eq!(read, out, "same");
+    }
+
+    #[test]
+    fn check_fever_duration() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        fever(&mut scoring, 8, TriggerType::Time, 3, ALWAYS, 100, 500);
+
+        // [3000, 3500) is notes 11 to 15.
+        // [6000, 6500) is notes 41 to 45.
+        let out = play(&queue, &scoring);
+        assert_eq!(out.activations, 2);
+        assert_eq!(out.skill, 5 * 110 + 5 * 140);
+
+        ladder(&mut scoring, 6);
+        assert_eq!(play(&queue, &scoring), out);
+    }
+
+    /// BACK IN MY DAY COMBO FEVER HAD A CAP.
+    /// But the skill was shit and apparently klab actually buffed it shortly before eos.
+    #[test]
+    fn check_fever_has_no_cap() {
+        let stream: Vec<_> = (0..230_u32).map(|i| tap(2000 + i * 50, (i % 9) as u8)).collect();
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        fever(&mut scoring, 2, TriggerType::Time, 1, ALWAYS, 300, 60_000);
+        fever(&mut scoring, 6, TriggerType::Time, 1, ALWAYS, 300, 60_000);
+
+        let rows: u32 = [
+            100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 225, 250, 275, 300, 350, 400,
+            500, 600, 700, 800, 900,
+        ]
+        .iter()
+        .sum();
+        let out = play(&queue, &scoring);
+        assert_eq!(out.activations, 2);
+        assert_eq!(out.skill * 100, u64::from(600 * (10 * rows + 10 * 1000)));
+        assert_eq!(out.skill, 477_000);
+
+        ladder(&mut scoring, 4);
+        assert_eq!(play(&queue, &scoring), out);
+    }
+
+    #[test]
+    fn check_fever_lane_blocking() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        fever(&mut scoring, 4, TriggerType::Combo, 5, ALWAYS, 100, 550);
+
+        let out = play(&queue, &scoring);
+        assert_eq!(out.activations, 9);
+        assert_eq!(out.skill, 5 * 100 + 10 * 110 + 10 * 120 + 10 * 130 + 10 * 140 + 150);
+
+        ladder(&mut scoring, 6);
+        assert_eq!(play(&queue, &scoring), out);
+    }
+
+    #[test]
+    fn check_fever_acc() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        scoring.skills[4] = clocked(TriggerType::Combo, 10, 0, 1);
+        scoring.accessories[4] =
+            AccessorySkill { value: 45, chance: ALWAYS, effect: SkillEffect::ComboFever };
+        scoring.durations[4][1] = 10_000;
+        let triggers = Triggers::build(&queue, &scoring);
+        assert_eq!((triggers.fever(), triggers.lasting()), (1 << 4, 1 << 4));
+
+        let out = play(&queue, &scoring);
+        assert_eq!((out.activations, out.accessory_activations), (0, 1));
+        assert_eq!(out.skill, 2317);
+    }
+
+    #[test]
+    fn check_fever_contribs_to_score_scorers() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        fever(&mut scoring, 4, TriggerType::Combo, 10, ALWAYS, 300, 10_000);
+        scoring.skills[6] = clocked(TriggerType::Score, 10_000, ALWAYS, 0);
+
+        let out = play(&queue, &scoring);
+        assert_eq!(out.skill * 100, u64::from(300 * ELEVEN_ON));
+        assert_eq!(out.activations, 1 + 6);
+        scoring.skills[4].value = 0;
+        assert_eq!(play(&queue, &scoring).activations, 1 + 5);
     }
 }

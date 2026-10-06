@@ -22,14 +22,14 @@ impl Chain {
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "benchmarked")]
     #[expect(clippy::indexing_slicing, reason = "`lanes` have lane bits")]
-    pub(in crate::play) fn after(
+    pub(in crate::play) fn after<'q>(
         &mut self,
         landed: u16,
         now: Time,
         scoring: &Scoring,
         rng: &mut Rng,
         out: &mut Outcome,
-        expiry: &mut impl Lasting,
+        expiry: &mut impl Lasting<'q>,
     ) {
         let mut members = 0;
         let mut landings = landed;
@@ -58,14 +58,14 @@ impl Chain {
 
     #[inline(never)]
     #[expect(clippy::indexing_slicing, reason = "`lanes` have lane bits")]
-    fn round(
+    fn round<'q>(
         &mut self,
         due: u16,
         now: Time,
         scoring: &Scoring,
         mut rng: Rng,
         mut out: Outcome,
-        expiry: &mut impl Lasting,
+        expiry: &mut impl Lasting<'q>,
     ) -> (Rng, Outcome) {
         let mut bits = due;
         while let Some(lane) = bits.highest_one() {

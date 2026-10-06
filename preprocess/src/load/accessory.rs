@@ -139,7 +139,7 @@ fn value(effect: SkillEffect, threshold: u8, raw: u32) -> Result<Centi, ErrorKin
         | SkillEffect::Amplify
         | SkillEffect::TotalTrick
         | SkillEffect::PerfectScoreUp
-        | SkillEffect::ComboBonusUp
+        | SkillEffect::ComboFever
         | SkillEffect::Sync => 100,
     };
     raw.checked_mul(factor).ok_or(ErrorKind::OutOfRange(f64::from(raw)))
@@ -315,7 +315,7 @@ mod tests {
                 | SkillEffect::Amplify
                 | SkillEffect::TotalTrick
                 | SkillEffect::PerfectScoreUp
-                | SkillEffect::ComboBonusUp
+                | SkillEffect::ComboFever
                 | SkillEffect::Sync => (first * 100, 3),
             };
             assert_eq!(got, expected, "accessory {id}");

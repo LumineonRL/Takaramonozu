@@ -121,14 +121,14 @@ impl Ladder {
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "I benchmarked")]
-    pub(in crate::play) fn settle<const YEAR: bool>(
+    pub(in crate::play) fn settle<'q, const YEAR: bool>(
         &mut self,
         now: Time,
         scoring: &Scoring,
         rng: &mut Rng,
         out: &mut Outcome,
         chain: &mut Chain,
-        expiry: &mut impl Lasting,
+        expiry: &mut impl Lasting<'q>,
     ) {
         if out.score() >= self.low {
             self.climb::<YEAR>(0, now, scoring, rng, out, chain, expiry);
@@ -138,7 +138,7 @@ impl Ladder {
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "I benchmarked")]
     #[expect(clippy::too_many_arguments, reason = "the trial's state")]
-    pub(in crate::play) fn climb<const YEAR: bool>(
+    pub(in crate::play) fn climb<'q, const YEAR: bool>(
         &mut self,
         first: u16,
         now: Time,
@@ -146,7 +146,7 @@ impl Ladder {
         rng: &mut Rng,
         out: &mut Outcome,
         chain: &mut Chain,
-        expiry: &mut impl Lasting,
+        expiry: &mut impl Lasting<'q>,
     ) {
         let climbed =
             self.rungs.climb::<YEAR>(first, now, scoring, rng.clone(), *out, chain, expiry);
@@ -155,14 +155,14 @@ impl Ladder {
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "I benchmarked")]
-    pub(in crate::play) fn catch_up<const YEAR: bool>(
+    pub(in crate::play) fn catch_up<'q, const YEAR: bool>(
         &mut self,
         until: Time,
         scoring: &Scoring,
         rng: &mut Rng,
         out: &mut Outcome,
         chain: &mut Chain,
-        expiry: &mut impl Lasting,
+        expiry: &mut impl Lasting<'q>,
     ) {
         if self.pending < until {
             let owed = self.rungs.owe::<YEAR>(
@@ -213,7 +213,7 @@ impl Rungs {
     /// For when a score-based scorer is "owed" an activation on a later frame.
     #[inline(never)]
     #[expect(clippy::too_many_arguments, reason = "the trial's state")]
-    fn owe<const YEAR: bool>(
+    fn owe<'q, const YEAR: bool>(
         &mut self,
         mut pending: Time,
         until: Time,
@@ -221,7 +221,7 @@ impl Rungs {
         mut rng: Rng,
         mut out: Outcome,
         chain: &mut Chain,
-        expiry: &mut impl Lasting,
+        expiry: &mut impl Lasting<'q>,
     ) -> (Rng, Outcome, u64, Time) {
         let mut low = 0;
         while pending < until {
@@ -234,7 +234,7 @@ impl Rungs {
     /// increments the score counter for score-based scorers.
     #[inline(never)]
     #[expect(clippy::too_many_arguments, reason = "the trial's state")]
-    fn climb<const YEAR: bool>(
+    fn climb<'q, const YEAR: bool>(
         &mut self,
         first: u16,
         now: Time,
@@ -242,7 +242,7 @@ impl Rungs {
         mut rng: Rng,
         mut out: Outcome,
         chain: &mut Chain,
-        expiry: &mut impl Lasting,
+        expiry: &mut impl Lasting<'q>,
     ) -> (Rng, Outcome, u64, Time) {
         let (mut due, mut low, mut pending) = (first, 0, NO_PASS);
         loop {
@@ -286,13 +286,13 @@ impl Rungs {
 }
 
 #[inline]
-fn fire_landed(
+fn fire_landed<'q>(
     due: u16,
     now: Time,
     scoring: &Scoring,
     rng: &mut Rng,
     out: &mut Outcome,
-    expiry: &mut impl Lasting,
+    expiry: &mut impl Lasting<'q>,
 ) -> u16 {
     let mut landed = 0;
     let mut bits = due;
