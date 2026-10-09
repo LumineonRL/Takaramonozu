@@ -93,27 +93,7 @@ pub fn run(
     if triggers.lasting() != 0 {
         return lasting::<Expiry, Tricked>(queue, config, scoring, triggers, judgements);
     }
-    // Only one card has a star note skill trigger and it's a very old SR that's not very good.
-    // So this has const generics since, in almost every case, we can completely ignore star notes pre-trial.
-    if triggers.year() != 0 {
-        return chained::<Instant>(queue, config, scoring, triggers, judgements);
-    }
-    match (!triggers.stars().is_empty(), triggers.score() != 0) {
-        (false, false) => {
-            walk::<false, false, false, Instant>(queue, config, scoring, triggers, judgements)
-        }
-        (false, true) => {
-            walk::<false, true, false, Instant>(queue, config, scoring, triggers, judgements)
-        }
-        (true, false) => {
-            core::hint::cold_path();
-            walk::<true, false, false, Instant>(queue, config, scoring, triggers, judgements)
-        }
-        (true, true) => {
-            core::hint::cold_path();
-            walk::<true, true, false, Instant>(queue, config, scoring, triggers, judgements)
-        }
-    }
+    effects::<Instant>(queue, config, scoring, triggers, judgements)
 }
 
 #[inline(never)]
@@ -129,29 +109,7 @@ fn healing(
             queue, config, scoring, triggers, judgements,
         );
     }
-    if triggers.year() != 0 {
-        return chained::<Healing<Instant>>(queue, config, scoring, triggers, judgements);
-    }
-    match (!triggers.stars().is_empty(), triggers.score() != 0) {
-        (false, false) => walk::<false, false, false, Healing<Instant>>(
-            queue, config, scoring, triggers, judgements,
-        ),
-        (false, true) => walk::<false, true, false, Healing<Instant>>(
-            queue, config, scoring, triggers, judgements,
-        ),
-        (true, false) => {
-            core::hint::cold_path();
-            walk::<true, false, false, Healing<Instant>>(
-                queue, config, scoring, triggers, judgements,
-            )
-        }
-        (true, true) => {
-            core::hint::cold_path();
-            walk::<true, true, false, Healing<Instant>>(
-                queue, config, scoring, triggers, judgements,
-            )
-        }
-    }
+    effects::<Healing<Instant>>(queue, config, scoring, triggers, judgements)
 }
 
 /// `X` is the duration table and `T` the same with a Total Trick.
@@ -184,34 +142,16 @@ where
     X: Lasting<'q>,
     T: Lasting<'q>,
 {
+    // Total Trick getting its own copies measured to be faster. I kind of hate it really
+    // belongs with regular PL.
     if triggers.tricks() != 0 {
-        return tricked::<T>(queue, config, scoring, triggers, judgements);
+        return effects::<T>(queue, config, scoring, triggers, judgements);
     }
-    if triggers.year() != 0 {
-        return chained::<X>(queue, config, scoring, triggers, judgements);
-    }
-    match (!triggers.stars().is_empty(), triggers.score() != 0) {
-        (false, false) => {
-            walk::<false, false, false, X>(queue, config, scoring, triggers, judgements)
-        }
-        (false, true) => {
-            walk::<false, true, false, X>(queue, config, scoring, triggers, judgements)
-        }
-        (true, false) => {
-            core::hint::cold_path();
-            walk::<true, false, false, X>(queue, config, scoring, triggers, judgements)
-        }
-        (true, true) => {
-            core::hint::cold_path();
-            walk::<true, true, false, X>(queue, config, scoring, triggers, judgements)
-        }
-    }
+    effects::<X>(queue, config, scoring, triggers, judgements)
 }
 
-/// I wanted to just roll this into the existing perfect lock code since it's nearly identical
-/// but making it its own arm was better for performance.
-#[inline(never)]
-fn tricked<'q, T>(
+/// Year Group gets its own too but this one makes more sense I don't see a clean way around it.
+fn effects<'q, E>(
     queue: &'q Queue,
     config: &PlayConfig,
     scoring: &Scoring,
@@ -219,33 +159,18 @@ fn tricked<'q, T>(
     judgements: &Judgements,
 ) -> Outcome
 where
-    T: Lasting<'q>,
+    E: Lasting<'q>,
 {
     if triggers.year() != 0 {
-        return chained::<T>(queue, config, scoring, triggers, judgements);
+        return branch::<true, E>(queue, config, scoring, triggers, judgements);
     }
-    match (!triggers.stars().is_empty(), triggers.score() != 0) {
-        (false, false) => {
-            walk::<false, false, false, T>(queue, config, scoring, triggers, judgements)
-        }
-        (false, true) => {
-            walk::<false, true, false, T>(queue, config, scoring, triggers, judgements)
-        }
-        (true, false) => {
-            core::hint::cold_path();
-            walk::<true, false, false, T>(queue, config, scoring, triggers, judgements)
-        }
-        (true, true) => {
-            core::hint::cold_path();
-            walk::<true, true, false, T>(queue, config, scoring, triggers, judgements)
-        }
-    }
+    branch::<false, E>(queue, config, scoring, triggers, judgements)
 }
 
-/// Really don't think there's a clean way to integrate year-group triggers / chain scorers into what exists
-/// so it gets its own bespoke handling.
+/// Only one card has a star note skill trigger and it's a very old SR that's not very good.
+/// So this has const generics since, in almost every case, we can completely ignore star notes pre-trial.
 #[inline(never)]
-fn chained<'q, E>(
+fn branch<'q, const YEAR: bool, E>(
     queue: &'q Queue,
     config: &PlayConfig,
     scoring: &Scoring,
@@ -257,16 +182,16 @@ where
 {
     match (!triggers.stars().is_empty(), triggers.score() != 0) {
         (false, false) => {
-            walk::<false, false, true, E>(queue, config, scoring, triggers, judgements)
+            walk::<false, false, YEAR, E>(queue, config, scoring, triggers, judgements)
         }
-        (false, true) => walk::<false, true, true, E>(queue, config, scoring, triggers, judgements),
+        (false, true) => walk::<false, true, YEAR, E>(queue, config, scoring, triggers, judgements),
         (true, false) => {
             core::hint::cold_path();
-            walk::<true, false, true, E>(queue, config, scoring, triggers, judgements)
+            walk::<true, false, YEAR, E>(queue, config, scoring, triggers, judgements)
         }
         (true, true) => {
             core::hint::cold_path();
-            walk::<true, true, true, E>(queue, config, scoring, triggers, judgements)
+            walk::<true, true, YEAR, E>(queue, config, scoring, triggers, judgements)
         }
     }
 }
