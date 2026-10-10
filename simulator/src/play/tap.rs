@@ -10,9 +10,10 @@ const BASE: u64 = 80;
 /// 1.00x -> 100. Again, floats are cringe.
 pub(super) const UNIT: u16 = 100;
 
-/// Note multiplierse can have an extra decimal. A swing hold gets a 0.625x multiplier. Wait a minute SIF1 doesn't
-/// even have swing holds when I checked `songs.json` it has to though or else why would we have the multipliers for it.
-/// My script searching `songs.json` must've been wrong. Surely. Maybe.
+/// Note multipliers can have an extra decimal. A swing hold gets a 0.625x multiplier. The scrape dropped the
+/// swing bit off all 520 of them, and `scripts/fix_swing_holds.py` put it back.
+/// Update: swing holds are very much real, it was the data that was wrong.
+/// This is pretty big actually because affects burrito's sim too.
 const NOTE_UNIT: u16 = 1000;
 
 /// Previously this was 1.00, but apparently getting a great+great on a hold notes gives you a

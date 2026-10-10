@@ -61,9 +61,6 @@ pub enum EventKind {
     End = 3,
 }
 
-/// Took some liberties here since star + swing never occur together,
-/// star + hold never occur together, and apparently swing + hold never occur together???
-/// (Maybe it's only SIF2 charts that have swings that end in holds?)
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(transparent)]
 pub struct Event(u8);
@@ -302,7 +299,7 @@ pub struct SongDb {
 impl Kind for SongDb {
     /// `LLSIFSDB` is the SIS database, so songs take `L` for live.
     const MAGIC: [u8; 8] = *b"LLSIFLDB";
-    const VERSION: u32 = 3;
+    const VERSION: u32 = 4;
 }
 
 impl SongDb {
