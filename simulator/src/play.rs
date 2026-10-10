@@ -222,7 +222,6 @@ where
 #[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
 #[expect(clippy::else_if_without_else, reason = "lazy")]
 #[expect(clippy::too_many_lines, reason = "Benchmarked. Splitting it moved what LLVM inlined.")]
-#[expect(clippy::cognitive_complexity, reason = "as `too_many_lines`")]
 #[inline(never)]
 fn walk<'q, const STARS: bool, const SCORE: bool, const YEAR: bool, E>(
     queue: &'q Queue,
@@ -288,7 +287,7 @@ where
                 &mut expiry,
             );
             if E::ANY && expiry.next() <= at {
-                (rng, out) = release::<SCORE, YEAR>(
+                (rng, out) = release::<SCORE, YEAR, _>(
                     at,
                     scoring,
                     rng,
@@ -348,9 +347,6 @@ where
                         &mut chain,
                         &mut expiry,
                     );
-                }
-                if E::PSU {
-                    expiry.expire(time, out.perfects);
                 }
                 let tail = judgements.at(tap);
                 let head = (kind == EventKind::Tap) | heads.get(lane).copied().unwrap_or(true);
@@ -509,15 +505,24 @@ fn moment<'q, const YEAR: bool>(
 
 /// Ends a duration effect.
 #[inline(never)]
-fn release<'q, const SCORE: bool, const YEAR: bool>(
+fn release<'q, const SCORE: bool, const YEAR: bool, E>(
     at: Time,
     scoring: &Scoring,
     mut rng: Rng,
     mut out: Outcome,
     ladder: &mut Ladder,
     chain: &mut Chain,
-    expiry: &mut impl Lasting<'q>,
-) -> (Rng, Outcome) {
+    expiry: &mut E,
+) -> (Rng, Outcome)
+where
+    E: Lasting<'q>,
+{
+    if E::PSU {
+        expiry.expire(at, out.perfects);
+        if expiry.next() > at {
+            return (rng, out);
+        }
+    }
     if SCORE {
         ladder.catch_up::<YEAR>(at, scoring, &mut rng, &mut out, chain, expiry);
     }
@@ -585,7 +590,7 @@ impl Spawns<'_> {
             }
             core::hint::cold_path();
             (*rng, *out) =
-                release::<SCORE, YEAR>(stop, scoring, rng.clone(), *out, ladder, chain, expiry);
+                release::<SCORE, YEAR, _>(stop, scoring, rng.clone(), *out, ladder, chain, expiry);
             stop = bound.min(expiry.next());
         }
     }

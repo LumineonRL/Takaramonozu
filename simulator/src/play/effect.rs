@@ -665,13 +665,17 @@ pub(in crate::play) struct Psu<E> {
     sum: u32,
     mark: u32,
     paid: u64,
-    next: Time,
+    ending: Time,
+    wake: Time,
     open: u16,
     until: [Time; LANES],
     value: [u32; LANES],
 }
 
-impl<E> Psu<E> {
+impl<'q, E> Psu<E>
+where
+    E: Lasting<'q>,
+{
     #[inline(always)]
     fn settle(&mut self, perfects: u32) {
         let new = u64::from(perfects.saturating_sub(self.mark));
@@ -697,7 +701,8 @@ impl<E> Psu<E> {
                 next = next.min(until);
             }
         }
-        self.next = next;
+        self.ending = next;
+        self.wake = self.lasting.next().min(next);
     }
 }
 
@@ -717,7 +722,8 @@ where
             sum: 0,
             mark: 0,
             paid: 0,
-            next: NEVER,
+            ending: NEVER,
+            wake: NEVER,
             open: 0,
             until: [Time(0); LANES],
             value: [0; LANES],
@@ -726,17 +732,21 @@ where
 
     #[inline(always)]
     fn admit(&mut self, mask: u16, now: Time) -> u16 {
-        self.lasting.admit(mask, now)
+        let admitted = self.lasting.admit(mask, now);
+        self.wake = self.wake.min(self.lasting.next());
+        admitted
     }
 
     #[inline(always)]
     fn next(&self) -> Time {
-        self.lasting.next()
+        self.wake
     }
 
     #[inline(always)]
     fn release(&mut self, at: Time) -> u16 {
-        self.lasting.release(at)
+        let due = self.lasting.release(at);
+        self.wake = self.lasting.next().min(self.ending);
+        due
     }
 
     #[inline(always)]
@@ -785,9 +795,10 @@ where
     }
 
     #[expect(clippy::indexing_slicing, reason = "is safe")]
+    #[inline(never)]
     fn psu(&mut self, lane: u32, now: Time, duration: Ms, value: u32, perfects: u32) {
         let end = self.lasting.occupy(lane, now, duration);
-        if now >= self.next {
+        if now >= self.ending {
             self.lapse(now, perfects);
         } else {
             self.settle(perfects);
@@ -796,12 +807,13 @@ where
         self.value[lane as usize] = value;
         self.open |= 1_u16.checked_shl(lane).unwrap_or(0);
         self.sum = self.sum.saturating_add(value);
-        self.next = self.next.min(end);
+        self.ending = self.ending.min(end);
+        self.wake = self.wake.min(end);
     }
 
     #[inline(always)]
     fn expire(&mut self, now: Time, perfects: u32) {
-        if now >= self.next {
+        if now >= self.ending {
             self.lapse(now, perfects);
         }
     }
@@ -1932,5 +1944,23 @@ mod tests {
         assert_eq!(out.activations, 1 + 6);
         scoring.skills[4].value = 0;
         assert_eq!(play(&queue, &scoring).activations, 1 + 5);
+    }
+
+    /// The lock holds its lane through every window, as in `check_pl_duration`, and has to
+    /// wake the walk on a PSU team too.
+    #[test]
+    fn check_psu_team_releases_held_lanes() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut plain = Scoring::flat(TEAM);
+        lock(&mut plain, 4, TriggerType::RhythmIcons, 1, ALWAYS, 450);
+        plain.skills[8] = clocked(TriggerType::Perfects, 3, 0, 0);
+        let mut never = plain;
+        psu(&mut never, 8, TriggerType::Perfects, 3, 0, 200, 700);
+        assert_eq!(Triggers::build(&queue, &never).psu(), 1 << 8);
+
+        let out = play(&queue, &never);
+        assert_eq!((out.activations, out.tap), (13, ALL_LOCKED));
+        assert_eq!(out, play(&queue, &plain));
     }
 }
