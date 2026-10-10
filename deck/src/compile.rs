@@ -410,18 +410,17 @@ const fn rate(chance: Pct) -> Rate {
     (chance as Rate).saturating_mul(RATE_UNIT / 100)
 }
 
-/// Scorer's points with Charm, Healer's points with Heal, or Combo Fever's points.
+/// Scorer's points with Charm, Healer's points with Heal, or Combo Fever's and PSU's points.
 /// Param (Appeal) Boost will probably go here too.
 fn points(effect: SkillEffect, value: Centi, sis: SisFlags) -> Centi {
     match effect {
         SkillEffect::Scorer => payout(value, if sis.charm() { CHARM } else { MILLI_UNIT }),
         SkillEffect::Healer => payout(value, if sis.heal() { HEAL } else { 0 }),
-        SkillEffect::ComboFever => payout(value, MILLI_UNIT),
+        SkillEffect::ComboFever | SkillEffect::PerfectScoreUp => payout(value, MILLI_UNIT),
         SkillEffect::PerfectLock
         | SkillEffect::Encore
         | SkillEffect::Amplify
         | SkillEffect::TotalTrick
-        | SkillEffect::PerfectScoreUp
         | SkillEffect::SkillRateUp
         | SkillEffect::AppealBoost
         | SkillEffect::Sync

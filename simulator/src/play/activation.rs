@@ -150,6 +150,7 @@ pub struct Triggers {
     tricks: u16,
     heals: u16,
     fever: u16,
+    psu: u16,
 }
 
 impl Triggers {
@@ -173,6 +174,7 @@ impl Triggers {
                 lanes_with(scoring, |effect| effect == SkillEffect::Healer)
             },
             fever: lanes_with(scoring, |effect| effect == SkillEffect::ComboFever),
+            psu: lanes_with(scoring, |effect| effect == SkillEffect::PerfectScoreUp),
         }
     }
 
@@ -233,6 +235,15 @@ impl Triggers {
     #[must_use]
     pub const fn fever(&self) -> u16 {
         self.fever
+    }
+
+    /// Lanes whose card or accessory is a Perfect Score Up.
+    /// I'm going to stop copy-pasting these comments on every one of them but the purpose of the
+    /// comment in the first place was to make it clear that this is the lane. Not necessarily the
+    /// card. Not necessarily the accessory.
+    #[must_use]
+    pub const fn psu(&self) -> u16 {
+        self.psu
     }
 
     #[must_use]

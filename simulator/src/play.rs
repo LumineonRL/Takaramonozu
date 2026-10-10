@@ -14,7 +14,7 @@ use activation::chain::Chain;
 use activation::ladder::Ladder;
 use activation::{AccessorySkill, Skill, Tally, Triggers, fire};
 use config::PlayConfig;
-use effect::{Expiry, Fever, Healing, Instant, Lasting, Tricked};
+use effect::{Expiry, Fever, Healing, Instant, Lasting, Psu, Tricked};
 use judgement::Judgements;
 use queue::Queue;
 use rng::Rng;
@@ -125,10 +125,33 @@ where
     X: Lasting<'q>,
     T: Lasting<'q>,
 {
+    if triggers.psu() != 0 {
+        return perfect_score_up::<X, T>(queue, config, scoring, triggers, judgements);
+    }
     if triggers.fever() != 0 {
         return durations::<Fever<X>, Fever<T>>(queue, config, scoring, triggers, judgements);
     }
     durations::<X, T>(queue, config, scoring, triggers, judgements)
+}
+
+#[inline(never)]
+fn perfect_score_up<'q, X, T>(
+    queue: &'q Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    X: Lasting<'q>,
+    T: Lasting<'q>,
+{
+    if triggers.fever() != 0 {
+        return durations::<Fever<Psu<X>>, Fever<Psu<T>>>(
+            queue, config, scoring, triggers, judgements,
+        );
+    }
+    durations::<Psu<X>, Psu<T>>(queue, config, scoring, triggers, judgements)
 }
 
 fn durations<'q, X, T>(
@@ -199,6 +222,7 @@ where
 #[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
 #[expect(clippy::else_if_without_else, reason = "lazy")]
 #[expect(clippy::too_many_lines, reason = "Benchmarked. Splitting it moved what LLVM inlined.")]
+#[expect(clippy::cognitive_complexity, reason = "as `too_many_lines`")]
 #[inline(never)]
 fn walk<'q, const STARS: bool, const SCORE: bool, const YEAR: bool, E>(
     queue: &'q Queue,
@@ -325,6 +349,9 @@ where
                         &mut expiry,
                     );
                 }
+                if E::PSU {
+                    expiry.expire(time, out.perfects);
+                }
                 let tail = judgements.at(tap);
                 let head = (kind == EventKind::Tap) | heads.get(lane).copied().unwrap_or(true);
                 let converted = E::ANY && expiry.converted(time);
@@ -369,6 +396,9 @@ where
                 }
                 let perfect = converted || (head & tail);
                 out.perfects = out.perfects.saturating_add(u32::from(perfect));
+                if E::PSU && SCORE {
+                    out.skill = out.skill.saturating_add(expiry.psu_tap(perfect));
+                }
 
                 // Shoutouts to Snow Maiden Umi. I wonder why they gave a skill to one card and then just never again.
                 // I wonder why. Could've been interesting.
@@ -413,6 +443,9 @@ where
     out.icons = u32::try_from(spawns.icon).unwrap_or(u32::MAX);
     if E::FEVER && !SCORE {
         out.skill = out.skill.saturating_add(expiry.fever_paid());
+    }
+    if E::PSU && !SCORE {
+        out.skill = out.skill.saturating_add(expiry.psu_paid(out.perfects));
     }
     out
 }
