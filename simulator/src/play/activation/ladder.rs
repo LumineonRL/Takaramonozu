@@ -294,6 +294,7 @@ fn fire_landed<'q>(
     out: &mut Outcome,
     expiry: &mut impl Lasting<'q>,
 ) -> u16 {
+    expiry.begin();
     let mut landed = 0;
     let mut bits = due;
     while bits != 0 {

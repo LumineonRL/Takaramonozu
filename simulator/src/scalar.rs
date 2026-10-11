@@ -38,12 +38,13 @@ pub type Milli = u32;
 /// which are 0..=100. However, It is deliberately too narrow for a rate as the simulator will
 /// need to handle because Skill Rate Up + Amplify shenanigans can technicaly get a skill activation chance
 /// to exceed 255% (I think... I actually need to check this edge case. Mark it as a TODO).
+/// Update: Actually the cap is 379%. I thought SRU was additive but it's multiplicitive (:
 pub type Pct = u8;
 
 /// You may be thinking, "what's the different between a percentage and a rate?"
 /// Most of the time they're exactly the same thing, but Rate is what actually needs
 /// to be used during the gameplay loop because of Skill Rate Up
-/// Stacking enough SRU can get the skill rate up way over 255%, breaking u8 and then
+/// An SRU can get the skill rate way over 255%, breaking u8 and then
 /// everything would explode..
 pub type Rate = u16;
 pub const RATE_UNIT: Rate = 10_000;

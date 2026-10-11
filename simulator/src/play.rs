@@ -14,7 +14,7 @@ use activation::chain::Chain;
 use activation::ladder::Ladder;
 use activation::{AccessorySkill, Skill, Tally, Triggers, fire};
 use config::PlayConfig;
-use effect::{Expiry, Fever, Healing, Instant, Lasting, Psu, Tricked};
+use effect::{Expiry, Fever, Healing, Instant, Lasting, Psu, Sru, Tricked};
 use judgement::Judgements;
 use queue::Queue;
 use rng::Rng;
@@ -115,6 +115,39 @@ fn healing(
 /// `X` is the duration table and `T` the same with a Total Trick.
 #[inline(never)]
 fn lasting<'q, X, T>(
+    queue: &'q Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    X: Lasting<'q>,
+    T: Lasting<'q>,
+{
+    if triggers.sru() != 0 {
+        return rated::<X, T>(queue, config, scoring, triggers, judgements);
+    }
+    flat::<X, T>(queue, config, scoring, triggers, judgements)
+}
+
+#[inline(never)]
+fn rated<'q, X, T>(
+    queue: &'q Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    X: Lasting<'q>,
+    T: Lasting<'q>,
+{
+    flat::<Sru<X>, Sru<T>>(queue, config, scoring, triggers, judgements)
+}
+
+/// The flat bonuses, PSU and Combo Fever.
+fn flat<'q, X, T>(
     queue: &'q Queue,
     config: &PlayConfig,
     scoring: &Scoring,
@@ -495,6 +528,7 @@ fn moment<'q, const YEAR: bool>(
     chain: &mut Chain,
     expiry: &mut impl Lasting<'q>,
 ) {
+    expiry.begin();
     if YEAR {
         let landed = fire::<true>(mask, now, scoring, rng, out, expiry);
         chain.after(landed, now, scoring, rng, out, expiry);

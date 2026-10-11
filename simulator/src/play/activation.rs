@@ -151,6 +151,7 @@ pub struct Triggers {
     heals: u16,
     fever: u16,
     psu: u16,
+    sru: u16,
 }
 
 impl Triggers {
@@ -175,6 +176,7 @@ impl Triggers {
             },
             fever: lanes_with(scoring, |effect| effect == SkillEffect::ComboFever),
             psu: lanes_with(scoring, |effect| effect == SkillEffect::PerfectScoreUp),
+            sru: lanes_with(scoring, |effect| effect == SkillEffect::SkillRateUp),
         }
     }
 
@@ -244,6 +246,11 @@ impl Triggers {
     #[must_use]
     pub const fn psu(&self) -> u16 {
         self.psu
+    }
+
+    #[must_use]
+    pub const fn sru(&self) -> u16 {
+        self.sru
     }
 
     #[must_use]
@@ -344,7 +351,12 @@ pub(super) fn fire<'q, const LANDED: bool>(
         let [duration, worn_duration] =
             scoring.durations.get(lane as usize).copied().unwrap_or_default();
         let [hp, worn_hp] = scoring.heals.get(lane as usize).copied().unwrap_or_default();
-        if rng.roll(skill.chance) {
+        let chance = if expiry.boosted(now) {
+            expiry.rates(lane)[0]
+        } else {
+            skill.chance
+        };
+        if rng.roll(chance) {
             out.activations = out.activations.saturating_add(1);
             pay(lane, skill.effect, skill.value, duration, hp, now, out, expiry);
             if LANDED {
@@ -356,7 +368,12 @@ pub(super) fn fire<'q, const LANDED: bool>(
         let Some(accessory) = scoring.accessories.get(lane as usize) else {
             continue;
         };
-        if accessory.is_inert() || !rng.roll(accessory.chance) {
+        let worn_chance = if expiry.boosted(now) {
+            expiry.rates(lane)[1]
+        } else {
+            accessory.chance
+        };
+        if accessory.is_inert() || !rng.roll(worn_chance) {
             continue;
         }
         out.accessory_activations = out.accessory_activations.saturating_add(1);

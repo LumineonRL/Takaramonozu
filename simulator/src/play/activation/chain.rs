@@ -67,6 +67,7 @@ impl Chain {
         mut out: Outcome,
         expiry: &mut impl Lasting<'q>,
     ) -> (Rng, Outcome) {
+        expiry.begin();
         let mut bits = due;
         while let Some(lane) = bits.highest_one() {
             let bit = bits.isolate_highest_one();
