@@ -144,14 +144,14 @@ pub(in crate::play) trait Lasting<'q> {
         HEART_UNIT
     }
 
-    /// aka Param Boost
-    fn appeal(&self, _now: Time) -> u32 {
+    /// Team strength with any Appeal Boost running and the Trick if `locked`.
+    fn strength(&self, _locked: bool) -> u32 {
         debug_assert!(false, "no Appeal Boost on this team, buddy.");
         0
     }
 
-    /// param boost * heart multiplier
-    fn hearted_appeal(&self, _now: Time) -> u64 {
+    /// `strength` * heart multiplier.
+    fn hearted_strength(&self, _locked: bool) -> u64 {
         debug_assert!(false, "no Appeal Boost on this team, buddy.");
         0
     }
@@ -727,13 +727,13 @@ where
         self.lasting.sru(lane, now, duration, value);
     }
     #[inline(always)]
-    fn appeal(&self, now: Time) -> u32 {
-        self.lasting.appeal(now)
+    fn strength(&self, locked: bool) -> u32 {
+        self.lasting.strength(locked)
     }
 
     #[inline(always)]
-    fn hearted_appeal(&self, now: Time) -> u64 {
-        self.lasting.hearted_appeal(now)
+    fn hearted_strength(&self, locked: bool) -> u64 {
+        self.lasting.hearted_strength(locked)
     }
 
     #[inline(always)]
@@ -897,6 +897,10 @@ where
 
     #[inline(always)]
     fn expire(&mut self, now: Time, perfects: u32) {
+        if E::PARAM {
+            self.lasting.expire(now, perfects);
+            self.wake = self.lasting.next().min(self.ending);
+        }
         if now >= self.ending {
             self.lapse(now, perfects);
         }
@@ -933,18 +937,21 @@ where
         self.lasting.sru(lane, now, duration, value);
     }
     #[inline(always)]
-    fn appeal(&self, now: Time) -> u32 {
-        self.lasting.appeal(now)
+    fn strength(&self, locked: bool) -> u32 {
+        self.lasting.strength(locked)
     }
 
     #[inline(always)]
-    fn hearted_appeal(&self, now: Time) -> u64 {
-        self.lasting.hearted_appeal(now)
+    fn hearted_strength(&self, locked: bool) -> u64 {
+        self.lasting.hearted_strength(locked)
     }
 
     #[inline(always)]
     fn param(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
         self.lasting.param(lane, now, duration, value);
+        if E::PARAM {
+            self.wake = self.wake.min(self.lasting.next());
+        }
     }
 }
 
@@ -1120,13 +1127,13 @@ where
         }
     }
     #[inline(always)]
-    fn appeal(&self, now: Time) -> u32 {
-        self.lasting.appeal(now)
+    fn strength(&self, locked: bool) -> u32 {
+        self.lasting.strength(locked)
     }
 
     #[inline(always)]
-    fn hearted_appeal(&self, now: Time) -> u64 {
-        self.lasting.hearted_appeal(now)
+    fn hearted_strength(&self, locked: bool) -> u64 {
+        self.lasting.hearted_strength(locked)
     }
 
     #[inline(always)]
@@ -1139,9 +1146,14 @@ where
 pub(in crate::play) struct Param<E> {
     lasting: E,
     until: Time,
-    boost: u32,
-    /// `boost` times the heart multiplier.
-    hearted: u64,
+    ending: Time,
+    wake: Time,
+    /// team strength
+    base: [u32; 2],
+    /// `base` plus any active boost.
+    strengths: [u32; 2],
+    /// `strengths` * heart multiplier.
+    hearts: [u64; 2],
     /// `boost` times every judgement. For Total Trick team.
     /// isn't it funny how much special handling I have to give to such a simple
     /// and useless skill like Total Trick?
@@ -1159,28 +1171,60 @@ where
 
     #[inline]
     fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self {
-        Self {
+        let base = [
+            scoring.team_strength,
+            scoring.team_strength.saturating_add(scoring.trick),
+        ];
+        let mut param = Self {
             lasting: E::new(last, queue, scoring),
             until: Time(0),
-            boost: 0,
-            hearted: 0,
+            ending: NEVER,
+            wake: NEVER,
+            base,
+            strengths: base,
+            hearts: [0; 2],
             table: Worth::default(),
-        }
+        };
+        param.refresh(0);
+        param
     }
 
     #[inline(always)]
     fn admit(&mut self, mask: u16, now: Time) -> u16 {
-        self.lasting.admit(mask, now)
+        let admitted = self.lasting.admit(mask, now);
+        self.wake = self.wake.min(self.lasting.next());
+        admitted
     }
 
     #[inline(always)]
     fn next(&self) -> Time {
-        self.lasting.next()
+        self.wake
     }
 
     #[inline(always)]
     fn release(&mut self, at: Time) -> u16 {
-        self.lasting.release(at)
+        let due = self.lasting.release(at);
+        self.wake = self.lasting.next().min(self.ending);
+        due
+    }
+
+    #[inline(always)]
+    fn expire(&mut self, now: Time, _perfects: u32) {
+        if now >= self.ending {
+            self.lapse();
+        }
+    }
+
+    #[inline(always)]
+    #[expect(clippy::indexing_slicing, reason = "bool")]
+    fn strength(&self, locked: bool) -> u32 {
+        self.strengths[usize::from(locked)]
+    }
+
+    #[inline(always)]
+    #[expect(clippy::indexing_slicing, reason = "bool")]
+    fn hearted_strength(&self, locked: bool) -> u64 {
+        self.hearts[usize::from(locked)]
     }
 
     #[inline(always)]
@@ -1222,19 +1266,16 @@ where
     #[expect(clippy::indexing_slicing, reason = "bool")]
     fn worth(&self, now: Time, head: bool, tail: bool) -> u64 {
         let worth = self.lasting.worth(now, head, tail);
-        if now < self.until {
-            let row = self.table.row(self.lasting.converted(now), self.lasting.locked(now));
-            worth.saturating_add(row[usize::from(head)][usize::from(tail)])
-        } else {
-            worth
-        }
+        let row = self.table.row(self.lasting.converted(now), self.lasting.locked(now));
+        worth.saturating_add(row[usize::from(head)][usize::from(tail)])
     }
 
     #[inline(always)]
     fn heal(&mut self, hp: u8) {
         self.lasting.heal(hp);
         if E::HEARTS {
-            self.hearted = hearted(self.boost, self.lasting.heart_multiplier());
+            let multiplier = self.lasting.heart_multiplier();
+            self.hearts = self.strengths.map(|s| hearted(s, multiplier));
         }
     }
 
@@ -1248,16 +1289,6 @@ where
         self.lasting.heart_multiplier()
     }
 
-    #[inline(always)]
-    fn appeal(&self, now: Time) -> u32 {
-        if now < self.until { self.boost } else { 0 }
-    }
-
-    #[inline(always)]
-    fn hearted_appeal(&self, now: Time) -> u64 {
-        if now < self.until { self.hearted } else { 0 }
-    }
-
     /// Param Boost rolling while already active doesn't do anything.
     /// well it should be a valid target for encore so it does do *something*
     /// but I really just mean that it doesn't extend or overwrite the current duration.
@@ -1267,18 +1298,37 @@ where
             return;
         }
         self.until = self.lasting.occupy(lane, now, duration);
-        self.boost = value;
-        if E::TRICKS {
-            self.table = Worth::new(value, 0);
-        }
-        if E::HEARTS {
-            self.hearted = hearted(value, self.lasting.heart_multiplier());
-        }
+        self.ending = self.until;
+        self.wake = self.wake.min(self.ending);
+        self.refresh(value);
     }
 }
 
-fn hearted(boost: u32, multiplier: u16) -> u64 {
-    u64::from(boost).saturating_mul(u64::from(multiplier))
+impl<'q, E> Param<E>
+where
+    E: Lasting<'q>,
+{
+    fn refresh(&mut self, boost: u32) {
+        self.strengths = self.base.map(|s| s.saturating_add(boost));
+        if E::HEARTS {
+            let multiplier = self.lasting.heart_multiplier();
+            self.hearts = self.strengths.map(|s| hearted(s, multiplier));
+        }
+        if E::TRICKS {
+            self.table = Worth::new(boost, 0);
+        }
+    }
+
+    #[inline(never)]
+    fn lapse(&mut self) {
+        self.ending = NEVER;
+        self.refresh(0);
+        self.wake = self.lasting.next();
+    }
+}
+
+fn hearted(strength: u32, multiplier: u16) -> u64 {
+    u64::from(strength).saturating_mul(u64::from(multiplier))
 }
 
 /// SRU boost is `rate * (1 + value%)`. I actually wasn't sure at first if this was
@@ -2960,6 +3010,104 @@ mod tests {
         let mut longer = scoring;
         longer.durations[0][0] = 601;
         assert_eq!(play(&queue, &longer).skill, 100);
+    }
+
+    /// for hold releases when one param boost ends mid hold
+    #[test]
+    fn check_param_ends_through_releases() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut locked = Scoring::flat(TEAM);
+        lock(&mut locked, 4, TriggerType::RhythmIcons, 1, ALWAYS, 250);
+        let mut boosted = locked;
+        param(&mut boosted, 1, TriggerType::Time, 3, ALWAYS, BOOST, 500);
+
+        let (with, without) = (play(&queue, &boosted), play(&queue, &locked));
+        assert!(without.activations > 20, "the lock re-lands");
+        // Notes 11 to 15 and 41 to 45, each `BOOST * 1.08`.
+        assert_eq!(with.tap, without.tap + 10 * 540);
+        assert_eq!(
+            Outcome {
+                tap: with.tap,
+                activations: without.activations + 2,
+                ..without
+            },
+            with
+        );
+    }
+
+    #[test]
+    fn check_param_window_copies() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        // [3000, 3500) and [6000, 6500).
+        let mut bare = Scoring::flat(TEAM);
+        param(&mut bare, 1, TriggerType::Time, 3, ALWAYS, BOOST, 500);
+        assert_eq!(play(&queue, &bare).tap, 40 * 1000 + 10 * 1500 + 1100);
+
+        let mut copies = 0;
+        for shape in 0..128_u32 {
+            for lasting in 0..3 {
+                let mut team = bare;
+                if shape & 1 != 0 {
+                    team.skills[3] = clocked(TriggerType::Score, 1500, 0, 50);
+                }
+                if shape & 2 != 0 {
+                    team.skills[0] = clocked(TriggerType::YearGroup, (1 << 2) | (1 << 5), 0, 70);
+                    (team.members[0], team.members[2], team.members[5]) = (1, 1 << 2, 1 << 5);
+                }
+                if shape & 4 != 0 {
+                    team.skills[8] = clocked(TriggerType::StarNotes, 1, 0, 5);
+                }
+                if shape & 8 != 0 {
+                    overhealing(&mut team, 30);
+                    healer(&mut team, 6, TriggerType::RhythmIcons, 4, 0, 12);
+                }
+                // acc can't roll with no card skill
+                if shape & 16 != 0 {
+                    team.skills[7] = clocked(TriggerType::RhythmIcons, u16::MAX, 0, 3);
+                    team.accessories[7] =
+                        AccessorySkill { effect: SkillEffect::ComboFever, ..worn(ALWAYS, 30) };
+                    team.durations[7][1] = 400;
+                }
+                if shape & 32 != 0 {
+                    team.skills[2] = scorer(u16::MAX, 0, 100);
+                    team.accessories[2] =
+                        AccessorySkill { effect: SkillEffect::PerfectScoreUp, ..worn(ALWAYS, 50) };
+                    team.durations[2][1] = 500;
+                }
+                if shape & 64 != 0 {
+                    team.skills[5] = scorer(u16::MAX, 0, 10);
+                    team.accessories[5] =
+                        AccessorySkill { effect: SkillEffect::SkillRateUp, ..worn(ALWAYS, 50) };
+                    team.durations[5][1] = 300;
+                }
+                match lasting {
+                    0 => {}
+                    1 => lock(&mut team, 4, TriggerType::RhythmIcons, 5, 0, 600),
+                    _ => trick(&mut team, 4, TriggerType::RhythmIcons, 5, 0, 600),
+                }
+                let triggers = Triggers::build(&queue, &team);
+                assert_eq!(triggers.heals() != 0, shape & 8 != 0);
+                assert_eq!(triggers.fever() != 0, shape & 16 != 0);
+                assert_eq!(triggers.psu() != 0, shape & 32 != 0);
+                assert_eq!(triggers.sru() != 0, shape & 64 != 0);
+                assert_eq!(triggers.tricks() != 0, lasting == 2);
+
+                for accuracy in [ALWAYS, 8000] {
+                    for seed in 0..2 {
+                        let config = sloppy(accuracy, seed);
+                        assert_eq!(
+                            at(&queue, &team, &config),
+                            at(&queue, &bare, &config),
+                            "shape {shape}, lasting {lasting}, seed {seed}"
+                        );
+                    }
+                }
+                copies += 1;
+            }
+        }
+        assert_eq!(copies, 384);
     }
 
     #[test]

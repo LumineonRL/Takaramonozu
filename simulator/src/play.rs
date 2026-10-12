@@ -288,7 +288,10 @@ where
 #[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
 #[expect(clippy::else_if_without_else, reason = "lazy")]
 #[expect(clippy::too_many_lines, reason = "Benchmarked. Splitting it moved what LLVM inlined.")]
-#[expect(clippy::cognitive_complexity, reason = "TODO agreed, some of these are getting out of hand. Was going to wait for all effects to be finished to restruct but there's still 4 left so maybe that should come now.")]
+#[expect(
+    clippy::cognitive_complexity,
+    reason = "TODO agreed, some of these are getting out of hand. Was going to wait for all effects to be finished to restruct but there's still 4 left so maybe that should come now."
+)]
 #[inline(never)]
 fn walk<'q, const STARS: bool, const SCORE: bool, const YEAR: bool, E>(
     queue: &'q Queue,
@@ -434,11 +437,11 @@ where
                     )
                 } else if E::HEARTS {
                     overheal_score(
-                        expiry.overheal_strength(locked).saturating_add(if E::PARAM {
-                            expiry.hearted_appeal(time)
+                        if E::PARAM {
+                            expiry.hearted_strength(locked)
                         } else {
-                            0
-                        }),
+                            expiry.overheal_strength(locked)
+                        },
                         queue.combo()[tap],
                         scoring.lanes.get(lane).copied().unwrap_or(UNIT),
                         note_eighths(event),
@@ -446,16 +449,13 @@ where
                     )
                 } else {
                     note_score(
-                        if locked {
+                        if E::PARAM {
+                            expiry.strength(locked)
+                        } else if locked {
                             tricked
                         } else {
                             scoring.team_strength
-                        }
-                        .saturating_add(if E::PARAM {
-                            expiry.appeal(time)
-                        } else {
-                            0
-                        }),
+                        },
                         queue.combo()[tap],
                         scoring.lanes.get(lane).copied().unwrap_or(UNIT),
                         note_multiplier(event),
@@ -594,7 +594,7 @@ fn release<'q, const SCORE: bool, const YEAR: bool, E>(
 where
     E: Lasting<'q>,
 {
-    if E::PSU {
+    if E::PSU || E::PARAM {
         expiry.expire(at, out.perfects);
         if expiry.next() > at {
             return (rng, out);
