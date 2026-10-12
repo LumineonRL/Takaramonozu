@@ -256,8 +256,8 @@ pub fn character_set(
 }
 
 /// # Errors
-/// A name that is neither `"All"`, a key of the map, nor a valid member name.
-pub fn accessory_target(
+/// Invalid key
+pub fn skill_target(
     name: &str,
     map: &RawTargetMap,
     roster: &Roster,
@@ -265,8 +265,18 @@ pub fn accessory_target(
     if name == "All" {
         return Ok(roster.all());
     }
-    if map.contains_key(name) {
-        return character_set(name, map, roster);
+    character_set(name, map, roster)
+}
+
+/// # Errors
+/// Invalid key
+pub fn accessory_target(
+    name: &str,
+    map: &RawTargetMap,
+    roster: &Roster,
+) -> Result<CharacterSet, ErrorKind> {
+    if name == "All" || map.contains_key(name) {
+        return skill_target(name, map, roster);
     }
     singleton(name, roster)
 }

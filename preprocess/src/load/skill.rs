@@ -52,7 +52,7 @@ impl Table {
             convert::trigger(&raw.activation).at(Culprit::Card(card_id), "activation")?;
         let target = raw
             .target()
-            .map(|t| self.targets.intern(t, || convert::character_set(t, map, roster)))
+            .map(|t| self.targets.intern(t, || convert::skill_target(t, map, roster)))
             .transpose()
             .at(Culprit::Card(card_id), "target")?;
 
@@ -149,7 +149,7 @@ mod tests {
         // 2460 distinct skills plus the dead slot 0.
         assert_eq!(table.arena.defs().len(), 2461);
         assert_eq!(table.arena.trigger_rows(), 2460 * ROWS);
-        assert_eq!(table.targets.len(), 14);
+        assert_eq!(table.targets.len(), 13);
     }
 
     /// Every card must read back out of the arena what its own rows said, which
@@ -178,26 +178,22 @@ mod tests {
     }
 
     /// The big difference between how skill and leader skills are handled
-    ///  is that leader skills can be pairs but skills can be any of groups,
+    /// is that leader skills can be pairs but skills can be any of groups,
     /// year-groups (which would be a trio), or a sub-unit (which are also only trios in SIF)
     #[test]
     fn check_targets_resolve_to_whole_groups() {
         let (table, roster, _) = built();
-        assert_eq!(table.targets.len(), 14);
+        assert_eq!(table.targets.len(), 13);
         for i in 0..table.targets.len() {
             let id = TargetId::from_index(i);
             let name = table.targets.name(id).expect("in range");
-            let members = match name {
-                "μ's" | "Aqours" => 9,
-                _ => 3,
-            };
-            assert_eq!(table.targets.set(id).expect("in range").0.count_ones(), members, "{name}");
+            let set = table.targets.set(id).expect("in range");
+            if name == "All" {
+                assert_eq!(set, roster.all());
+            } else {
+                assert_eq!(set.0.count_ones(), 3, "{name}");
+            }
         }
-
-        let names: Vec<&str> = (0..table.targets.len())
-            .map(|i| table.targets.name(TargetId::from_index(i)).expect("in range"))
-            .collect();
-        assert!(!names.contains(&"All"), "no card asks for the All key");
 
         // The stored mask is the whole group, including its own own bit
         let nico = roster.id("Yazawa Nico").expect("in roster");
