@@ -17,6 +17,7 @@ use crate::song::{LANES, Time};
 /// reused if the same team is being evaluated many times.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Skill {
+    /// Points for Scorers, Healers, Combo Fever, PSU or Param Boost, but percent for SRU.
     pub value: Centi,
     pub chance: Rate,
     pub threshold: u16,
@@ -152,6 +153,7 @@ pub struct Triggers {
     fever: u16,
     psu: u16,
     sru: u16,
+    param: u16,
 }
 
 impl Triggers {
@@ -177,6 +179,7 @@ impl Triggers {
             fever: lanes_with(scoring, |effect| effect == SkillEffect::ComboFever),
             psu: lanes_with(scoring, |effect| effect == SkillEffect::PerfectScoreUp),
             sru: lanes_with(scoring, |effect| effect == SkillEffect::SkillRateUp),
+            param: lanes_with(scoring, |effect| effect == SkillEffect::AppealBoost),
         }
     }
 
@@ -251,6 +254,11 @@ impl Triggers {
     #[must_use]
     pub const fn sru(&self) -> u16 {
         self.sru
+    }
+
+    #[must_use]
+    pub const fn param(&self) -> u16 {
+        self.param
     }
 
     #[must_use]

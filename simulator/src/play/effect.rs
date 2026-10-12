@@ -12,8 +12,7 @@ use crate::song::{LANES, Time};
 /// No lane is waiting to roll.
 const NEVER: Time = Time(u32::MAX);
 
-/// For Duration effects. Perfect Lock, Total Trick, Combo Fever, Perfect Score Up and Skill Rate Up so far
-/// TODO: Appeal Boost, etc
+/// For Duration effects. Perfect Lock, Total Trick, Combo Fever, Perfect Score Up, Skill Rate Up, and Appeal Boost
 pub(in crate::play) trait Lasting<'q> {
     /// Whether anything on the team is active.
     const ANY: bool;
@@ -25,6 +24,8 @@ pub(in crate::play) trait Lasting<'q> {
     const FEVER: bool = false;
 
     const PSU: bool = false;
+
+    const PARAM: bool = false;
 
     /// `last` is the final judgement aka end of song.
     fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self;
@@ -136,6 +137,27 @@ pub(in crate::play) trait Lasting<'q> {
 
     fn sru(&mut self, _lane: u32, _now: Time, _duration: Ms, _value: u32) {
         debug_assert!(false, "no SRU on this team, buddy.");
+    }
+
+    fn heart_multiplier(&self) -> u16 {
+        debug_assert!(false, "no hearts on this team, buddy.");
+        HEART_UNIT
+    }
+
+    /// aka Param Boost
+    fn appeal(&self, _now: Time) -> u32 {
+        debug_assert!(false, "no Appeal Boost on this team, buddy.");
+        0
+    }
+
+    /// param boost * heart multiplier
+    fn hearted_appeal(&self, _now: Time) -> u64 {
+        debug_assert!(false, "no Appeal Boost on this team, buddy.");
+        0
+    }
+
+    fn param(&mut self, _lane: u32, _now: Time, _duration: Ms, _value: u32) {
+        debug_assert!(false, "no Appeal Boost on this team, buddy.");
     }
 }
 
@@ -481,6 +503,11 @@ where
     fn overheal_strength(&self, locked: bool) -> u64 {
         self.hearts.strength[usize::from(locked)]
     }
+
+    #[inline(always)]
+    fn heart_multiplier(&self) -> u16 {
+        self.hearts.multiplier
+    }
 }
 
 /// PSU and Spark belong here too. Maybe it shouldn't be called Fever then?
@@ -531,6 +558,7 @@ where
     const HEARTS: bool = E::HEARTS;
     const FEVER: bool = true;
     const PSU: bool = E::PSU;
+    const PARAM: bool = E::PARAM;
 
     #[inline]
     fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self {
@@ -698,6 +726,20 @@ where
     fn sru(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
         self.lasting.sru(lane, now, duration, value);
     }
+    #[inline(always)]
+    fn appeal(&self, now: Time) -> u32 {
+        self.lasting.appeal(now)
+    }
+
+    #[inline(always)]
+    fn hearted_appeal(&self, now: Time) -> u64 {
+        self.lasting.hearted_appeal(now)
+    }
+
+    #[inline(always)]
+    fn param(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
+        self.lasting.param(lane, now, duration, value);
+    }
 }
 
 /// Flat points for every perfect while the skill is active. Stacks.
@@ -755,6 +797,7 @@ where
     const TRICKS: bool = E::TRICKS;
     const HEARTS: bool = E::HEARTS;
     const PSU: bool = true;
+    const PARAM: bool = E::PARAM;
 
     #[inline]
     fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self {
@@ -889,6 +932,20 @@ where
     fn sru(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
         self.lasting.sru(lane, now, duration, value);
     }
+    #[inline(always)]
+    fn appeal(&self, now: Time) -> u32 {
+        self.lasting.appeal(now)
+    }
+
+    #[inline(always)]
+    fn hearted_appeal(&self, now: Time) -> u64 {
+        self.lasting.hearted_appeal(now)
+    }
+
+    #[inline(always)]
+    fn param(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
+        self.lasting.param(lane, now, duration, value);
+    }
 }
 
 /// Skill Rate Up. Multiplies every other skill's chance, one at a time.
@@ -911,6 +968,7 @@ where
     const HEARTS: bool = E::HEARTS;
     const FEVER: bool = E::FEVER;
     const PSU: bool = E::PSU;
+    const PARAM: bool = E::PARAM;
 
     #[inline]
     fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self {
@@ -1061,6 +1119,166 @@ where
             }
         }
     }
+    #[inline(always)]
+    fn appeal(&self, now: Time) -> u32 {
+        self.lasting.appeal(now)
+    }
+
+    #[inline(always)]
+    fn hearted_appeal(&self, now: Time) -> u64 {
+        self.lasting.hearted_appeal(now)
+    }
+
+    #[inline(always)]
+    fn param(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
+        self.lasting.param(lane, now, duration, value);
+    }
+}
+
+/// Appeal Boost. Adds its points to the team strength one at a time.
+pub(in crate::play) struct Param<E> {
+    lasting: E,
+    until: Time,
+    boost: u32,
+    /// `boost` times the heart multiplier.
+    hearted: u64,
+    /// `boost` times every judgement. For Total Trick team.
+    /// isn't it funny how much special handling I have to give to such a simple
+    /// and useless skill like Total Trick?
+    table: Worth,
+}
+
+impl<'q, E> Lasting<'q> for Param<E>
+where
+    E: Lasting<'q>,
+{
+    const ANY: bool = E::ANY;
+    const TRICKS: bool = E::TRICKS;
+    const HEARTS: bool = E::HEARTS;
+    const PARAM: bool = true;
+
+    #[inline]
+    fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self {
+        Self {
+            lasting: E::new(last, queue, scoring),
+            until: Time(0),
+            boost: 0,
+            hearted: 0,
+            table: Worth::default(),
+        }
+    }
+
+    #[inline(always)]
+    fn admit(&mut self, mask: u16, now: Time) -> u16 {
+        self.lasting.admit(mask, now)
+    }
+
+    #[inline(always)]
+    fn next(&self) -> Time {
+        self.lasting.next()
+    }
+
+    #[inline(always)]
+    fn release(&mut self, at: Time) -> u16 {
+        self.lasting.release(at)
+    }
+
+    #[inline(always)]
+    fn converted(&self, now: Time) -> bool {
+        self.lasting.converted(now)
+    }
+
+    #[inline(always)]
+    fn locked(&self, now: Time) -> bool {
+        self.lasting.locked(now)
+    }
+
+    #[inline(always)]
+    fn lock(&mut self, lane: u32, now: Time, duration: Ms) {
+        self.lasting.lock(lane, now, duration);
+    }
+
+    #[inline(always)]
+    fn trick(&mut self, lane: u32, now: Time, duration: Ms) {
+        self.lasting.trick(lane, now, duration);
+    }
+
+    #[inline(always)]
+    fn occupy(&mut self, lane: u32, now: Time, duration: Ms) -> Time {
+        self.lasting.occupy(lane, now, duration)
+    }
+
+    #[inline(always)]
+    fn tap(&self, now: Time, head: bool, tail: bool, combo: u16, lane: u16, note: u16) -> u64 {
+        let worth = self.worth(now, head, tail);
+        if E::HEARTS {
+            overheal_score_val(worth, combo, lane, note, self.lasting.heart_multiplier())
+        } else {
+            worth_score(worth, combo, lane, note)
+        }
+    }
+
+    #[inline(always)]
+    #[expect(clippy::indexing_slicing, reason = "bool")]
+    fn worth(&self, now: Time, head: bool, tail: bool) -> u64 {
+        let worth = self.lasting.worth(now, head, tail);
+        if now < self.until {
+            let row = self.table.row(self.lasting.converted(now), self.lasting.locked(now));
+            worth.saturating_add(row[usize::from(head)][usize::from(tail)])
+        } else {
+            worth
+        }
+    }
+
+    #[inline(always)]
+    fn heal(&mut self, hp: u8) {
+        self.lasting.heal(hp);
+        if E::HEARTS {
+            self.hearted = hearted(self.boost, self.lasting.heart_multiplier());
+        }
+    }
+
+    #[inline(always)]
+    fn overheal_strength(&self, locked: bool) -> u64 {
+        self.lasting.overheal_strength(locked)
+    }
+
+    #[inline(always)]
+    fn heart_multiplier(&self) -> u16 {
+        self.lasting.heart_multiplier()
+    }
+
+    #[inline(always)]
+    fn appeal(&self, now: Time) -> u32 {
+        if now < self.until { self.boost } else { 0 }
+    }
+
+    #[inline(always)]
+    fn hearted_appeal(&self, now: Time) -> u64 {
+        if now < self.until { self.hearted } else { 0 }
+    }
+
+    /// Param Boost rolling while already active doesn't do anything.
+    /// well it should be a valid target for encore so it does do *something*
+    /// but I really just mean that it doesn't extend or overwrite the current duration.
+    #[inline(never)]
+    fn param(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
+        if now < self.until {
+            return;
+        }
+        self.until = self.lasting.occupy(lane, now, duration);
+        self.boost = value;
+        if E::TRICKS {
+            self.table = Worth::new(value, 0);
+        }
+        if E::HEARTS {
+            self.hearted = hearted(value, self.lasting.heart_multiplier());
+        }
+    }
+}
+
+fn hearted(boost: u32, multiplier: u16) -> u64 {
+    u64::from(boost).saturating_mul(u64::from(multiplier))
 }
 
 /// SRU boost is `rate * (1 + value%)`. I actually wasn't sure at first if this was
@@ -1134,7 +1352,7 @@ impl Hearts {
     }
 }
 
-/// TODO: every effect with a duration.
+/// TODO: Sync. Maybe Spark too.
 pub(super) const fn lasts(effect: SkillEffect) -> bool {
     matches!(
         effect,
@@ -1143,6 +1361,7 @@ pub(super) const fn lasts(effect: SkillEffect) -> bool {
             | SkillEffect::ComboFever
             | SkillEffect::PerfectScoreUp
             | SkillEffect::SkillRateUp
+            | SkillEffect::AppealBoost
     )
 }
 
@@ -1176,10 +1395,10 @@ pub(super) fn pay<'q>(
         SkillEffect::ComboFever => expiry.fever(lane, now, duration, value, out.notes),
         SkillEffect::PerfectScoreUp => expiry.psu(lane, now, duration, value, out.perfects),
         SkillEffect::SkillRateUp => expiry.sru(lane, now, duration, value),
+        SkillEffect::AppealBoost => expiry.param(lane, now, duration, value),
         SkillEffect::Scorer
         | SkillEffect::Encore
         | SkillEffect::Amplify
-        | SkillEffect::AppealBoost
         | SkillEffect::Sync
         | SkillEffect::Spark => {}
     }
@@ -2535,5 +2754,323 @@ mod tests {
             }
         }
         assert_eq!(copies, 192, "every SRU copy");
+    }
+
+    fn param(
+        scoring: &mut Scoring,
+        lane: usize,
+        trigger: TriggerType,
+        threshold: u16,
+        chance: Rate,
+        value: u32,
+        duration: Ms,
+    ) {
+        lasting(scoring, lane, SkillEffect::AppealBoost, trigger, threshold, chance, duration);
+        scoring.skills[lane].value = value;
+    }
+
+    /// Half of `TEAM`.
+    const BOOST: u32 = 40_000;
+
+    /// Every note of the 51-note map at `TEAM + BOOST`.
+    const ALL_BOOSTED: u64 = 50 * 1500 + 1650;
+
+    #[test]
+    fn check_param() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        // Before first note, lasts until after final note.
+        param(&mut scoring, 8, TriggerType::Time, 1, ALWAYS, BOOST, 60_000);
+        let triggers = Triggers::build(&queue, &scoring);
+        assert_eq!((triggers.param(), triggers.lasting()), (1 << 8, 1 << 8));
+
+        let out = play(&queue, &scoring);
+        assert_eq!((out.activations, out.skill, out.tap), (1, 0, ALL_BOOSTED));
+    }
+
+    #[test]
+    fn check_param_from_next_note() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut combo = Scoring::flat(TEAM);
+        param(&mut combo, 8, TriggerType::Combo, 10, ALWAYS, BOOST, 60_000);
+        let hit = play(&queue, &combo);
+        assert_eq!((hit.activations, hit.tap), (1, 10 * 1000 + 40 * 1500 + 1650));
+
+        // Icon 10 spawns on note 4's tap. Tap processed first.
+        let mut icon = Scoring::flat(TEAM);
+        param(&mut icon, 8, TriggerType::RhythmIcons, 10, ALWAYS, BOOST, 60_000);
+        let spawn = play(&queue, &icon);
+        assert_eq!((spawn.activations, spawn.tap), (1, 4 * 1000 + 46 * 1500 + 1650));
+    }
+
+    #[test]
+    fn check_param_duration() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        // [3000, 3500) and [6000, 6500)
+        //  notes 11 to 15 and 41 to 45.
+        param(&mut scoring, 8, TriggerType::Time, 3, ALWAYS, BOOST, 500);
+        let out = play(&queue, &scoring);
+        assert_eq!((out.activations, out.tap), (2, 40 * 1000 + 10 * 1500 + 1100));
+    }
+
+    #[test]
+    fn check_param_doesnt_stack() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        param(&mut scoring, 8, TriggerType::Time, 1, ALWAYS, BOOST, 60_000);
+        param(&mut scoring, 7, TriggerType::RhythmIcons, 1, ALWAYS, 2 * BOOST, 60_000);
+        let mut idle = scoring;
+        idle.skills[7] = scorer(1, ALWAYS, 0);
+
+        let out = play(&queue, &scoring);
+        assert_eq!((out.activations, out.tap), (1 + 51, ALL_BOOSTED));
+        assert_eq!(out, play(&queue, &idle));
+    }
+
+    #[test]
+    fn check_param_lane_blocking() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        param(&mut scoring, 4, TriggerType::Perfects, 5, ALWAYS, 0, 550);
+        let out = play(&queue, &scoring);
+        assert_eq!(out.activations, 9);
+
+        let mut paying_nothing = scoring;
+        psu(&mut paying_nothing, 4, TriggerType::Perfects, 5, ALWAYS, 0, 550);
+        assert_eq!(play(&queue, &paying_nothing), out);
+    }
+
+    #[test]
+    fn check_param_acc() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        scoring.skills[6] = clocked(TriggerType::Time, 1, 0, 1);
+        scoring.accessories[6] =
+            AccessorySkill { effect: SkillEffect::AppealBoost, ..worn(ALWAYS, BOOST) };
+        scoring.durations[6][1] = 60_000;
+        assert_eq!(Triggers::build(&queue, &scoring).param(), 1 << 6);
+
+        let out = play(&queue, &scoring);
+        assert_eq!((out.activations, out.accessory_activations), (0, 1));
+        assert_eq!((out.skill, out.tap), (0, ALL_BOOSTED));
+    }
+
+    /// Gets 1.08x true perfect
+    /// Does not get Trick SIS.
+    #[test]
+    fn check_param_under_a_lock() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        scoring.trick = 8_000;
+        param(&mut scoring, 8, TriggerType::Time, 1, ALWAYS, BOOST, 60_000);
+        lock(&mut scoring, 4, TriggerType::Time, 1, ALWAYS, 60_000);
+        // 128_000 a note = 1728 at 1.08x -> 1600 converted.
+        assert_eq!(play(&queue, &scoring).tap, 50 * 1728 + 1900);
+        assert_eq!(at(&queue, &scoring, &sloppy(0, 0)).tap, 50 * 1600 + 1760);
+
+        let mut unboosted = scoring;
+        unboosted.skills[8].value = 0;
+        assert_eq!(play(&queue, &unboosted).tap, ALL_LOCKED_TRICKED);
+    }
+
+    /// `(TEAM + 8000) * 1.08`.
+    const ALL_LOCKED_TRICKED: u64 = 50 * 1188 + 1306;
+
+    /// Total Trick should have no affect.
+    #[test]
+    fn check_param_under_a_total_trick() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        scoring.trick = 8_000;
+        param(&mut scoring, 8, TriggerType::Time, 1, ALWAYS, BOOST, 60_000);
+        trick(&mut scoring, 4, TriggerType::Time, 1, ALWAYS, 60_000);
+        assert_eq!(Triggers::build(&queue, &scoring).tricks(), 1 << 4);
+        for accuracy in [ALWAYS, FLIP, 0] {
+            assert_eq!(at(&queue, &scoring, &sloppy(accuracy, 0)).tap, 50 * 1600 + 1760);
+        }
+
+        let mut locked = scoring;
+        lock(&mut locked, 3, TriggerType::Time, 1, ALWAYS, 60_000);
+        assert_eq!(play(&queue, &locked).tap, 50 * 1728 + 1900);
+    }
+
+    #[test]
+    #[expect(clippy::integer_division, reason = "it's a test.")]
+    fn check_param_with_hearts() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        overhealing(&mut scoring, 30);
+        healer(&mut scoring, 4, TriggerType::RhythmIcons, 10, ALWAYS, 30);
+        param(&mut scoring, 8, TriggerType::Time, 1, ALWAYS, BOOST, 60_000);
+        // Every heal rigged to proc.
+        assert_eq!(play(&queue, &scoring).tap, ONE_HEART_EVERY_TEN * 3 / 2);
+
+        // Boost lands on note 25, after two hearts -> 1.2x and up.
+        let mut late = scoring;
+        param(&mut late, 8, TriggerType::Combo, 25, ALWAYS, BOOST, 60_000);
+        let want: u64 = (1..=51_u64)
+            .map(|note| {
+                let heart = 10 + (note + 5) / 10;
+                let strength = if note > 25 { 120 } else { 80 };
+                let combo = if note > 50 { 110 } else { 100 };
+                strength * heart * combo / 80
+            })
+            .sum();
+        assert_eq!(play(&queue, &late).tap, want);
+    }
+
+    /// For when a duration expires and the next skill is rolled.
+    #[test]
+    fn check_a_release_on_a_tap_goes_first() {
+        let stream = [tap(2000, 1), tap(2650, 1), tap(3000, 1), tap(3550, 1)];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut locked = Scoring::flat(TEAM);
+        lock(&mut locked, 0, TriggerType::RhythmIcons, 2, ALWAYS, 950);
+        let lock_out = play(&queue, &locked);
+        assert_eq!((lock_out.activations, lock_out.tap), (2, 1000 + 3 * 1080));
+
+        let mut boosted = Scoring::flat(TEAM);
+        param(&mut boosted, 0, TriggerType::RhythmIcons, 2, ALWAYS, BOOST, 950);
+        let param_out = play(&queue, &boosted);
+        assert_eq!((param_out.activations, param_out.tap), (2, 1000 + 3 * 1500));
+    }
+
+    #[test]
+    fn check_a_psu_ending_on_a_tap_gives_nothing() {
+        // Icon 2 spawns at 4400 and lasts until the end.
+        let stream = [tap(2000, 1), tap(5000, 1)];
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        psu(&mut scoring, 0, TriggerType::RhythmIcons, 2, ALWAYS, 100, 600);
+        let out = play(&queue, &scoring);
+        assert_eq!((out.activations, out.skill), (1, 0));
+
+        let mut longer = scoring;
+        longer.durations[0][0] = 601;
+        assert_eq!(play(&queue, &longer).skill, 100);
+    }
+
+    #[test]
+    #[expect(clippy::too_many_lines, reason = "I agree, clippy")]
+    #[expect(clippy::cognitive_complexity, reason = "agreed, again and don't feel like rewriting.")]
+    fn check_param_copies() {
+        let stream: Vec<_> = (0..51_u32)
+            .map(|i| {
+                (Time(2000 + i * 100), Event::new((i % 9) as u8, EventKind::Tap, i % 3 == 0, false))
+            })
+            .collect();
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+
+        let mut base = Scoring::flat(TEAM);
+        base.trick = 9_999;
+        base.skills[2] = scorer(4, FLIP, 100);
+        base.skills[5] = clocked(TriggerType::Combo, 3, FLIP, 10);
+        base.accessories[5] = worn(FLIP, 20);
+        base.skills[6] = clocked(TriggerType::Time, 1, FLIP, 7);
+        base.skills[7] = clocked(TriggerType::Perfects, 2, FLIP, 3);
+
+        let mut copies = 0;
+        for shape in 0..128_u32 {
+            for lasting in 0..3 {
+                let mut team = base;
+                if shape & 1 != 0 {
+                    team.skills[3] = clocked(TriggerType::Score, 1500, FLIP, 50);
+                }
+                if shape & 2 != 0 {
+                    team.skills[0] = clocked(TriggerType::YearGroup, (1 << 2) | (1 << 5), FLIP, 70);
+                    (team.members[0], team.members[2], team.members[5]) = (1, 1 << 2, 1 << 5);
+                }
+                if shape & 4 != 0 {
+                    team.skills[8] = clocked(TriggerType::StarNotes, 1, FLIP, 5);
+                }
+                if shape & 8 != 0 {
+                    overhealing(&mut team, 30);
+                    team.accessories[6] =
+                        AccessorySkill { effect: SkillEffect::Healer, ..worn(FLIP, 0) };
+                    team.heals[6][1] = 12;
+                }
+                if shape & 16 != 0 {
+                    team.accessories[7] =
+                        AccessorySkill { effect: SkillEffect::ComboFever, ..worn(FLIP, 30) };
+                    team.durations[7][1] = 400;
+                }
+                if shape & 32 != 0 {
+                    team.accessories[2] =
+                        AccessorySkill { effect: SkillEffect::PerfectScoreUp, ..worn(FLIP, 50) };
+                    team.durations[2][1] = 500;
+                }
+                if shape & 64 != 0 {
+                    team.accessories[5] =
+                        AccessorySkill { effect: SkillEffect::SkillRateUp, ..worn(FLIP, 50) };
+                    team.durations[5][1] = 300;
+                }
+                match lasting {
+                    0 => {}
+                    1 => lock(&mut team, 4, TriggerType::RhythmIcons, 5, FLIP, 600),
+                    _ => trick(&mut team, 4, TriggerType::RhythmIcons, 5, FLIP, 600),
+                }
+
+                let mut never = team;
+                param(&mut never, 1, TriggerType::RhythmIcons, 3, 0, BOOST, 700);
+                let mut cold = team;
+                cold.skills[1] = scorer(3, 0, 0);
+                let mut nothing = team;
+                param(&mut nothing, 1, TriggerType::RhythmIcons, 3, FLIP, 0, 700);
+                let mut feverish = team;
+                fever(&mut feverish, 1, TriggerType::RhythmIcons, 3, FLIP, 0, 700);
+                let mut boosted = team;
+                param(&mut boosted, 1, TriggerType::Time, 1, ALWAYS, BOOST, 60_000);
+                let mut strong = Scoring { team_strength: TEAM + BOOST, ..team };
+                fever(&mut strong, 1, TriggerType::Time, 1, ALWAYS, 0, 60_000);
+
+                let triggers = Triggers::build(&queue, &never);
+                assert_eq!(triggers.param(), 1 << 1);
+                assert_eq!(triggers.score() != 0, shape & 1 != 0);
+                assert_eq!(triggers.year() != 0, shape & 2 != 0);
+                assert_eq!(!triggers.stars().is_empty(), shape & 4 != 0);
+                assert_eq!(triggers.heals() != 0, shape & 8 != 0);
+                assert_eq!(triggers.fever() != 0, shape & 16 != 0);
+                assert_eq!(triggers.psu() != 0, shape & 32 != 0);
+                assert_eq!(triggers.sru() != 0, shape & 64 != 0);
+                assert_eq!(triggers.tricks() != 0, lasting == 2);
+
+                for accuracy in [ALWAYS, 8000, 0] {
+                    for seed in 0..4 {
+                        let config = sloppy(accuracy, seed);
+                        let what = format!("shape {shape}, lasting {lasting}, seed {seed}");
+                        assert_eq!(
+                            at(&queue, &never, &config),
+                            at(&queue, &cold, &config),
+                            "{what}"
+                        );
+                        assert_eq!(
+                            at(&queue, &nothing, &config),
+                            at(&queue, &feverish, &config),
+                            "{what}"
+                        );
+                        assert_eq!(
+                            at(&queue, &boosted, &config),
+                            at(&queue, &strong, &config),
+                            "{what}"
+                        );
+                    }
+                }
+                copies += 1;
+            }
+        }
+        assert_eq!(copies, 384, "every Appeal Boost copy");
     }
 }

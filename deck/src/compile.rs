@@ -272,7 +272,7 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
         (dst.skill, dst.accessory) = (skill, accessory);
         (dst.durations, dst.heals) = ([duration, worn_duration], [hp, worn_hp]);
         if dst.skill.trigger == TriggerType::YearGroup {
-            *year = year_group(card, ctx.cards);
+            *year = skill_target(card, ctx.cards);
         }
     }
 
@@ -320,6 +320,7 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
         out.trick = out.trick.saturating_add(pick(slot.trick, song.attribute));
     }
     out.team_strength = pick(out.totals, song.attribute);
+    appeal_boosts(&mut out.slots, team, ctx, &chars, song.attribute);
     out.per_heart = heart_bonus(out.max_hp);
     out.max_hearts = max_hearts(out.per_heart);
     out
@@ -370,9 +371,62 @@ fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> (AccessorySk
     (skill, duration, heal(def.effect, value))
 }
 
-fn year_group(card: &Card, cards: &CardDb) -> Option<CharacterSet> {
+fn skill_target(card: &Card, cards: &CardDb) -> Option<CharacterSet> {
     let def = cards.skills.def(card.skill?)?;
     cards.skill_targets.set(def.target?)
+}
+
+/// Converts Param Boost's percents into points.
+/// Takes the lane's final stat and pre-computes what the boost would be.
+/// Very end of stat calc.
+fn appeal_boosts(
+    slots: &mut [Slot; LANES],
+    team: &Team,
+    ctx: Context,
+    chars: &[Option<CharacterId>; LANES],
+    attribute: Attribute,
+) {
+    let strengths = slots.map(|s| pick(s.stats, attribute));
+    for (lane, dst) in slots.iter_mut().enumerate() {
+        let Some(slot) = team.slot(lane) else {
+            continue;
+        };
+        if dst.skill.effect == SkillEffect::AppealBoost {
+            let target = ctx.card(slot.card()).and_then(|card| skill_target(card, ctx.cards));
+            dst.skill.value = appeal(dst.skill.value, target, chars, &strengths);
+        }
+        if dst.accessory.effect == SkillEffect::AppealBoost {
+            let target = slot.accessory().and_then(|worn| accessory_target(worn, ctx));
+            dst.accessory.value = appeal(dst.accessory.value, target, chars, &strengths);
+        }
+    }
+}
+
+fn accessory_target(worn: EntryId, ctx: Context) -> Option<CharacterSet> {
+    let (accessory, _) = ctx.accessory(worn)?;
+    let def = ctx.acc_db.skills.def(accessory.skill)?;
+    ctx.acc_db.targets.set(def.target?)
+}
+
+/// `ceil(stat * value%)` on every lane that has a character that targets it.
+fn appeal(
+    value: Centi,
+    target: Option<CharacterSet>,
+    chars: &[Option<CharacterId>; LANES],
+    strengths: &[u32; LANES],
+) -> u32 {
+    let Some(set) = target else { return 0 };
+    chars
+        .iter()
+        .zip(strengths)
+        .filter(|(who, _)| who.is_some_and(|c| set.contains(c)))
+        .fold(0, |sum, (_, &stat)| sum.saturating_add(percent(stat, value)))
+}
+
+/// `ceil(stat * value/100)`
+fn percent(stat: u32, value: Centi) -> u32 {
+    let scaled = u64::from(stat).saturating_mul(u64::from(value)).div_ceil(100);
+    u32::try_from(scaled).unwrap_or(u32::MAX)
 }
 
 /// Each lane's character as the bit of the first lane that character is in.
@@ -411,7 +465,7 @@ const fn rate(chance: Pct) -> Rate {
 }
 
 /// Scorer's points with Charm, Healer's points with Heal, or Combo Fever's and PSU's points.
-/// Param (Appeal) Boost will probably go here too.
+/// Appeal Boost stays a percent here and becomes points once every lane's stat is known.
 fn points(effect: SkillEffect, value: Centi, sis: SisFlags) -> Centi {
     match effect {
         SkillEffect::Scorer => payout(value, if sis.charm() { CHARM } else { MILLI_UNIT }),
@@ -532,8 +586,8 @@ fn bit(c: CharacterId) -> u128 {
 #[cfg(test)]
 mod tests {
     use super::{
-        BOTH_MATCH, Compiled, MAX_TABLE_HP, MIN_TABLE_HP, NO_MATCH, ONE_MATCH, compile,
-        heart_bonus, max_hearts, seats, waits_for,
+        BOTH_MATCH, Compiled, MAX_TABLE_HP, MIN_TABLE_HP, NO_MATCH, ONE_MATCH, appeal, compile,
+        heart_bonus, max_hearts, percent, seats, waits_for,
     };
     use crate::accessory::{Accessories, tests::accessories};
     use crate::card::{Deck, Gallery, tests::cards};
@@ -908,5 +962,44 @@ mod tests {
             assert!(n * b >= 20_000, "{n} hearts at {hp} hp does not reach +200%");
         }
         assert_eq!(max_hearts(heart_bonus(0)), 0, "empty team = no hearts4u");
+    }
+
+    /// Transcription of real recording.
+    /// Smile 541, 311, 759, 2024, 9754, 1614 and 1321*3
+    /// 18,966 displayed team strength
+    /// +215% on all nine lanes from kotoeli's skill
+    #[test]
+    fn check_appeal_boost() {
+        assert_eq!(percent(541, 215), 1164, "1163.15, up");
+        assert_eq!(percent(1000, 215), 2150, "exact");
+        assert_eq!(percent(1000, 0), 0);
+
+        let strengths = [541, 311, 759, 2024, 9754, 1614, 1321, 1321, 1321];
+        assert_eq!(strengths.iter().sum::<u32>(), 18_966);
+        let (minami, honoka, eli, kotori) =
+            (CharacterId(40), CharacterId(1), CharacterId(2), CharacterId(3));
+        let chars = [
+            Some(minami),
+            Some(CharacterId(41)),
+            Some(CharacterId(42)),
+            Some(honoka),
+            Some(kotori),
+            Some(eli),
+            Some(kotori),
+            Some(kotori),
+            Some(kotori),
+        ];
+        let all = CharacterSet((1 << 43) - 1);
+        let boost = appeal(215, Some(all), &chars, &strengths);
+        assert_eq!(boost, 40_783, "a ceiling a lane");
+        assert!((59_716..=59_760).contains(&(18_966 + boost)));
+
+        let muse = CharacterSet((1 << 1) | (1 << 2) | (1 << 3));
+        assert_eq!(appeal(215, Some(muse), &chars, &strengths), 4352 + 20_972 + 3471 + 3 * 2841);
+        let only_kotori = CharacterSet(1 << 3);
+        assert_eq!(appeal(100, Some(only_kotori), &chars, &strengths), 9754 + 3 * 1321);
+        assert_eq!(appeal(215, None, &chars, &strengths), 0, "no target");
+        let empty = chars.map(|c| c.filter(|&c| c != kotori));
+        assert_eq!(appeal(100, Some(only_kotori), &empty, &strengths), 0, "empty lanes");
     }
 }

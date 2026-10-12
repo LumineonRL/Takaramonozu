@@ -14,7 +14,7 @@ use activation::chain::Chain;
 use activation::ladder::Ladder;
 use activation::{AccessorySkill, Skill, Tally, Triggers, fire};
 use config::PlayConfig;
-use effect::{Expiry, Fever, Healing, Instant, Lasting, Psu, Sru, Tricked};
+use effect::{Expiry, Fever, Healing, Instant, Lasting, Param, Psu, Sru, Tricked};
 use judgement::Judgements;
 use queue::Queue;
 use rng::Rng;
@@ -115,6 +115,39 @@ fn healing(
 /// `X` is the duration table and `T` the same with a Total Trick.
 #[inline(never)]
 fn lasting<'q, X, T>(
+    queue: &'q Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    X: Lasting<'q>,
+    T: Lasting<'q>,
+{
+    if triggers.param() != 0 {
+        return appealing::<X, T>(queue, config, scoring, triggers, judgements);
+    }
+    boosting::<X, T>(queue, config, scoring, triggers, judgements)
+}
+
+#[inline(never)]
+fn appealing<'q, X, T>(
+    queue: &'q Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    X: Lasting<'q>,
+    T: Lasting<'q>,
+{
+    boosting::<Param<X>, Param<T>>(queue, config, scoring, triggers, judgements)
+}
+
+/// Rate boosts, SRU.
+fn boosting<'q, X, T>(
     queue: &'q Queue,
     config: &PlayConfig,
     scoring: &Scoring,
@@ -255,6 +288,7 @@ where
 #[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
 #[expect(clippy::else_if_without_else, reason = "lazy")]
 #[expect(clippy::too_many_lines, reason = "Benchmarked. Splitting it moved what LLVM inlined.")]
+#[expect(clippy::cognitive_complexity, reason = "TODO agreed, some of these are getting out of hand. Was going to wait for all effects to be finished to restruct but there's still 4 left so maybe that should come now.")]
 #[inline(never)]
 fn walk<'q, const STARS: bool, const SCORE: bool, const YEAR: bool, E>(
     queue: &'q Queue,
@@ -309,7 +343,7 @@ where
             // timer skills really don't roll very often
             core::hint::cold_path();
             let at = next_timer.min(expiry.next());
-            spawns.drain::<SCORE, YEAR, E>(
+            spawns.drain::<SCORE, YEAR, false, E>(
                 at,
                 offset,
                 scoring,
@@ -349,7 +383,7 @@ where
                 ladder.settle::<YEAR>(at, scoring, &mut rng, &mut out, &mut chain, &mut expiry);
             }
         }
-        spawns.drain::<SCORE, YEAR, E>(
+        spawns.drain::<SCORE, YEAR, true, E>(
             time,
             offset,
             scoring,
@@ -400,7 +434,11 @@ where
                     )
                 } else if E::HEARTS {
                     overheal_score(
-                        expiry.overheal_strength(locked),
+                        expiry.overheal_strength(locked).saturating_add(if E::PARAM {
+                            expiry.hearted_appeal(time)
+                        } else {
+                            0
+                        }),
                         queue.combo()[tap],
                         scoring.lanes.get(lane).copied().unwrap_or(UNIT),
                         note_eighths(event),
@@ -412,7 +450,12 @@ where
                             tricked
                         } else {
                             scoring.team_strength
-                        },
+                        }
+                        .saturating_add(if E::PARAM {
+                            expiry.appeal(time)
+                        } else {
+                            0
+                        }),
                         queue.combo()[tap],
                         scoring.lanes.get(lane).copied().unwrap_or(UNIT),
                         note_multiplier(event),
@@ -580,13 +623,20 @@ struct Spawns<'a> {
 
 impl Spawns<'_> {
     #[inline(always)]
+    fn firing(&self, offset: u32) -> Time {
+        self.icons
+            .get(self.next.wrapping_sub(1))
+            .map_or(Time(u32::MAX), |t| t.spawn(offset))
+    }
+
+    #[inline(always)]
     #[expect(clippy::inline_always, reason = "I benchmarked")]
     #[expect(clippy::indexing_slicing, reason = "`at` is terminated, `icons` is bounded")]
     #[expect(
         clippy::too_many_arguments,
         reason = "Legit trying to fix this lead to a +7% performance regression. `offset` as a field of `Spawns` moved register allocation to all of `walk`."
     )]
-    fn drain<'q, const SCORE: bool, const YEAR: bool, E>(
+    fn drain<'q, const SCORE: bool, const YEAR: bool, const LAST: bool, E>(
         &mut self,
         bound: Time,
         offset: u32,
@@ -616,6 +666,17 @@ impl Spawns<'_> {
                     }
                     if E::ANY {
                         stop = stop.min(expiry.next());
+                    }
+                    while LAST && E::ANY && expiry.next() == bound && self.firing(offset) >= bound {
+                        (*rng, *out) = release::<SCORE, YEAR, _>(
+                            bound,
+                            scoring,
+                            rng.clone(),
+                            *out,
+                            ladder,
+                            chain,
+                            expiry,
+                        );
                     }
                 }
             }
