@@ -34,7 +34,7 @@ where
         heal, overheal_strength,
         fever, fevered, read_running, fever_paid,
         psu, expire, psu_tap, psu_paid,
-        strength, hearted_strength, param,
+        strength, hearted_strength, param, sync, seed,
     }
 
     #[inline]

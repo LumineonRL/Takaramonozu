@@ -43,6 +43,23 @@ impl Judgements {
         }
     }
 
+    /// Judgements as they were played.
+    /// For the sync skill. Well had been considered for a while and encore and amp
+    /// will end up using it too, but sync was the reason.
+    #[must_use]
+    pub fn recorded(mut perfect: Vec<bool>, seed: u64) -> Self {
+        let perfects = perfect.iter().filter(|&&p| p).count();
+        perfect.push(false);
+        let mut out = Self {
+            perfect,
+            seed,
+            accuracy: 0,
+            perfects: u32::try_from(perfects).unwrap_or(u32::MAX),
+        };
+        out.accuracy = out.observed();
+        out
+    }
+
     /// Whether a given judgement rolled as Perfect
     #[inline]
     #[must_use]

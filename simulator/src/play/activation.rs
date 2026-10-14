@@ -154,6 +154,7 @@ pub struct Triggers {
     psu: u16,
     sru: u16,
     param: u16,
+    sync: u16,
 }
 
 impl Triggers {
@@ -180,6 +181,7 @@ impl Triggers {
             psu: lanes_with(scoring, |effect| effect == SkillEffect::PerfectScoreUp),
             sru: lanes_with(scoring, |effect| effect == SkillEffect::SkillRateUp),
             param: lanes_with(scoring, |effect| effect == SkillEffect::AppealBoost),
+            sync: lanes_with(scoring, |effect| effect == SkillEffect::Sync),
         }
     }
 
@@ -259,6 +261,11 @@ impl Triggers {
     #[must_use]
     pub const fn param(&self) -> u16 {
         self.param
+    }
+
+    #[must_use]
+    pub const fn sync(&self) -> u16 {
+        self.sync
     }
 
     #[must_use]
@@ -366,7 +373,7 @@ pub(super) fn fire<'q, const LANDED: bool>(
         };
         if rng.roll(chance) {
             out.activations = out.activations.saturating_add(1);
-            pay(lane, skill.effect, skill.value, duration, hp, now, out, expiry);
+            pay(lane, false, skill.effect, skill.value, duration, hp, now, out, expiry);
             if LANDED {
                 landed |= bit;
             }
@@ -385,7 +392,17 @@ pub(super) fn fire<'q, const LANDED: bool>(
             continue;
         }
         out.accessory_activations = out.accessory_activations.saturating_add(1);
-        pay(lane, accessory.effect, accessory.value, worn_duration, worn_hp, now, out, expiry);
+        pay(
+            lane,
+            true,
+            accessory.effect,
+            accessory.value,
+            worn_duration,
+            worn_hp,
+            now,
+            out,
+            expiry,
+        );
         if LANDED {
             landed |= bit;
         }

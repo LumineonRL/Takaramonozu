@@ -44,12 +44,13 @@ where
     X: Lasting<'q>,
     T: Lasting<'q>,
 {
-    if triggers.param() != 0 {
+    if (triggers.param() | triggers.sync()) != 0 {
         return appealing::<X, T>(queue, config, scoring, triggers, judgements);
     }
     boosting::<X, T>(queue, config, scoring, triggers, judgements)
 }
 
+/// Stat changes for Param Boost and Sync.
 #[inline(never)]
 fn appealing<'q, X, T>(
     queue: &'q Queue,

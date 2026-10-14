@@ -67,7 +67,7 @@ where
         converted, locked, lock, trick, occupy, tap, worth,
         heal, overheal_strength,
         begin, boosted, rates, sru,
-        strength, hearted_strength,
+        strength, hearted_strength, seed,
     }
 
     #[inline]
@@ -144,8 +144,16 @@ where
     }
 
     #[inline(always)]
-    fn param(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
-        self.lasting.param(lane, now, duration, value);
+    fn param(&mut self, lane: u32, worn: bool, now: Time, duration: Ms, value: u32) {
+        self.lasting.param(lane, worn, now, duration, value);
+        if E::PARAM {
+            self.wake = self.wake.min(self.lasting.next());
+        }
+    }
+
+    #[inline(always)]
+    fn sync(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) {
+        self.lasting.sync(lane, worn, now, duration);
         if E::PARAM {
             self.wake = self.wake.min(self.lasting.next());
         }

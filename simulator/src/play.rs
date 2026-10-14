@@ -23,40 +23,52 @@ use queue::Queue;
 use rng::Rng;
 use tap::{JUDGEMENT, UNIT, note_eighths, note_multiplier, note_score, overheal_score};
 
+/// `repr(C)` in the order rustc laid it out before Sync, so the fields every `walk` copy
+/// reads kept their offsets.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(C)]
 pub struct Scoring {
-    pub team_strength: u32,
-    pub trick: u32,
-    pub lanes: [u16; LANES],
     pub skills: [Skill; LANES],
     pub accessories: [AccessorySkill; LANES],
-    /// For Year-Group triggers, although effects like sync will probably steal this too. Or something similar.
+    pub team_strength: u32,
+    pub trick: u32,
+    pub durations: [[Ms; 2]; LANES],
+    pub lanes: [u16; LANES],
+    /// For Year-Group triggers.
     /// One bit for each lane's character. The bit of the first lane that character is in.
     pub members: [u16; LANES],
-    pub durations: [[Ms; 2]; LANES],
     /// HP each lane's card and accessory heal. 0 unless a Healer.
     pub heals: [[u8; 2]; LANES],
-    pub max_hp: u8,
     /// Tap bonus per heart
     pub per_heart: u16,
     pub max_hearts: u16,
+    pub max_hp: u8,
+    /// Each lane's stat in the song's attribute, after the leader skill. They sum to `team_strength`.
+    pub stats: [u32; LANES],
+    /// The lanes an Appeal Boost boosts or a Sync may copy, card then accessory.
+    pub targets: [[u16; 2]; LANES],
+    /// An Appeal Boost's percent, card then accessory.
+    pub boosts: [[u16; 2]; LANES],
 }
 
 impl Scoring {
     #[must_use]
     pub const fn flat(team_strength: u32) -> Self {
         Self {
-            team_strength,
-            trick: 0,
-            lanes: [UNIT; LANES],
             skills: [Skill::NONE; LANES],
             accessories: [AccessorySkill::NONE; LANES],
-            members: [0; LANES],
+            team_strength,
+            trick: 0,
             durations: [[0; 2]; LANES],
+            lanes: [UNIT; LANES],
+            members: [0; LANES],
             heals: [[0; 2]; LANES],
-            max_hp: 0,
             per_heart: 0,
             max_hearts: 0,
+            max_hp: 0,
+            stats: [0; LANES],
+            targets: [[0; 2]; LANES],
+            boosts: [[0; 2]; LANES],
         }
     }
 }
@@ -141,6 +153,9 @@ where
     let mut stars = Tally::new(triggers.stars());
     let mut star_perfects = 0_u32;
     let mut expiry = E::new(queue.last_judgement(), queue, scoring);
+    if E::PARAM {
+        expiry.seed(config.seed);
+    }
     if E::FEVER && SCORE {
         expiry.read_running();
     }

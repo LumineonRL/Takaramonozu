@@ -1,25 +1,41 @@
 //! Appeal Boost / Param Boost whatever you want to call it.
+//! And part of Sync because Sync reuses a lot of this. Fundamentally they're very similar
+//! in that they both modify PPN mid-play.
+
+mod sync;
 
 use super::{Lasting, NEVER};
 use crate::play::Scoring;
 use crate::play::queue::Queue;
 use crate::play::tap::{Worth, overheal_score_val, worth_score};
 use crate::scalar::Ms;
-use crate::song::Time;
+use crate::song::{LANES, Time};
+use sync::Copies;
 
-/// Appeal Boost. Adds its points to the team strength one at a time.
+/// Appeal Boost and Sync.
+/// A lane starts by broadcasting its stat. 99% of the time this is just its regular stat, but can also
+/// be its sync'd stat.
+/// An active param boost gets added onto that.
 pub(in crate::play) struct Param<E> {
     lasting: E,
+    /// Sorry for the confusing names. This one represents when a Param Boost expires.
     until: Time,
+    /// and this is the earliest end of any param boost OR sync.
     ending: Time,
     wake: Time,
-    /// team strength
-    base: [u32; 2],
-    /// `base` plus any active boost.
+    trick: u32,
+    /// The active boost's points, the lanes it applies to its percententage.
+    boost: u32,
+    reach: u16,
+    percent: u16,
+    copies: Copies,
+    targets: [[u16; 2]; LANES],
+    percents: [[u16; 2]; LANES],
+    /// The team strength, then with the Trick. Yeah Trick SIS is completely separate.
     strengths: [u32; 2],
     /// `strengths` * heart multiplier.
     hearts: [u64; 2],
-    /// `boost` times every judgement. For Total Trick team.
+    /// `strengths` times every judgement. For a Total Trick team.
     /// isn't it funny how much special handling I have to give to such a simple
     /// and useless skill like Total Trick?
     table: Worth,
@@ -41,21 +57,23 @@ where
 
     #[inline]
     fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self {
-        let base = [
-            scoring.team_strength,
-            scoring.team_strength.saturating_add(scoring.trick),
-        ];
         let mut param = Self {
             lasting: E::new(last, queue, scoring),
             until: Time(0),
             ending: NEVER,
             wake: NEVER,
-            base,
-            strengths: base,
+            trick: scoring.trick,
+            boost: 0,
+            reach: 0,
+            percent: 0,
+            copies: Copies::new(scoring),
+            targets: scoring.targets,
+            percents: scoring.boosts,
+            strengths: [0; 2],
             hearts: [0; 2],
             table: Worth::default(),
         };
-        param.refresh(0);
+        param.refresh();
         param
     }
 
@@ -81,7 +99,7 @@ where
     #[inline(always)]
     fn expire(&mut self, now: Time, _perfects: u32) {
         if now >= self.ending {
-            self.lapse();
+            self.lapse(now);
         }
     }
 
@@ -110,9 +128,8 @@ where
     #[inline(always)]
     #[expect(clippy::indexing_slicing, reason = "bool")]
     fn worth(&self, now: Time, head: bool, tail: bool) -> u64 {
-        let worth = self.lasting.worth(now, head, tail);
         let row = self.table.row(self.lasting.converted(now), self.lasting.locked(now));
-        worth.saturating_add(row[usize::from(head)][usize::from(tail)])
+        row[usize::from(head)][usize::from(tail)]
     }
 
     #[inline(always)]
@@ -128,14 +145,37 @@ where
     /// well it should be a valid target for encore so it does do *something*
     /// but I really just mean that it doesn't extend or overwrite the current duration.
     #[inline(never)]
-    fn param(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
+    #[expect(clippy::indexing_slicing, reason = "lane bits")]
+    fn param(&mut self, lane: u32, worn: bool, now: Time, duration: Ms, value: u32) {
         if now < self.until {
             return;
         }
         self.until = self.lasting.occupy(lane, now, duration);
-        self.ending = self.until;
-        self.wake = self.wake.min(self.ending);
-        self.refresh(value);
+        self.ending = self.ending.min(self.until);
+        self.wake = self.wake.min(self.until);
+        self.boost = value;
+        let half = usize::from(worn);
+        self.reach = self.targets[lane as usize][half];
+        self.percent = self.percents[lane as usize][half];
+        self.refresh();
+    }
+
+    #[inline(never)]
+    #[expect(clippy::indexing_slicing, reason = "lane bits")]
+    fn sync(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) {
+        let until = self.lasting.occupy(lane, now, duration);
+        let targets = self.targets[lane as usize][usize::from(worn)];
+        if !self.copies.land(lane, targets, until, (self.reach, self.percent)) {
+            return;
+        }
+        self.ending = self.ending.min(until);
+        self.wake = self.wake.min(until);
+        self.refresh();
+    }
+
+    #[inline(always)]
+    fn seed(&mut self, seed: u64) {
+        self.copies.seed(seed);
     }
 }
 
@@ -143,22 +183,31 @@ impl<'q, E> Param<E>
 where
     E: Lasting<'q>,
 {
-    fn refresh(&mut self, boost: u32) {
-        self.strengths = self.base.map(|s| s.saturating_add(boost));
+    fn refresh(&mut self) {
+        let shown = self.copies.shown().saturating_add(self.boost);
+        self.strengths = [shown, shown.saturating_add(self.trick)];
         if E::HEARTS {
             let multiplier = self.lasting.heart_multiplier();
             self.hearts = self.strengths.map(|s| hearted(s, multiplier));
         }
         if E::TRICKS {
-            self.table = Worth::new(boost, 0);
+            self.table = Worth::new(shown, self.trick);
         }
     }
 
+    /// Ends an active boost and Sync whose window is over.
     #[inline(never)]
-    fn lapse(&mut self) {
-        self.ending = NEVER;
-        self.refresh(0);
-        self.wake = self.lasting.next();
+    fn lapse(&mut self, now: Time) {
+        let mut ending = NEVER;
+        if self.until <= now {
+            (self.boost, self.reach) = (0, 0);
+        } else {
+            ending = self.until;
+        }
+        let ending = ending.min(self.copies.lapse(now));
+        self.ending = ending;
+        self.refresh();
+        self.wake = self.lasting.next().min(ending);
     }
 }
 
@@ -174,6 +223,7 @@ mod tests {
         psu, trick,
     };
     use crate::play::queue::Queue;
+
     use crate::play::tests::{ALWAYS, arena, at, fifty_one, only, play, scorer, sloppy, worn};
     use crate::play::{Outcome, Scoring};
     use crate::skill::{SkillEffect, TriggerType};

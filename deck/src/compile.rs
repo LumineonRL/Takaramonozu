@@ -134,6 +134,12 @@ pub struct Slot {
     pub heals: [u8; 2],
     pub sis: SisFlags,
     _pad: u8,
+    /// See `Scoring::stats`.
+    pub strength: u32,
+    /// See `Scoring::targets`.
+    pub targets: [u16; 2],
+    /// See `Scoring::boosts`.
+    pub boosts: [u16; 2],
 }
 
 impl Default for Slot {
@@ -149,6 +155,9 @@ impl Default for Slot {
             heals: [0; 2],
             sis: SisFlags(0),
             _pad: 0,
+            strength: 0,
+            targets: [0; 2],
+            boosts: [0; 2],
         }
     }
 }
@@ -174,17 +183,20 @@ impl Compiled {
     #[must_use]
     pub fn scoring(&self) -> Scoring {
         Scoring {
-            team_strength: self.team_strength,
-            trick: self.trick,
-            lanes: self.slots.map(|s| s.bonus),
             skills: self.slots.map(|s| s.skill),
             accessories: self.slots.map(|s| s.accessory),
-            members: self.slots.map(|s| s.member),
+            team_strength: self.team_strength,
+            trick: self.trick,
             durations: self.slots.map(|s| s.durations),
+            lanes: self.slots.map(|s| s.bonus),
+            members: self.slots.map(|s| s.member),
             heals: self.slots.map(|s| s.heals),
-            max_hp: self.max_hp,
             per_heart: self.per_heart,
             max_hearts: self.max_hearts,
+            max_hp: self.max_hp,
+            stats: self.slots.map(|s| s.strength),
+            targets: self.slots.map(|s| s.targets),
+            boosts: self.slots.map(|s| s.boosts),
         }
     }
 }
@@ -320,7 +332,7 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
         out.trick = out.trick.saturating_add(pick(slot.trick, song.attribute));
     }
     out.team_strength = pick(out.totals, song.attribute);
-    appeal_boosts(&mut out.slots, team, ctx, &chars, song.attribute);
+    reaches(&mut out.slots, team, ctx, &chars, song.attribute);
     out.per_heart = heart_bonus(out.max_hp);
     out.max_hearts = max_hearts(out.per_heart);
     out
@@ -376,10 +388,10 @@ fn skill_target(card: &Card, cards: &CardDb) -> Option<CharacterSet> {
     cards.skill_targets.set(def.target?)
 }
 
-/// Converts Param Boost's percents into points.
-/// Takes the lane's final stat and pre-computes what the boost would be.
-/// Very end of stat calc.
-fn appeal_boosts(
+/// The lanes each Param Boost and Sync can affect.
+/// Converts Param Boost's percents into points
+/// pre-computed from each lane's final stat, so this is the very end of stat calc.
+fn reaches(
     slots: &mut [Slot; LANES],
     team: &Team,
     ctx: Context,
@@ -387,19 +399,62 @@ fn appeal_boosts(
     attribute: Attribute,
 ) {
     let strengths = slots.map(|s| pick(s.stats, attribute));
-    for (lane, dst) in slots.iter_mut().enumerate() {
-        let Some(slot) = team.slot(lane) else {
+    for (lane, (dst, &strength)) in (0_u32..).zip(slots.iter_mut().zip(&strengths)) {
+        dst.strength = strength;
+        let Some(slot) = team.slot(lane as usize) else {
             continue;
         };
-        if dst.skill.effect == SkillEffect::AppealBoost {
-            let target = ctx.card(slot.card()).and_then(|card| skill_target(card, ctx.cards));
-            dst.skill.value = appeal(dst.skill.value, target, chars, &strengths);
-        }
-        if dst.accessory.effect == SkillEffect::AppealBoost {
-            let target = slot.accessory().and_then(|worn| accessory_target(worn, ctx));
-            dst.accessory.value = appeal(dst.accessory.value, target, chars, &strengths);
-        }
+        let own = 1_u16.checked_shl(lane).unwrap_or(0);
+        let card = ctx.card(slot.card()).and_then(|card| skill_target(card, ctx.cards));
+        let worn = slot.accessory().and_then(|worn| accessory_target(worn, ctx));
+        let [(card_reach, card_boost), (worn_reach, worn_boost)] = [
+            reach(dst.skill.effect, &mut dst.skill.value, card, own, chars, &strengths),
+            reach(dst.accessory.effect, &mut dst.accessory.value, worn, own, chars, &strengths),
+        ];
+        dst.targets = [card_reach, worn_reach];
+        dst.boosts = [card_boost, worn_boost];
     }
+}
+
+/// Target lanes and Param Boost percent.
+/// Turns the boost's percent into points.
+/// Syncs can't copy their own lane.
+fn reach(
+    effect: SkillEffect,
+    value: &mut Centi,
+    set: Option<CharacterSet>,
+    own: u16,
+    chars: &[Option<CharacterId>; LANES],
+    strengths: &[u32; LANES],
+) -> (u16, u16) {
+    match effect {
+        SkillEffect::AppealBoost => {
+            let percent = u16::try_from(*value).unwrap_or(u16::MAX);
+            *value = appeal(*value, set, chars, strengths);
+            (lanes(set, chars), percent)
+        }
+        SkillEffect::Sync => (lanes(set, chars) & !own, 0),
+        SkillEffect::Scorer
+        | SkillEffect::Healer
+        | SkillEffect::PerfectLock
+        | SkillEffect::Encore
+        | SkillEffect::Amplify
+        | SkillEffect::TotalTrick
+        | SkillEffect::PerfectScoreUp
+        | SkillEffect::SkillRateUp
+        | SkillEffect::ComboFever
+        | SkillEffect::Spark => (0, 0),
+    }
+}
+
+/// Filters who can affect whom for param boost and sync activations that are tied
+/// to groups e.g. Aqours second years.
+fn lanes(target: Option<CharacterSet>, chars: &[Option<CharacterId>; LANES]) -> u16 {
+    let Some(set) = target else { return 0 };
+    (0_u32..)
+        .zip(chars)
+        .filter(|(_, who)| who.is_some_and(|c| set.contains(c)))
+        .fold(0, |mask, (lane, _)| mask | 1_u16.checked_shl(lane).unwrap_or(0))
 }
 
 fn accessory_target(worn: EntryId, ctx: Context) -> Option<CharacterSet> {
@@ -587,7 +642,7 @@ fn bit(c: CharacterId) -> u128 {
 mod tests {
     use super::{
         BOTH_MATCH, Compiled, MAX_TABLE_HP, MIN_TABLE_HP, NO_MATCH, ONE_MATCH, appeal, compile,
-        heart_bonus, max_hearts, percent, seats, waits_for,
+        heart_bonus, lanes, max_hearts, percent, reach, seats, waits_for,
     };
     use crate::accessory::{Accessories, tests::accessories};
     use crate::card::{Deck, Gallery, tests::cards};
@@ -824,6 +879,8 @@ mod tests {
         assert_eq!(cool.team_strength, 315);
         assert_eq!(smile.scoring().team_strength, smile.team_strength);
         assert_eq!(smile.totals, cool.totals, "only the attribute read differs");
+        assert_eq!(smile.scoring().stats.iter().sum::<u32>(), smile.team_strength);
+        assert_eq!(cool.scoring().stats[0], 315);
     }
 
     #[test]
@@ -1001,5 +1058,47 @@ mod tests {
         assert_eq!(appeal(215, None, &chars, &strengths), 0, "no target");
         let empty = chars.map(|c| c.filter(|&c| c != kotori));
         assert_eq!(appeal(100, Some(only_kotori), &empty, &strengths), 0, "empty lanes");
+    }
+
+    /// Two Planetarium Nozomis in lanes 3 and 5 with Cheer Girl Umi (the UR. This isn't the infamous cheer umi score-based scorer.
+    /// it's a different cheer umi with a lily white-boosting param skill) in lane 6, a
+    /// Nico in lane 0, an N card in lane 2, and three empty lanes.
+    #[test]
+    fn check_sync_targets() {
+        let strengths = [4000, 0, 2000, 3270, 0, 2990, 4968, 0, 0];
+        let (nico, nozomi, umi) = (CharacterId(7), CharacterId(5), CharacterId(8));
+        let chars = [
+            Some(nico),
+            None,
+            Some(CharacterId(40)),
+            Some(nozomi),
+            None,
+            Some(nozomi),
+            Some(umi),
+            None,
+            None,
+        ];
+        let third_years = Some(CharacterSet((1 << 5) | (1 << 6) | (1 << 7)));
+        let all = Some(CharacterSet((1 << 43) - 1));
+
+        let mut none = 0;
+        let card = reach(SkillEffect::Sync, &mut none, third_years, 1 << 3, &chars, &strengths);
+        assert_eq!(card, ((1 << 0) | (1 << 5), 0));
+        let worn = reach(SkillEffect::Sync, &mut none, all, 1 << 3, &chars, &strengths);
+        assert_eq!(worn, ((1 << 0) | (1 << 2) | (1 << 5) | (1 << 6), 0));
+        assert_eq!(none, 0, "Sync has no value field");
+
+        // Param Boost boosts its own lane and keeps its percent beside its points.
+        let lily_white = Some(CharacterSet((1 << 5) | (1 << 8)));
+        let mut points = 32;
+        let boost =
+            reach(SkillEffect::AppealBoost, &mut points, lily_white, 1 << 6, &chars, &strengths);
+        assert_eq!(boost, ((1 << 3) | (1 << 5) | (1 << 6), 32));
+        assert_eq!(points, 1047 + 957 + 1590);
+
+        let mut scored = 500;
+        assert_eq!(reach(SkillEffect::Scorer, &mut scored, all, 1, &chars, &strengths), (0, 0));
+        assert_eq!(scored, 500);
+        assert_eq!(lanes(None, &chars), 0, "no target");
     }
 }

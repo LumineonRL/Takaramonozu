@@ -26,9 +26,11 @@ pub struct Rng(Pcg32);
 /// Skills are only sometimes deterministic Throw in a score-based scorer or a
 /// star note scorer and the numbers of times they'll need to roll will change from
 /// trial to trial.
+/// Sync skill also needed its own RNG to pick its target.
 impl Rng {
     pub const SKILLS: u64 = 0;
     pub const ACCURACY: u64 = 1;
+    pub const SYNC: u64 = 2;
 
     #[must_use]
     pub fn new(seed: u64, stream: u64) -> Self {
@@ -108,28 +110,33 @@ mod tests {
         const SEEDS: u64 = 4096;
         const INDICES: usize = 1200;
 
-        let mut sums = vec![0_i128; INDICES];
-        for seed in 0..SEEDS {
-            let mut skills = Rng::new(seed, Rng::SKILLS);
-            let mut accuracy = Rng::new(seed, Rng::ACCURACY);
-            for sum in &mut sums {
-                *sum += centred(skills.next_u32()) * centred(accuracy.next_u32());
+        for (a, b) in [
+            (Rng::SKILLS, Rng::ACCURACY),
+            (Rng::SKILLS, Rng::SYNC),
+            (Rng::ACCURACY, Rng::SYNC),
+        ] {
+            let mut sums = vec![0_i128; INDICES];
+            for seed in 0..SEEDS {
+                let (mut x, mut y) = (Rng::new(seed, a), Rng::new(seed, b));
+                for sum in &mut sums {
+                    *sum += centred(x.next_u32()) * centred(y.next_u32());
+                }
             }
-        }
 
-        let se = (64_u128 << 64) / 12;
-        let (index, worst) = sums
-            .iter()
-            .map(|s| s.unsigned_abs())
-            .enumerate()
-            .max_by_key(|&(_, s)| s)
-            .expect("indices");
-        let tenths = worst * 10 / se;
-        assert!(
-            worst < 6 * se,
-            "index {index} is {}.{} SE off independent",
-            tenths / 10,
-            tenths % 10
-        );
+            let se = (64_u128 << 64) / 12;
+            let (index, worst) = sums
+                .iter()
+                .map(|s| s.unsigned_abs())
+                .enumerate()
+                .max_by_key(|&(_, s)| s)
+                .expect("indices");
+            let tenths = worst * 10 / se;
+            assert!(
+                worst < 6 * se,
+                "streams {a} and {b}: index {index} is {}.{} SE off independent",
+                tenths / 10,
+                tenths % 10
+            );
+        }
     }
 }

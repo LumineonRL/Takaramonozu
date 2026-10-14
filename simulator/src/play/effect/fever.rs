@@ -62,7 +62,7 @@ where
         heal, overheal_strength,
         psu, expire, psu_tap, psu_paid,
         begin, boosted, rates, sru,
-        strength, hearted_strength, param,
+        strength, hearted_strength, param, sync, seed,
     }
 
     #[inline]

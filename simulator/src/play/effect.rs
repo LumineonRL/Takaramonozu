@@ -66,9 +66,16 @@ macro_rules! forward {
     (@ hearted_strength) => { forward!(fn hearted_strength(&self, locked: bool) -> u64); };
     (@ param) => {
         forward!(fn param(
-            &mut self, lane: u32, now: crate::song::Time, duration: crate::scalar::Ms, value: u32
+            &mut self, lane: u32, worn: bool, now: crate::song::Time, duration: crate::scalar::Ms,
+            value: u32
         ));
     };
+    (@ sync) => {
+        forward!(fn sync(
+            &mut self, lane: u32, worn: bool, now: crate::song::Time, duration: crate::scalar::Ms
+        ));
+    };
+    (@ seed) => { forward!(fn seed(&mut self, seed: u64)); };
     (fn $name:ident(&self $(, $arg:ident: $ty:ty)* $(,)?) -> $ret:ty) => {
         #[inline(always)]
         fn $name(&self $(, $arg: $ty)*) -> $ret {
@@ -106,7 +113,7 @@ use crate::song::Time;
 /// No lane is waiting to roll.
 const NEVER: Time = Time(u32::MAX);
 
-/// For Duration effects. Perfect Lock, Total Trick, Combo Fever, Perfect Score Up, Skill Rate Up, and Appeal Boost
+/// For Duration effects. Perfect Lock, Total Trick, Combo Fever, Perfect Score Up, Skill Rate Up, Appeal Boost and Sync.
 pub(in crate::play) trait Lasting<'q> {
     /// Whether anything on the team is active.
     const ANY: bool;
@@ -119,6 +126,7 @@ pub(in crate::play) trait Lasting<'q> {
 
     const PSU: bool = false;
 
+    /// Both param boost and sync
     const PARAM: bool = false;
 
     /// `last` is the final judgement aka end of song.
@@ -250,9 +258,18 @@ pub(in crate::play) trait Lasting<'q> {
         0
     }
 
-    fn param(&mut self, _lane: u32, _now: Time, _duration: Ms, _value: u32) {
+    /// `worn` just means the accessory rolled and the card didn't.
+    fn param(&mut self, _lane: u32, _worn: bool, _now: Time, _duration: Ms, _value: u32) {
         debug_assert!(false, "no Appeal Boost on this team, buddy.");
     }
+
+    fn sync(&mut self, _lane: u32, _worn: bool, _now: Time, _duration: Ms) {
+        debug_assert!(false, "no Sync on this team, buddy.");
+    }
+
+    /// Sync gets its own RNG stream.
+    #[inline(always)]
+    fn seed(&mut self, _seed: u64) {}
 }
 
 pub(in crate::play) struct Instant;
@@ -310,7 +327,7 @@ impl Lasting<'_> for Instant {
     }
 }
 
-/// TODO: Sync. Maybe Spark too.
+/// TODO: Maybe Spark too.
 pub(super) const fn lasts(effect: SkillEffect) -> bool {
     matches!(
         effect,
@@ -320,6 +337,7 @@ pub(super) const fn lasts(effect: SkillEffect) -> bool {
             | SkillEffect::PerfectScoreUp
             | SkillEffect::SkillRateUp
             | SkillEffect::AppealBoost
+            | SkillEffect::Sync
     )
 }
 
@@ -331,6 +349,7 @@ pub(super) const fn lasts(effect: SkillEffect) -> bool {
 )]
 pub(super) fn pay<'q>(
     lane: u32,
+    worn: bool,
     effect: SkillEffect,
     value: Centi,
     duration: Ms,
@@ -353,12 +372,9 @@ pub(super) fn pay<'q>(
         SkillEffect::ComboFever => expiry.fever(lane, now, duration, value, out.notes),
         SkillEffect::PerfectScoreUp => expiry.psu(lane, now, duration, value, out.perfects),
         SkillEffect::SkillRateUp => expiry.sru(lane, now, duration, value),
-        SkillEffect::AppealBoost => expiry.param(lane, now, duration, value),
-        SkillEffect::Scorer
-        | SkillEffect::Encore
-        | SkillEffect::Amplify
-        | SkillEffect::Sync
-        | SkillEffect::Spark => {}
+        SkillEffect::AppealBoost => expiry.param(lane, worn, now, duration, value),
+        SkillEffect::Sync => expiry.sync(lane, worn, now, duration),
+        SkillEffect::Scorer | SkillEffect::Encore | SkillEffect::Amplify | SkillEffect::Spark => {}
     }
 }
 
@@ -490,6 +506,21 @@ mod tests {
 
     /// Half of `TEAM`.
     pub(super) const BOOST: u32 = 40_000;
+    pub(super) const STATS: [u32; 9] = [8000, 24_000, 6000, 6000, 6000, 6000, 8000, 8000, 8000];
+
+    /// `targets` are the lanes it may copy.
+    pub(super) fn sync(
+        scoring: &mut Scoring,
+        lane: usize,
+        trigger: TriggerType,
+        threshold: u16,
+        chance: Rate,
+        duration: Ms,
+        targets: u16,
+    ) {
+        lasting(scoring, lane, SkillEffect::Sync, trigger, threshold, chance, duration);
+        scoring.targets[lane][0] = targets;
+    }
 
     /// 480 * heal value
     #[test]
