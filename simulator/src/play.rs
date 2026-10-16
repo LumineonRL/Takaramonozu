@@ -114,10 +114,6 @@ pub fn run(
 #[expect(clippy::indexing_slicing, reason = "I'll allow it.")]
 #[expect(clippy::else_if_without_else, reason = "lazy")]
 #[expect(clippy::too_many_lines, reason = "Benchmarked. Splitting it moved what LLVM inlined.")]
-#[expect(
-    clippy::cognitive_complexity,
-    reason = "TODO agreed, some of these are getting out of hand. Was going to wait for all effects to be finished to restruct but there's still 4 left so maybe that should come now."
-)]
 #[inline(never)]
 fn walk<'q, const STARS: bool, const SCORE: bool, const YEAR: bool, E>(
     queue: &'q Queue,

@@ -484,7 +484,6 @@ mod tests {
 
     #[test]
     #[expect(clippy::too_many_lines, reason = "agreed`")]
-    #[expect(clippy::cognitive_complexity, reason = "agreed")]
     fn check_sync_copies() {
         let stream: Vec<_> = (0..51_u32)
             .map(|i| {

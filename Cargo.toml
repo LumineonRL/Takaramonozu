@@ -52,6 +52,7 @@ missing_docs_in_private_items = "allow"
 doc_paragraphs_missing_punctuation = "allow"
 missing_inline_in_public_items = "allow"
 as_conversions = "allow"
+cognitive_complexity = "allow" # I went to fix an instance of this that I `expect`ed, but apparently even the clippy docs recommend against having this on LMAO.
 
 # Wrong for this workspace specifically.
 exhaustive_structs = "allow" # `preprocess` constructs these.

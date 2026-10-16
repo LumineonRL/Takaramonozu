@@ -486,7 +486,6 @@ mod tests {
 
     #[test]
     #[expect(clippy::too_many_lines, reason = "I agree, clippy")]
-    #[expect(clippy::cognitive_complexity, reason = "agreed, again and don't feel like rewriting.")]
     fn check_param_copies() {
         let stream: Vec<_> = (0..51_u32)
             .map(|i| {
