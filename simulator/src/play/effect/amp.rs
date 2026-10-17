@@ -6,7 +6,7 @@
 //! I'll document some of them here.
 //!
 //! Encores activating don't spend an amplify charge
-//! Encore can't copy Amp.
+//! Encore copying an Amp re-amps, unless an Amp already proc'd at that exact moment.
 //! Encore copying a skill that was Amp'd, replays the Amp/
 //! Accs get Amp'd.
 //! Only one amplify can activate at a given moment. If more than one proc at the exact same time,
@@ -28,6 +28,7 @@
 //! search up `coinflip` in this codebase, I don't remember which module it's in. `rng.rs`, I think.
 
 use super::Lasting;
+use super::encore::{Copied, Slot};
 use crate::play::Scoring;
 use crate::play::activation::{AMP_LEVELS, Payload};
 use crate::play::queue::Queue;
@@ -53,6 +54,8 @@ pub(in crate::play) struct Amp<E> {
     second: u16,
     /// card then acc you know the drill by now.
     base: [[Payload; 2]; LANES],
+    /// Needed for Encore
+    slot: Slot,
 }
 
 impl<'q, E> Lasting<'q> for Amp<E>
@@ -113,6 +116,7 @@ where
             first: amps,
             second: others,
             base,
+            slot: Slot::default(),
         }
     }
 
@@ -129,6 +133,7 @@ where
             self.fresh
         };
         self.fresh = 0;
+        self.slot.end();
     }
 
     /// This might need to come out of this module since it's relevant for Encore too, not
@@ -150,10 +155,8 @@ where
     }
 
     #[inline(always)]
-    fn spend(&mut self, take: bool) -> u32 {
-        let levels = if take { self.standing } else { 0 };
-        self.standing = if take { 0 } else { self.standing };
-        levels
+    fn spend(&mut self) -> u32 {
+        core::mem::take(&mut self.standing)
     }
 
     #[inline(always)]
@@ -180,6 +183,16 @@ where
             self.fresh
         };
     }
+
+    #[inline(always)]
+    fn write(&mut self, landed: Copied) {
+        self.slot.write(landed);
+    }
+
+    #[inline(always)]
+    fn copy(&mut self) -> Option<Copied> {
+        self.slot.copy()
+    }
 }
 
 // This test module is a behemoth but there's so many interactions with this mechanic it's kind of needed.
@@ -190,10 +203,10 @@ mod tests {
     use crate::play::Scoring;
     use crate::play::activation::{AMP_LEVELS, AccessorySkill, Payload, Skill, Triggers};
     use crate::play::effect::tests::{
-        BOOST, FLIP, STATS, TEAM, clocked, lasting, lock, overhealing, param, psu, sync, trick,
+        BOOST, FLIP, STATS, TEAM, clocked, draws, lasting, lock, others_first, overhealing, param,
+        psu, sync, trick,
     };
     use crate::play::queue::Queue;
-    use crate::play::rng::Rng;
     use crate::play::tests::{
         ALWAYS, arena, at, fifty_one, only, play, scorer, seeded, sloppy, worn,
     };
@@ -240,17 +253,6 @@ mod tests {
                 scoring.amplified[lane][half] = [Payload { value, duration, extra }; AMP_LEVELS];
             }
         }
-    }
-
-    /// First `n` skill draws of a seed at a coin flip.
-    fn draws(seed: u64, n: usize) -> Vec<u64> {
-        let mut rng = Rng::new(seed, Rng::SKILLS);
-        core::iter::repeat_with(|| u64::from(rng.roll(FLIP))).take(n).collect()
-    }
-
-    /// Whether other skills go before Amplify this trial as a result of the coin flip.
-    fn others_first(seed: u64) -> bool {
-        Rng::new(seed, Rng::COIN).roll(FLIP)
     }
 
     /// Amp triggered on notes 10 and 50.
@@ -363,31 +365,12 @@ mod tests {
         scoring.skills[2] = scorer(15, ALWAYS, 1000);
         climbing(&mut scoring, 2, 0, 1000, 100);
         let encored = play(&queue, &scoring);
-        assert_eq!(encored.skill, 3 * 1400);
+        assert_eq!(encored.skill, 3 * 3 * 1400, "each +4 scorer, copied on its icon and the next");
 
         let mut stolen = scoring;
         stolen.skills[5].effect = SkillEffect::Scorer;
         let out = play(&queue, &stolen);
         assert_eq!((out.activations, out.skill), (encored.activations, 3 * 1000));
-    }
-
-    /// This will move when the coinflip related mechanics get their own module.
-    #[test]
-    fn check_encores_go_last() {
-        let arena = fifty_one();
-        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
-        let mut scoring = Scoring::flat(TEAM);
-        scoring.skills[8] = scorer(1, FLIP, 100);
-        scoring.skills[5] = Skill { effect: SkillEffect::Encore, ..scorer(1, FLIP, 0) };
-        scoring.skills[2] = scorer(1, FLIP, 1);
-        amp(&mut scoring, 0, TriggerType::RhythmIcons, 1, 0, 4);
-
-        for seed in 0..32 {
-            let d = draws(seed, 4 * 51);
-            let (big, small) = if others_first(seed) { (0, 1) } else { (1, 2) };
-            let want: u64 = d.chunks(4).map(|icon| 100 * icon[big] + icon[small]).sum();
-            assert_eq!(seeded(&queue, &scoring, seed).skill, want, "seed {seed}");
-        }
     }
 
     #[test]

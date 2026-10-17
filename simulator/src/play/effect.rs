@@ -103,6 +103,7 @@ macro_rules! forward {
 }
 
 pub(super) mod amp;
+pub(super) mod encore;
 pub(super) mod fever;
 pub(super) mod healing;
 pub(super) mod locks;
@@ -117,6 +118,7 @@ use super::{Outcome, Scoring};
 use crate::scalar::{Centi, Ms, Rate};
 use crate::skill::SkillEffect;
 use crate::song::Time;
+use encore::Copied;
 
 /// No lane is waiting to roll.
 const NEVER: Time = Time(u32::MAX);
@@ -318,7 +320,7 @@ pub(in crate::play) trait Lasting<'q> {
     /// Probably a confusing very to use because Spark spends charge of Encore activations
     /// what verb am I supposed to use for that why are there so many different skills remember
     /// when SIF was just Scorers, Healers and Perfect Locks? Take me back to the good ol' days.
-    fn spend(&mut self, _take: bool) -> u32 {
+    fn spend(&mut self) -> u32 {
         debug_assert!(false, "no Amplify on this team, buddy.");
         0
     }
@@ -331,6 +333,18 @@ pub(in crate::play) trait Lasting<'q> {
 
     fn amp(&mut self, _levels: u32) {
         debug_assert!(false, "no Amplify on this team, buddy.");
+    }
+
+    /// Encore's verbs are `write` and `copy`.
+    /// The first skill to proc at a givenl moment that isn't Encore
+    fn write(&mut self, _landed: Copied) {
+        debug_assert!(false, "no Encore on this team, buddy.");
+    }
+
+    /// Reads the skill written by `write`.
+    fn copy(&mut self) -> Option<Copied> {
+        debug_assert!(false, "no Encore on this team, buddy.");
+        None
     }
 }
 
@@ -432,7 +446,7 @@ pub(super) fn pay<'q>(
     }
 }
 
-/// Specifically for teams with Amplify. No amp means we don't worry about this (actually that applies to nearly every skill
+/// Specifically for teams with Amplify or Encore. No amp means we don't worry about this (actually that applies to nearly every skill
 /// in this repo).
 /// This processes an Amp activation so the increased skill level reading the enhanced value/duration
 /// and a skill check because Encore does not consume Amp.
@@ -446,9 +460,37 @@ pub(super) fn land<'q>(
     out: &mut Outcome,
     expiry: &mut impl Lasting<'q>,
 ) {
-    let levels = expiry.spend(effect != SkillEffect::Encore);
+    if effect == SkillEffect::Encore {
+        if let Some(copy) = expiry.copy() {
+            replay(lane, worn, copy, now, scoring, out, expiry);
+        }
+        return;
+    }
+    let levels = expiry.spend();
+    expiry.write(Copied { lane, worn, effect, levels });
     let payload = expiry.payload(lane, worn, levels, scoring);
     pay_at(lane, worn, effect, payload.value, payload.duration, payload.extra, now, out, expiry);
+}
+
+/// For encore to replay the previous skill
+#[inline(always)]
+fn replay<'q>(
+    lane: u32,
+    worn: bool,
+    copy: Copied,
+    now: Time,
+    scoring: &Scoring,
+    out: &mut Outcome,
+    expiry: &mut impl Lasting<'q>,
+) {
+    // TODO: Param Boost and syncs who they copy and how it works need to bust out that ol' discord search feature
+    // and watch back some private server recordings.
+    if matches!(copy.effect, SkillEffect::AppealBoost | SkillEffect::Sync) {
+        return;
+    }
+    let payload = expiry.payload(copy.lane, copy.worn, copy.levels, scoring);
+    let (value, duration, extra) = (payload.value, payload.duration, payload.extra);
+    pay_at(lane, worn, copy.effect, value, duration, extra, now, out, expiry);
 }
 
 /// `extra` can either be Healer's HP or an Appeal Boost's percent I wasn't sure what to do with them.
@@ -489,6 +531,7 @@ fn pay_at<'q>(
 mod tests {
     use crate::play::activation::{AccessorySkill, Skill};
     use crate::play::queue::Queue;
+    use crate::play::rng::Rng;
     use crate::play::tests::{fifty_one, only, scorer, seeded, worn};
     use crate::play::{Outcome, Scoring};
     use crate::scalar::{Ms, RATE_UNIT, Rate};
@@ -496,6 +539,17 @@ mod tests {
 
     #[expect(clippy::integer_division, reason = "a coin flip")]
     pub(super) const FLIP: Rate = RATE_UNIT / 2;
+
+    /// First `n` skill draws of a given seed based on a coin flip.
+    pub(super) fn draws(seed: u64, n: usize) -> Vec<u64> {
+        let mut rng = Rng::new(seed, Rng::SKILLS);
+        core::iter::repeat_with(|| u64::from(rng.roll(FLIP))).take(n).collect()
+    }
+
+    /// Whether other skills go before Amplify or not
+    pub(super) fn others_first(seed: u64) -> bool {
+        Rng::new(seed, Rng::COIN).roll(FLIP)
+    }
 
     pub(super) const TEAM: u32 = 80_000;
 

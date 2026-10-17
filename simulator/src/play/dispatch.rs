@@ -170,7 +170,8 @@ pub(super) fn effects<'q, E>(
 where
     E: Lasting<'q>,
 {
-    if triggers.amp() != 0 {
+    // Encore always goes last
+    if (triggers.amp() | triggers.encore()) != 0 {
         return amplified::<E>(queue, config, scoring, triggers, judgements);
     }
     years::<E>(queue, config, scoring, triggers, judgements)

@@ -173,6 +173,7 @@ pub struct Triggers {
     param: u16,
     sync: u16,
     amp: u16,
+    encore: u16,
 }
 
 impl Triggers {
@@ -201,6 +202,7 @@ impl Triggers {
             param: lanes_with(scoring, |effect| effect == SkillEffect::AppealBoost),
             sync: lanes_with(scoring, |effect| effect == SkillEffect::Sync),
             amp: lanes_with(scoring, |effect| effect == SkillEffect::Amplify),
+            encore: lanes_with(scoring, |effect| effect == SkillEffect::Encore),
         }
     }
 
@@ -290,6 +292,11 @@ impl Triggers {
     #[must_use]
     pub const fn amp(&self) -> u16 {
         self.amp
+    }
+
+    #[must_use]
+    pub const fn encore(&self) -> u16 {
+        self.encore
     }
 
     #[must_use]
