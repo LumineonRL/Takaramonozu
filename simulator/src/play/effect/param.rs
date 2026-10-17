@@ -147,16 +147,27 @@ where
     #[inline(never)]
     #[expect(clippy::indexing_slicing, reason = "lane bits")]
     fn param(&mut self, lane: u32, worn: bool, now: Time, duration: Ms, value: u32) {
-        if now < self.until {
+        if !self.open(lane, worn, now, duration, value) {
             return;
         }
-        self.until = self.lasting.occupy(lane, now, duration);
-        self.ending = self.ending.min(self.until);
-        self.wake = self.wake.min(self.until);
-        self.boost = value;
-        let half = usize::from(worn);
-        self.reach = self.targets[lane as usize][half];
-        self.percent = self.percents[lane as usize][half];
+        self.percent = self.percents[lane as usize][usize::from(worn)];
+        self.refresh();
+    }
+
+    #[inline(never)]
+    fn param_at(
+        &mut self,
+        lane: u32,
+        worn: bool,
+        now: Time,
+        duration: Ms,
+        value: u32,
+        percent: u16,
+    ) {
+        if !self.open(lane, worn, now, duration, value) {
+            return;
+        }
+        self.percent = percent;
         self.refresh();
     }
 
@@ -183,6 +194,21 @@ impl<'q, E> Param<E>
 where
     E: Lasting<'q>,
 {
+    /// Activates the boost unless the boost is already active
+    #[inline(always)]
+    #[expect(clippy::indexing_slicing, reason = "lane bits")]
+    fn open(&mut self, lane: u32, worn: bool, now: Time, duration: Ms, value: u32) -> bool {
+        if now < self.until {
+            return false;
+        }
+        self.until = self.lasting.occupy(lane, now, duration);
+        self.ending = self.ending.min(self.until);
+        self.wake = self.wake.min(self.until);
+        self.boost = value;
+        self.reach = self.targets[lane as usize][usize::from(worn)];
+        true
+    }
+
     fn refresh(&mut self) {
         let shown = self.copies.shown().saturating_add(self.boost);
         self.strengths = [shown, shown.saturating_add(self.trick)];

@@ -13,7 +13,7 @@ use crate::scalar::Ms;
 use crate::song::{EventKind, LANES, Time};
 use activation::chain::Chain;
 use activation::ladder::Ladder;
-use activation::{AccessorySkill, Skill, Tally, Triggers, fire};
+use activation::{AMP_LEVELS, AccessorySkill, Payload, Skill, Tally, Triggers, fire};
 use config::PlayConfig;
 use dispatch::{effects, healing, lasting};
 use effect::locks::{Expiry, Tricked};
@@ -49,6 +49,8 @@ pub struct Scoring {
     pub targets: [[u16; 2]; LANES],
     /// An Appeal Boost's percent, card then accessory.
     pub boosts: [[u16; 2]; LANES],
+    /// Card then accessory, at own level + 1..=16 for an Amplify.
+    pub amplified: [[[Payload; AMP_LEVELS]; 2]; LANES],
 }
 
 impl Scoring {
@@ -69,6 +71,7 @@ impl Scoring {
             stats: [0; LANES],
             targets: [[0; 2]; LANES],
             boosts: [[0; 2]; LANES],
+            amplified: [[[Payload { value: 0, duration: 0, extra: 0 }; AMP_LEVELS]; 2]; LANES],
         }
     }
 }
@@ -149,7 +152,7 @@ where
     let mut stars = Tally::new(triggers.stars());
     let mut star_perfects = 0_u32;
     let mut expiry = E::new(queue.last_judgement(), queue, scoring);
-    if E::PARAM {
+    if E::PARAM || E::AMP {
         expiry.seed(config.seed);
     }
     if E::FEVER && SCORE {
@@ -380,13 +383,7 @@ fn hit<'q, const SCORE: bool, const YEAR: bool>(
 
 /// You can think of this as a millisecond even if that's not quite accurate.
 /// Handles the skill activation mask, most skills firing right->left, and then year groups.
-/// Will probably need to modify when encore+amplify are in and the coinflip mechanics flips
-/// the order that skills resolve on its head. TODO amplify
 #[inline(always)]
-#[expect(
-    clippy::inline_always,
-    reason = "`fire` is inlined and this is all that gets added without YEAR"
-)]
 fn moment<'q, const YEAR: bool>(
     mask: u16,
     now: Time,
@@ -398,10 +395,10 @@ fn moment<'q, const YEAR: bool>(
 ) {
     expiry.begin();
     if YEAR {
-        let landed = fire::<true>(mask, now, scoring, rng, out, expiry);
+        let landed = fire::<true, true, _>(mask, now, scoring, rng, out, expiry);
         chain.after(landed, now, scoring, rng, out, expiry);
     } else {
-        fire::<false>(mask, now, scoring, rng, out, expiry);
+        fire::<false, true, _>(mask, now, scoring, rng, out, expiry);
     }
 }
 
@@ -455,7 +452,6 @@ impl Spawns<'_> {
     }
 
     #[inline(always)]
-    #[expect(clippy::inline_always, reason = "I benchmarked")]
     #[expect(clippy::indexing_slicing, reason = "`at` is terminated, `icons` is bounded")]
     #[expect(
         clippy::too_many_arguments,

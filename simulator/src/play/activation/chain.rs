@@ -72,7 +72,7 @@ impl Chain {
         while let Some(lane) = bits.highest_one() {
             let bit = bits.isolate_highest_one();
             bits ^= bit;
-            if fire::<true>(bit, now, scoring, &mut rng, &mut out, expiry) != 0 {
+            if fire::<true, false, _>(bit, now, scoring, &mut rng, &mut out, expiry) != 0 {
                 let member = scoring.members[lane as usize];
                 let mut others = self.lanes;
                 while let Some(other) = others.lowest_one() {
@@ -81,6 +81,7 @@ impl Chain {
                 }
             }
         }
+        expiry.end();
         (rng, out)
     }
 }

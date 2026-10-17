@@ -3,6 +3,7 @@
 
 use super::activation::Triggers;
 use super::config::PlayConfig;
+use super::effect::amp::Amp;
 use super::effect::fever::Fever;
 use super::effect::healing::Healing;
 use super::effect::locks::{Expiry, Tricked};
@@ -159,8 +160,38 @@ where
     effects::<X>(queue, config, scoring, triggers, judgements)
 }
 
-/// Year Group gets its own too but this one makes more sense I don't see a clean way around it.
 pub(super) fn effects<'q, E>(
+    queue: &'q Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    E: Lasting<'q>,
+{
+    if triggers.amp() != 0 {
+        return amplified::<E>(queue, config, scoring, triggers, judgements);
+    }
+    years::<E>(queue, config, scoring, triggers, judgements)
+}
+
+#[inline(never)]
+fn amplified<'q, E>(
+    queue: &'q Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    E: Lasting<'q>,
+{
+    years::<Amp<E>>(queue, config, scoring, triggers, judgements)
+}
+
+/// Year Group gets its own too but this one makes more sense I don't see a clean way around it.
+fn years<'q, E>(
     queue: &'q Queue,
     config: &PlayConfig,
     scoring: &Scoring,

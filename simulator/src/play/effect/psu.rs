@@ -158,6 +158,22 @@ where
             self.wake = self.wake.min(self.lasting.next());
         }
     }
+
+    #[inline(always)]
+    fn param_at(
+        &mut self,
+        lane: u32,
+        worn: bool,
+        now: Time,
+        duration: Ms,
+        value: u32,
+        percent: u16,
+    ) {
+        self.lasting.param_at(lane, worn, now, duration, value, percent);
+        if E::PARAM {
+            self.wake = self.wake.min(self.lasting.next());
+        }
+    }
 }
 
 #[cfg(test)]

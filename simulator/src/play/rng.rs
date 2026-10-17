@@ -26,11 +26,27 @@ pub struct Rng(Pcg32);
 /// Skills are only sometimes deterministic Throw in a score-based scorer or a
 /// star note scorer and the numbers of times they'll need to roll will change from
 /// trial to trial.
-/// Sync skill also needed its own RNG to pick its target.
+/// Sync skill also needed its own RNG to pick its target
+/// and Amplify/Encore get one for the coinflip mechanic.
+/// the coin flip one is weird because it's literally just one single 50/50 at the start of a trial.
+/// and really it SHOULDN'T impact anything if it was lumped into the skills stream, right? Like,
+/// just treat the coin flip as a 50/50 that happens at the start of a trial where an encore or amp is present.
+/// TODO to maybe change.
+///
+/// I guess I need to explain what "coin flip means" for those out of the loop and why it's here.
+/// there's a mechanic where the order in which skills resolve when an Encore or Amplify is on the team
+/// is random from trial to trial.
+/// If multiple skills are set to trigger at the same moment (almost always from a "rhythm icon" condition), for
+/// ALMOST EVERY skill, they will resolve from the right-most lane to the leftmost lane regardless of what the skill effect is.
+/// Except for Encore and Amplify.
+///
+/// The possible orderings are [Amp, Other, Encore] or [Other, Amp, Encore] where other is literally any
+/// other skill, And again, this only matters if multiple skills are trying to proc on the same exact instant.
 impl Rng {
     pub const SKILLS: u64 = 0;
     pub const ACCURACY: u64 = 1;
     pub const SYNC: u64 = 2;
+    pub const COIN: u64 = 3;
 
     #[must_use]
     pub fn new(seed: u64, stream: u64) -> Self {
@@ -114,6 +130,9 @@ mod tests {
             (Rng::SKILLS, Rng::ACCURACY),
             (Rng::SKILLS, Rng::SYNC),
             (Rng::ACCURACY, Rng::SYNC),
+            (Rng::SKILLS, Rng::COIN),
+            (Rng::ACCURACY, Rng::COIN),
+            (Rng::SYNC, Rng::COIN),
         ] {
             let mut sums = vec![0_i128; INDICES];
             for seed in 0..SEEDS {

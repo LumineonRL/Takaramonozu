@@ -5,11 +5,11 @@ pub(super) mod ladder;
 
 use core::num::NonZeroU8;
 
-use super::effect::{Lasting, lasts, pay};
+use super::effect::{Lasting, land, lasts, pay};
 use super::queue::Queue;
 use super::rng::Rng;
 use super::{Outcome, Scoring};
-use crate::scalar::{Centi, Rate};
+use crate::scalar::{Centi, Ms, Rate};
 use crate::skill::{SkillEffect, TriggerType};
 use crate::song::{LANES, Time};
 
@@ -18,6 +18,7 @@ use crate::song::{LANES, Time};
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Skill {
     /// Points for Scorers, Healers, Combo Fever, PSU or Param Boost, but percent for SRU.
+    /// Also, levels for Amplify.
     pub value: Centi,
     pub chance: Rate,
     pub threshold: u16,
@@ -64,6 +65,22 @@ impl Default for AccessorySkill {
     fn default() -> Self {
         Self::NONE
     }
+}
+
+/// Most levels an amp could add.
+pub const AMP_LEVELS: usize = 16;
+
+/// For Amplify.
+/// The skill data for the level it was boosted to.
+/// Note that only the value and duration get boosted.
+/// Activation rate doesn't get boosted I mean it doesn't make sense for activation rate to get
+/// boosted since the skill needs to activate to get the amp boost. Same argument for threshold.
+#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub struct Payload {
+    pub value: Centi,
+    pub duration: Ms,
+    /// HP for a Healer or percent for an Appeal Boost.
+    pub extra: u16,
 }
 
 // Can pre-add to the queue certain activations like rhythm icons, combo, and time.
@@ -155,6 +172,7 @@ pub struct Triggers {
     sru: u16,
     param: u16,
     sync: u16,
+    amp: u16,
 }
 
 impl Triggers {
@@ -182,6 +200,7 @@ impl Triggers {
             sru: lanes_with(scoring, |effect| effect == SkillEffect::SkillRateUp),
             param: lanes_with(scoring, |effect| effect == SkillEffect::AppealBoost),
             sync: lanes_with(scoring, |effect| effect == SkillEffect::Sync),
+            amp: lanes_with(scoring, |effect| effect == SkillEffect::Amplify),
         }
     }
 
@@ -269,6 +288,11 @@ impl Triggers {
     }
 
     #[must_use]
+    pub const fn amp(&self) -> u16 {
+        self.amp
+    }
+
+    #[must_use]
     pub fn rolls(&self) -> u32 {
         self.all().iter().map(|s| s.rolls()).sum()
     }
@@ -344,17 +368,24 @@ impl<'a> Tally<'a> {
     }
 }
 
-/// Ties happen right to left. Actually there's a coinflip mechanic involving Amplify, but we'll worry about that once I get around to Amplify.
+/// Ties happen right to left. On a team with an Amplify, in the groups `Lasting::order` gives.
+/// `MOMENT` is when `mask` is the whole moment, so an Amplify landing in it stands from the next.
 #[inline(always)]
 #[expect(clippy::inline_always, reason = "I benchmarked.")]
-pub(super) fn fire<'q, const LANDED: bool>(
+pub(super) fn fire<'q, const LANDED: bool, const MOMENT: bool, E>(
     mask: u16,
     now: Time,
     scoring: &Scoring,
     rng: &mut Rng,
     out: &mut Outcome,
-    expiry: &mut impl Lasting<'q>,
-) -> u16 {
+    expiry: &mut E,
+) -> u16
+where
+    E: Lasting<'q>,
+{
+    if E::AMP {
+        return ordered::<LANDED, MOMENT, E>(mask, now, scoring, rng, out, expiry);
+    }
     let mut landed = 0;
     let mut bits = expiry.admit(mask, now);
     while let Some(lane) = bits.highest_one() {
@@ -406,6 +437,67 @@ pub(super) fn fire<'q, const LANDED: bool>(
         if LANDED {
             landed |= bit;
         }
+    }
+    landed
+}
+
+/// Only for teams with Amplify.
+/// I put a near identical doc comment in `effect.rs` check that for more deets.
+#[inline(always)]
+fn ordered<'q, const LANDED: bool, const MOMENT: bool, E>(
+    mask: u16,
+    now: Time,
+    scoring: &Scoring,
+    rng: &mut Rng,
+    out: &mut Outcome,
+    expiry: &mut E,
+) -> u16
+where
+    E: Lasting<'q>,
+{
+    let mut landed = 0;
+    let admitted = expiry.admit(mask, now);
+    let mut bits = expiry.order(admitted);
+    while let Some(at) = bits.highest_one() {
+        bits ^= bits.isolate_highest_one();
+        let lane = at & 0xF;
+        let bit = 1_u16.checked_shl(lane).unwrap_or(0);
+        let Some(skill) = scoring.skills.get(lane as usize) else {
+            continue;
+        };
+        let chance = if expiry.boosted(now) {
+            expiry.rates(lane)[0]
+        } else {
+            skill.chance
+        };
+        if rng.roll(chance) {
+            out.activations = out.activations.saturating_add(1);
+            land(lane, false, skill.effect, now, scoring, out, expiry);
+            if LANDED {
+                landed |= bit;
+            }
+            continue;
+        }
+
+        let Some(accessory) = scoring.accessories.get(lane as usize) else {
+            continue;
+        };
+        let worn_chance = if expiry.boosted(now) {
+            expiry.rates(lane)[1]
+        } else {
+            accessory.chance
+        };
+        if accessory.is_inert() || !rng.roll(worn_chance) {
+            continue;
+        }
+        out.accessory_activations = out.accessory_activations.saturating_add(1);
+        land(lane, true, accessory.effect, now, scoring, out, expiry);
+        if LANDED {
+            landed |= bit;
+        }
+    }
+    if MOMENT {
+        expiry.end();
     }
     landed
 }

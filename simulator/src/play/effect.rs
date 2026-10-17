@@ -75,6 +75,12 @@ macro_rules! forward {
             &mut self, lane: u32, worn: bool, now: crate::song::Time, duration: crate::scalar::Ms
         ));
     };
+    (@ param_at) => {
+        forward!(fn param_at(
+            &mut self, lane: u32, worn: bool, now: crate::song::Time, duration: crate::scalar::Ms,
+            value: u32, percent: u16
+        ));
+    };
     (@ seed) => { forward!(fn seed(&mut self, seed: u64)); };
     (fn $name:ident(&self $(, $arg:ident: $ty:ty)* $(,)?) -> $ret:ty) => {
         #[inline(always)]
@@ -96,6 +102,7 @@ macro_rules! forward {
     };
 }
 
+pub(super) mod amp;
 pub(super) mod fever;
 pub(super) mod healing;
 pub(super) mod locks;
@@ -103,6 +110,7 @@ pub(super) mod param;
 pub(super) mod psu;
 pub(super) mod sru;
 
+use super::activation::Payload;
 use super::queue::Queue;
 use super::tap::HEART_UNIT;
 use super::{Outcome, Scoring};
@@ -128,6 +136,12 @@ pub(in crate::play) trait Lasting<'q> {
 
     /// Both param boost and sync
     const PARAM: bool = false;
+
+    /// I'm running out of verbs to go with each skill and it's actually getting very
+    /// confusing to remember which skills get which verbs (and which are just generic that apply to all skills)
+    /// so I'm going to start writing it down so it's easier to find.
+    /// Amp's verbs are  `land` and `order`.
+    const AMP: bool = false;
 
     /// `last` is the final judgement aka end of song.
     fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self;
@@ -225,6 +239,11 @@ pub(in crate::play) trait Lasting<'q> {
     #[inline(always)]
     fn begin(&mut self) {}
 
+    /// End of one specific moment of tick or step or whatever you want to call it.
+    /// It's for determining if an Amp is active or not.
+    #[inline(always)]
+    fn end(&mut self) {}
+
     /// SRU currently active flags.
     #[inline(always)]
     fn boosted(&self, _now: Time) -> bool {
@@ -267,9 +286,52 @@ pub(in crate::play) trait Lasting<'q> {
         debug_assert!(false, "no Sync on this team, buddy.");
     }
 
-    /// Sync gets its own RNG stream.
+    /// `param` at the percent an Amplify raised it to.
+    fn param_at(
+        &mut self,
+        _lane: u32,
+        _worn: bool,
+        _now: Time,
+        _duration: Ms,
+        _value: u32,
+        _percent: u16,
+    ) {
+        debug_assert!(false, "no Appeal Boost on this team, buddy.");
+    }
+
+    /// Sync gets its own RNG stream, and so does the Amplify coin flip.
     #[inline(always)]
     fn seed(&mut self, _seed: u64) {}
+
+    /// For lanes that are going off at the exact same time, this orders them in the order they're set to go off.
+    /// Depending on how many there are it uses different bits.
+    /// the first group's go in bits 32..48
+    /// the second's in 16..32
+    /// the last's in 0..16
+    /// Each of these represents a right to left activation.
+    fn order(&self, mask: u16) -> u64 {
+        debug_assert!(false, "no Amplify on this team, buddy.");
+        u64::from(mask)
+    }
+
+    /// For amp, spends an active amp.
+    /// Probably a confusing very to use because Spark spends charge of Encore activations
+    /// what verb am I supposed to use for that why are there so many different skills remember
+    /// when SIF was just Scorers, Healers and Perfect Locks? Take me back to the good ol' days.
+    fn spend(&mut self, _take: bool) -> u32 {
+        debug_assert!(false, "no Amplify on this team, buddy.");
+        0
+    }
+
+    /// This is what's in charge of bumping the skill level itself for an amp.
+    fn payload(&self, _lane: u32, _worn: bool, _levels: u32, _scoring: &Scoring) -> Payload {
+        debug_assert!(false, "no Amplify on this team, buddy.");
+        Payload::default()
+    }
+
+    fn amp(&mut self, _levels: u32) {
+        debug_assert!(false, "no Amplify on this team, buddy.");
+    }
 }
 
 pub(in crate::play) struct Instant;
@@ -279,49 +341,41 @@ impl Lasting<'_> for Instant {
     const TRICKS: bool = false;
 
     #[inline(always)]
-    #[expect(clippy::inline_always, reason = "nothing")]
     fn new(_: Time, _: &Queue<'_>, _: &Scoring) -> Self {
         Self
     }
 
     #[inline(always)]
-    #[expect(clippy::inline_always, reason = "nothing")]
     fn admit(&mut self, mask: u16, _: Time) -> u16 {
         mask
     }
 
     #[inline(always)]
-    #[expect(clippy::inline_always, reason = "nothing")]
     fn next(&self) -> Time {
         NEVER
     }
 
     #[inline(always)]
-    #[expect(clippy::inline_always, reason = "nothing")]
     fn release(&mut self, _: Time) -> u16 {
         0
     }
 
     #[inline(always)]
-    #[expect(clippy::inline_always, reason = "nothing")]
     fn converted(&self, _: Time) -> bool {
         false
     }
 
     #[inline(always)]
-    #[expect(clippy::inline_always, reason = "nothing")]
     fn locked(&self, _: Time) -> bool {
         false
     }
 
     #[inline(always)]
-    #[expect(clippy::inline_always, reason = "nothing")]
     fn lock(&mut self, _: u32, _: Time, _: Ms) {
         debug_assert!(false, "A PL did not schedule an expiration event.");
     }
 
     #[inline(always)]
-    #[expect(clippy::inline_always, reason = "nothing")]
     fn trick(&mut self, _: u32, _: Time, _: Ms) {
         debug_assert!(false, "A Total Trick did not schedule an expiration event.");
     }
@@ -375,6 +429,59 @@ pub(super) fn pay<'q>(
         SkillEffect::AppealBoost => expiry.param(lane, worn, now, duration, value),
         SkillEffect::Sync => expiry.sync(lane, worn, now, duration),
         SkillEffect::Scorer | SkillEffect::Encore | SkillEffect::Amplify | SkillEffect::Spark => {}
+    }
+}
+
+/// Specifically for teams with Amplify. No amp means we don't worry about this (actually that applies to nearly every skill
+/// in this repo).
+/// This processes an Amp activation so the increased skill level reading the enhanced value/duration
+/// and a skill check because Encore does not consume Amp.
+#[inline(always)]
+pub(super) fn land<'q>(
+    lane: u32,
+    worn: bool,
+    effect: SkillEffect,
+    now: Time,
+    scoring: &Scoring,
+    out: &mut Outcome,
+    expiry: &mut impl Lasting<'q>,
+) {
+    let levels = expiry.spend(effect != SkillEffect::Encore);
+    let payload = expiry.payload(lane, worn, levels, scoring);
+    pay_at(lane, worn, effect, payload.value, payload.duration, payload.extra, now, out, expiry);
+}
+
+/// `extra` can either be Healer's HP or an Appeal Boost's percent I wasn't sure what to do with them.
+#[inline(always)]
+#[expect(clippy::too_many_arguments, reason = "agreed")]
+fn pay_at<'q>(
+    lane: u32,
+    worn: bool,
+    effect: SkillEffect,
+    value: Centi,
+    duration: Ms,
+    extra: u16,
+    now: Time,
+    out: &mut Outcome,
+    expiry: &mut impl Lasting<'q>,
+) {
+    let paid = if matches!(effect, SkillEffect::Scorer | SkillEffect::Healer) {
+        value
+    } else {
+        0
+    };
+    out.skill = out.skill.saturating_add(u64::from(paid));
+    match effect {
+        SkillEffect::PerfectLock => expiry.lock(lane, now, duration),
+        SkillEffect::TotalTrick => expiry.trick(lane, now, duration),
+        SkillEffect::Healer => expiry.heal(u8::try_from(extra).unwrap_or(u8::MAX)),
+        SkillEffect::ComboFever => expiry.fever(lane, now, duration, value, out.notes),
+        SkillEffect::PerfectScoreUp => expiry.psu(lane, now, duration, value, out.perfects),
+        SkillEffect::SkillRateUp => expiry.sru(lane, now, duration, value),
+        SkillEffect::AppealBoost => expiry.param_at(lane, worn, now, duration, value, extra),
+        SkillEffect::Sync => expiry.sync(lane, worn, now, duration),
+        SkillEffect::Amplify => expiry.amp(value),
+        SkillEffect::Scorer | SkillEffect::Encore | SkillEffect::Spark => {}
     }
 }
 

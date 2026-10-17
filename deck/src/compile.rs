@@ -13,7 +13,7 @@ use core::num::NonZeroU8;
 use simulator::accessory::AccessoryRows;
 use simulator::card::{Card, CardDb, LeaderSkill, LeaderTargets};
 use simulator::play::Scoring;
-use simulator::play::activation::{AccessorySkill, Skill};
+use simulator::play::activation::{AMP_LEVELS, AccessorySkill, Payload, Skill};
 use simulator::scalar::{
     Attribute, Centi, CharacterId, CharacterSet, Milli, Ms, Pct, RATE_UNIT, Rate,
 };
@@ -140,6 +140,8 @@ pub struct Slot {
     pub targets: [u16; 2],
     /// See `Scoring::boosts`.
     pub boosts: [u16; 2],
+    /// See `Scoring::amplified`.
+    pub amplified: [[Payload; AMP_LEVELS]; 2],
 }
 
 impl Default for Slot {
@@ -158,6 +160,7 @@ impl Default for Slot {
             strength: 0,
             targets: [0; 2],
             boosts: [0; 2],
+            amplified: [[Payload::default(); AMP_LEVELS]; 2],
         }
     }
 }
@@ -197,6 +200,7 @@ impl Compiled {
             stats: self.slots.map(|s| s.strength),
             targets: self.slots.map(|s| s.targets),
             boosts: self.slots.map(|s| s.boosts),
+            amplified: self.slots.map(|s| s.amplified),
         }
     }
 }
@@ -277,12 +281,13 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
             }
         }
 
-        let (skill, duration, hp) = resolve(card, entry, ctx.cards, dst.sis);
-        let (accessory, worn_duration, worn_hp) = slot
+        let (skill, duration, hp, amped) = resolve(card, entry, ctx.cards, dst.sis);
+        let (accessory, worn_duration, worn_hp, worn_amped) = slot
             .accessory()
-            .map_or((AccessorySkill::NONE, 0, 0), |worn| resolve_accessory(worn, ctx, dst.sis));
+            .map_or(NO_ACCESSORY, |worn| resolve_accessory(worn, ctx, dst.sis));
         (dst.skill, dst.accessory) = (skill, accessory);
         (dst.durations, dst.heals) = ([duration, worn_duration], [hp, worn_hp]);
+        dst.amplified = [amped, worn_amped];
         if dst.skill.trigger == TriggerType::YearGroup {
             *year = skill_target(card, ctx.cards);
         }
@@ -338,16 +343,27 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
     out
 }
 
-/// Trying to do some future proofing for Amplify skills where the skill level a skill gets resolved at can change.
+/// A lane skill (value, duration) when Amp is active.
+type Resolved<S> = (S, Ms, u8, [Payload; AMP_LEVELS]);
+
+const NO_ACCESSORY: Resolved<AccessorySkill> =
+    (AccessorySkill::NONE, 0, 0, [Payload { value: 0, duration: 0, extra: 0 }; AMP_LEVELS]);
+
+/// Trigger at the card's skill level
+/// Payload at the value of the amp's skill level
+/// clamped to 1..16.
 ///
-/// TODO: Amplify. I'll be saving that for near the end though.
-fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> (Skill, Ms, u8) {
+/// For the SIF nerds out there, there was a modeling decision to pad every skill to 16 levels
+/// even lower rarities that might cap at only 11 like SRs. For performance it's easier to just
+/// pre-pad them all to 16 so in the hot loop we only worry about clamping to one value.
+fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> Resolved<Skill> {
     let Some(def) = card.skill.and_then(|id| cards.skills.def(id)) else {
-        return (Skill::NONE, 0, 0);
+        return (Skill::NONE, 0, 0, NO_ACCESSORY.3);
     };
     let level = entry.skill_level();
     let trigger = cards.skills.trigger(def, level);
     let (value, duration) = cards.skills.payload(def, level);
+    let amped = amplify(def.effect, level, sis, |at| cards.skills.payload(def, at));
 
     // TODO: Every other effect
     let skill = Skill {
@@ -358,29 +374,50 @@ fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> (Ski
         trigger: def.trigger_type,
         limit: activation_limit::of(entry.card_id()),
     };
-    (skill, duration, heal(def.effect, value))
+    (skill, duration, heal(def.effect, value), amped)
 }
 
 /// TODO: Spark. I'd prefer for this to also be generic enough to not need to reimplement every skill effect
 /// since accs have the same exact effects as cards besides spark.
-fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> (AccessorySkill, Ms, u8) {
+fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> Resolved<AccessorySkill> {
     let Some((accessory, level)) = ctx.accessory(worn) else {
-        return (AccessorySkill::NONE, 0, 0);
+        return NO_ACCESSORY;
     };
     let Some(def) = ctx.acc_db.skills.def(accessory.skill) else {
-        return (AccessorySkill::NONE, 0, 0);
+        return NO_ACCESSORY;
     };
     if def.effect == SkillEffect::Spark {
-        return (AccessorySkill::NONE, 0, 0);
+        return NO_ACCESSORY;
     }
     let (value, duration) = ctx.acc_db.skills.payload(def, level);
+    let amped = amplify(def.effect, level, sis, |at| ctx.acc_db.skills.payload(def, at));
 
     let skill = AccessorySkill {
         value: points(def.effect, value, sis),
         chance: rate(ctx.acc_db.skills.chance(def, level)),
         effect: def.effect,
     };
-    (skill, duration, heal(def.effect, value))
+    (skill, duration, heal(def.effect, value), amped)
+}
+
+/// The payload at `level` + 1..=16, saturating at the table's last row as `payload` does.
+/// An Appeal Boost's rows become points in `reaches`.
+fn amplify(
+    effect: SkillEffect,
+    level: u8,
+    sis: SisFlags,
+    payload: impl Fn(u8) -> (Centi, Ms),
+) -> [Payload; AMP_LEVELS] {
+    let mut above = level;
+    [(); AMP_LEVELS].map(|()| {
+        above = above.saturating_add(1);
+        let (value, duration) = payload(above);
+        Payload {
+            value: points(effect, value, sis),
+            duration,
+            extra: u16::from(heal(effect, value)),
+        }
+    })
 }
 
 fn skill_target(card: &Card, cards: &CardDb) -> Option<CharacterSet> {
@@ -413,6 +450,18 @@ fn reaches(
         ];
         dst.targets = [card_reach, worn_reach];
         dst.boosts = [card_boost, worn_boost];
+        let [card_rows, worn_rows] = &mut dst.amplified;
+        for (effect, rows, set) in [
+            (dst.skill.effect, card_rows, card),
+            (dst.accessory.effect, worn_rows, worn),
+        ] {
+            for row in rows.iter_mut() {
+                let (_, percent) = reach(effect, &mut row.value, set, own, chars, &strengths);
+                if effect == SkillEffect::AppealBoost {
+                    row.extra = percent;
+                }
+            }
+        }
     }
 }
 
@@ -520,21 +569,27 @@ const fn rate(chance: Pct) -> Rate {
 }
 
 /// Scorer's points with Charm, Healer's points with Heal, or Combo Fever's and PSU's points.
+/// And Amplify's levels.
 /// Appeal Boost stays a percent here and becomes points once every lane's stat is known.
 fn points(effect: SkillEffect, value: Centi, sis: SisFlags) -> Centi {
     match effect {
         SkillEffect::Scorer => payout(value, if sis.charm() { CHARM } else { MILLI_UNIT }),
         SkillEffect::Healer => payout(value, if sis.heal() { HEAL } else { 0 }),
         SkillEffect::ComboFever | SkillEffect::PerfectScoreUp => payout(value, MILLI_UNIT),
+        SkillEffect::Amplify => levels(value),
         SkillEffect::PerfectLock
         | SkillEffect::Encore
-        | SkillEffect::Amplify
         | SkillEffect::TotalTrick
         | SkillEffect::SkillRateUp
         | SkillEffect::AppealBoost
         | SkillEffect::Sync
         | SkillEffect::Spark => value,
     }
+}
+
+#[expect(clippy::integer_division, reason = "exact")]
+const fn levels(value: Centi) -> Centi {
+    value / 100
 }
 
 #[expect(clippy::integer_division, reason = "exact")]
@@ -904,6 +959,46 @@ mod tests {
         assert_eq!(charmed.chance, bare.chance);
         assert_eq!(f.run(&team).scoring().accessories[0], charmed);
         assert_eq!(f.run(&team).slots[0].skill.value, 2500, "and the card's own 1000");
+    }
+
+    /// The fixture has a scorer acc with a value of 1000 a level for 8 level
+    /// It also has a Healer that heals 1 per level.
+    /// Amp only goes to level 8 here.
+    #[test]
+    fn check_amplified_rows() {
+        let mut f = fixture();
+        let card = f.card(1, true, 8);
+        let pin = f.accessories.add(&f.acc_db, 11, 4).unwrap().0;
+        let charm = f.owns(15);
+        let mut team = Team::default();
+        team.equip_card(0, card, f.ctx()).unwrap();
+        team.equip_accessory(0, pin, f.ctx()).unwrap();
+        team.equip_sis(0, charm, f.ctx()).unwrap();
+
+        let slot = f.run(&team).slots[0];
+        assert_eq!(slot.accessory.value, 10_000);
+        let worn: Vec<u32> = slot.amplified[1].iter().map(|row| row.value).collect();
+        assert_eq!(worn[..5], [12_500, 15_000, 17_500, 20_000, 20_000]);
+        assert!(worn[4..].iter().all(|&v| v == 20_000), "only up to level 8");
+        assert!(slot.amplified[0].iter().all(|row| row.value == slot.skill.value), "one level");
+        assert_eq!(f.run(&team).scoring().amplified[0], slot.amplified);
+    }
+
+    /// Healer acc at sl 3 heals 4 at +1 and 8 from +5.
+    #[test]
+    fn check_amplified_heals() {
+        let mut f = fixture();
+        let healer = f.card(4, true, 8);
+        let clef = f.accessories.add(&f.acc_db, 15, 3).unwrap().0;
+        let heal = f.owns(27);
+        let mut team = Team::default();
+        team.equip_card(0, healer, f.ctx()).unwrap();
+        team.equip_accessory(0, clef, f.ctx()).unwrap();
+        team.equip_sis(0, heal, f.ctx()).unwrap();
+        let slot = f.run(&team).slots[0];
+        let hp: Vec<u16> = slot.amplified[1].iter().map(|row| row.extra).collect();
+        assert_eq!(hp[..6], [4, 5, 6, 7, 8, 8]);
+        assert_eq!(slot.amplified[1][0].value, 4 * 480);
     }
 
     /// card heals 4, acc 8.

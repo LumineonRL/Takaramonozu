@@ -286,22 +286,39 @@ impl Rungs {
 }
 
 #[inline]
-fn fire_landed<'q>(
+fn fire_landed<'q, E>(
     due: u16,
     now: Time,
     scoring: &Scoring,
     rng: &mut Rng,
     out: &mut Outcome,
-    expiry: &mut impl Lasting<'q>,
-) -> u16 {
+    expiry: &mut E,
+) -> u16
+where
+    E: Lasting<'q>,
+{
     expiry.begin();
     let mut landed = 0;
+    if E::AMP {
+        let mut bits = expiry.order(due);
+        while let Some(at) = bits.highest_one() {
+            bits ^= bits.isolate_highest_one();
+            let bit = 1_u16.checked_shl(at & 0xF).unwrap_or(0);
+            let before = (out.activations, out.accessory_activations);
+            fire::<false, false, _>(bit, now, scoring, rng, out, expiry);
+            if (out.activations, out.accessory_activations) != before {
+                landed |= bit;
+            }
+        }
+        expiry.end();
+        return landed;
+    }
     let mut bits = due;
     while bits != 0 {
         let bit = bits.isolate_highest_one();
         bits ^= bit;
         let before = (out.activations, out.accessory_activations);
-        fire::<false>(bit, now, scoring, rng, out, expiry);
+        fire::<false, false, _>(bit, now, scoring, rng, out, expiry);
         if (out.activations, out.accessory_activations) != before {
             landed |= bit;
         }
