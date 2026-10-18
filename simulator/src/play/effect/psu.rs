@@ -66,10 +66,10 @@ where
     const PARAM: bool = E::PARAM;
 
     forward! {
-        converted, locked, lock, trick, occupy, tap, worth,
-        heal, overheal_strength,
-        begin, boosted, rates, sru,
-        strength, hearted_strength, seed,
+        converted, locked, lock_land, total_trick_land, occupy, total_trick_tap, total_trick_worth,
+        healer_land, heart_strength,
+        begin, sru_boosted, sru_rates, sru_land,
+        param_strength, param_hearted_strength, seed,
     }
 
     #[inline]
@@ -108,7 +108,7 @@ where
 
     #[expect(clippy::indexing_slicing, reason = "is safe")]
     #[inline(never)]
-    fn psu(&mut self, lane: u32, now: Time, duration: Ms, value: u32, perfects: u32) {
+    fn psu_land(&mut self, lane: u32, now: Time, duration: Ms, value: u32, perfects: u32) {
         let end = self.lasting.occupy(lane, now, duration);
         if now >= self.ending {
             self.lapse(now, perfects);
@@ -146,16 +146,16 @@ where
     }
 
     #[inline(always)]
-    fn param(&mut self, lane: u32, worn: bool, now: Time, duration: Ms, value: u32) {
-        self.lasting.param(lane, worn, now, duration, value);
+    fn param_land(&mut self, lane: u32, worn: bool, now: Time, duration: Ms, value: u32) {
+        self.lasting.param_land(lane, worn, now, duration, value);
         if E::PARAM {
             self.wake = self.wake.min(self.lasting.next());
         }
     }
 
     #[inline(always)]
-    fn sync(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) -> u16 {
-        let picked = self.lasting.sync(lane, worn, now, duration);
+    fn sync_land(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) -> u16 {
+        let picked = self.lasting.sync_land(lane, worn, now, duration);
         if E::PARAM {
             self.wake = self.wake.min(self.lasting.next());
         }
@@ -163,7 +163,7 @@ where
     }
 
     #[inline(always)]
-    fn param_at(
+    fn param_land_at(
         &mut self,
         lane: u32,
         worn: bool,
@@ -172,23 +172,23 @@ where
         value: u32,
         percent: u16,
     ) {
-        self.lasting.param_at(lane, worn, now, duration, value, percent);
+        self.lasting.param_land_at(lane, worn, now, duration, value, percent);
         if E::PARAM {
             self.wake = self.wake.min(self.lasting.next());
         }
     }
 
     #[inline(always)]
-    fn param_copy(&mut self, hold: u32, from: Copied, now: Time, payload: Payload) {
-        self.lasting.param_copy(hold, from, now, payload);
+    fn encore_param(&mut self, hold: u32, from: Copied, now: Time, payload: Payload) {
+        self.lasting.encore_param(hold, from, now, payload);
         if E::PARAM {
             self.wake = self.wake.min(self.lasting.next());
         }
     }
 
     #[inline(always)]
-    fn sync_to(&mut self, hold: u32, targets: u16, now: Time, duration: Ms) {
-        self.lasting.sync_to(hold, targets, now, duration);
+    fn encore_sync(&mut self, hold: u32, targets: u16, now: Time, duration: Ms) {
+        self.lasting.encore_sync(hold, targets, now, duration);
         if E::PARAM {
             self.wake = self.wake.min(self.lasting.next());
         }

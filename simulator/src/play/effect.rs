@@ -10,13 +10,13 @@ macro_rules! forward {
     (@ release) => { forward!(fn release(&mut self, at: crate::song::Time) -> u16); };
     (@ converted) => { forward!(fn converted(&self, now: crate::song::Time) -> bool); };
     (@ locked) => { forward!(fn locked(&self, now: crate::song::Time) -> bool); };
-    (@ lock) => {
-        forward!(fn lock(
+    (@ lock_land) => {
+        forward!(fn lock_land(
             &mut self, lane: u32, now: crate::song::Time, duration: crate::scalar::Ms
         ));
     };
-    (@ trick) => {
-        forward!(fn trick(
+    (@ total_trick_land) => {
+        forward!(fn total_trick_land(
             &mut self, lane: u32, now: crate::song::Time, duration: crate::scalar::Ms
         ));
     };
@@ -25,17 +25,17 @@ macro_rules! forward {
             &mut self, lane: u32, now: crate::song::Time, duration: crate::scalar::Ms
         ) -> crate::song::Time);
     };
-    (@ fever) => {
-        forward!(fn fever(
+    (@ fever_land) => {
+        forward!(fn fever_land(
             &mut self, lane: u32, now: crate::song::Time, duration: crate::scalar::Ms, value: u32,
             notes: u32
         ));
     };
-    (@ fevered) => { forward!(fn fevered(&mut self, now: crate::song::Time, combo: u32) -> u64); };
-    (@ read_running) => { forward!(fn read_running(&mut self)); };
+    (@ fever_tap) => { forward!(fn fever_tap(&mut self, now: crate::song::Time, combo: u32) -> u64); };
+    (@ fever_per_note) => { forward!(fn fever_per_note(&mut self)); };
     (@ fever_paid) => { forward!(fn fever_paid(&self) -> u64); };
-    (@ psu) => {
-        forward!(fn psu(
+    (@ psu_land) => {
+        forward!(fn psu_land(
             &mut self, lane: u32, now: crate::song::Time, duration: crate::scalar::Ms, value: u32,
             perfects: u32
         ));
@@ -43,53 +43,53 @@ macro_rules! forward {
     (@ expire) => { forward!(fn expire(&mut self, now: crate::song::Time, perfects: u32)); };
     (@ psu_tap) => { forward!(fn psu_tap(&self, perfect: bool) -> u64); };
     (@ psu_paid) => { forward!(fn psu_paid(&self, perfects: u32) -> u64); };
-    (@ tap) => {
-        forward!(fn tap(
+    (@ total_trick_tap) => {
+        forward!(fn total_trick_tap(
             &self, now: crate::song::Time, head: bool, tail: bool, combo: u16, lane: u16, note: u16
         ) -> u64);
     };
-    (@ worth) => {
-        forward!(fn worth(&self, now: crate::song::Time, head: bool, tail: bool) -> u64);
+    (@ total_trick_worth) => {
+        forward!(fn total_trick_worth(&self, now: crate::song::Time, head: bool, tail: bool) -> u64);
     };
-    (@ heal) => { forward!(fn heal(&mut self, hp: u8)); };
-    (@ overheal_strength) => { forward!(fn overheal_strength(&self, locked: bool) -> u64); };
+    (@ healer_land) => { forward!(fn healer_land(&mut self, hp: u8)); };
+    (@ heart_strength) => { forward!(fn heart_strength(&self, locked: bool) -> u64); };
     (@ begin) => { forward!(fn begin(&mut self)); };
-    (@ boosted) => { forward!(fn boosted(&self, now: crate::song::Time) -> bool); };
-    (@ rates) => { forward!(fn rates(&self, lane: u32) -> [crate::scalar::Rate; 2]); };
-    (@ sru) => {
-        forward!(fn sru(
+    (@ sru_boosted) => { forward!(fn sru_boosted(&self, now: crate::song::Time) -> bool); };
+    (@ sru_rates) => { forward!(fn sru_rates(&self, lane: u32) -> [crate::scalar::Rate; 2]); };
+    (@ sru_land) => {
+        forward!(fn sru_land(
             &mut self, lane: u32, now: crate::song::Time, duration: crate::scalar::Ms, value: u32
         ));
     };
     (@ heart_multiplier) => { forward!(fn heart_multiplier(&self) -> u16); };
-    (@ strength) => { forward!(fn strength(&self, locked: bool) -> u32); };
-    (@ hearted_strength) => { forward!(fn hearted_strength(&self, locked: bool) -> u64); };
-    (@ param) => {
-        forward!(fn param(
+    (@ param_strength) => { forward!(fn param_strength(&self, locked: bool) -> u32); };
+    (@ param_hearted_strength) => { forward!(fn param_hearted_strength(&self, locked: bool) -> u64); };
+    (@ param_land) => {
+        forward!(fn param_land(
             &mut self, lane: u32, worn: bool, now: crate::song::Time, duration: crate::scalar::Ms,
             value: u32
         ));
     };
-    (@ sync) => {
-        forward!(fn sync(
+    (@ sync_land) => {
+        forward!(fn sync_land(
             &mut self, lane: u32, worn: bool, now: crate::song::Time, duration: crate::scalar::Ms
         ) -> u16);
     };
-    (@ param_at) => {
-        forward!(fn param_at(
+    (@ param_land_at) => {
+        forward!(fn param_land_at(
             &mut self, lane: u32, worn: bool, now: crate::song::Time, duration: crate::scalar::Ms,
             value: u32, percent: u16
         ));
     };
     (@ seed) => { forward!(fn seed(&mut self, seed: u64)); };
-    (@ param_copy) => {
-        forward!(fn param_copy(
+    (@ encore_param) => {
+        forward!(fn encore_param(
             &mut self, hold: u32, from: crate::play::effect::encore::Copied,
             now: crate::song::Time, payload: crate::play::activation::Payload
         ));
     };
-    (@ sync_to) => {
-        forward!(fn sync_to(
+    (@ encore_sync) => {
+        forward!(fn encore_sync(
             &mut self, hold: u32, targets: u16, now: crate::song::Time, duration: crate::scalar::Ms
         ));
     };
@@ -135,6 +135,11 @@ use encore::Copied;
 const NEVER: Time = Time(u32::MAX);
 
 /// For Duration effects. Perfect Lock, Total Trick, Combo Fever, Perfect Score Up, Skill Rate Up, Appeal Boost and Sync.
+///
+/// A method only one skill uses is prefixed with that skill (`lock_`, `total_trick_`, `healer_`, `heart_`,
+/// `fever_`, `psu_`, `sru_`, `param_`, `sync_`, `amp_`, `encore_`), and its landing is `<skill>_land`.
+/// The unprefixed ones (`admit`, `next`, `release`, `occupy`, `expire`, `converted`, `locked`, `begin`, `end`,
+/// `seed`) are shared.
 pub(in crate::play) trait Lasting<'q> {
     /// Whether anything on the team is active.
     const ANY: bool;
@@ -150,10 +155,6 @@ pub(in crate::play) trait Lasting<'q> {
     /// Both param boost and sync
     const PARAM: bool = false;
 
-    /// I'm running out of verbs to go with each skill and it's actually getting very
-    /// confusing to remember which skills get which verbs (and which are just generic that apply to all skills)
-    /// so I'm going to start writing it down so it's easier to find.
-    /// Amp's (and Encore's fwiw) verbs are  `land` and `order`.
     const AMP: bool = false;
 
     const REPEAT: bool = false;
@@ -174,8 +175,8 @@ pub(in crate::play) trait Lasting<'q> {
     fn converted(&self, now: Time) -> bool;
     /// A Perfect Lock is running. True PERFECTs score 1.08x.
     fn locked(&self, now: Time) -> bool;
-    fn lock(&mut self, lane: u32, now: Time, duration: Ms);
-    fn trick(&mut self, lane: u32, now: Time, duration: Ms);
+    fn lock_land(&mut self, lane: u32, now: Time, duration: Ms);
+    fn total_trick_land(&mut self, lane: u32, now: Time, duration: Ms);
 
     /// This is another mechanic that apparently does not work as I had remembered it working but
     /// the docs say otherwise.
@@ -186,17 +187,17 @@ pub(in crate::play) trait Lasting<'q> {
         now
     }
 
-    fn fever(&mut self, _lane: u32, _now: Time, _duration: Ms, _value: u32, _notes: u32) {
+    fn fever_land(&mut self, _lane: u32, _now: Time, _duration: Ms, _value: u32, _notes: u32) {
         debug_assert!(false, "no combo fever on this team, buddy.");
     }
 
-    fn fevered(&mut self, _now: Time, _combo: u32) -> u64 {
+    fn fever_tap(&mut self, _now: Time, _combo: u32) -> u64 {
         debug_assert!(false, "no combo fever on this team, buddy.");
         0
     }
 
     /// Flips to reading fever note-by-note.
-    fn read_running(&mut self) {}
+    fn fever_per_note(&mut self) {}
 
     /// Total fever bonus for the whole song.  For teams that never look at the running score.
     fn fever_paid(&self) -> u64 {
@@ -204,11 +205,11 @@ pub(in crate::play) trait Lasting<'q> {
         0
     }
 
-    fn psu(&mut self, _lane: u32, _now: Time, _duration: Ms, _value: u32, _perfects: u32) {
+    fn psu_land(&mut self, _lane: u32, _now: Time, _duration: Ms, _value: u32, _perfects: u32) {
         debug_assert!(false, "no PSU on this team, buddy.");
     }
 
-    /// Specifically for PSU. TODO rename to make clear?
+    /// Ends the PSU, Appeal Boost and Sync windows that are over.
     fn expire(&mut self, _now: Time, _perfects: u32) {
         debug_assert!(false, "no PSU on this team, buddy.");
     }
@@ -225,26 +226,26 @@ pub(in crate::play) trait Lasting<'q> {
     }
 
     /// PPN with tricks.
-    fn tap(&self, _: Time, _: bool, _: bool, _: u16, _: u16, _: u16) -> u64 {
+    fn total_trick_tap(&self, _: Time, _: bool, _: bool, _: u16, _: u16, _: u16) -> u64 {
         debug_assert!(false, "a tap scored as if a Total Trick could run");
         0
     }
 
     /// A Total Trick team's strength times the judgement, before combo, lane and note.
     /// Why Total Trick you ask? Because profiling showed it was faster to make it its own thing.
-    fn worth(&self, _: Time, _: bool, _: bool) -> u64 {
+    fn total_trick_worth(&self, _: Time, _: bool, _: bool) -> u64 {
         debug_assert!(false, "value as if Total Trick could proc.");
         0
     }
 
     #[inline(always)]
-    fn heal(&mut self, _hp: u8) {}
+    fn healer_land(&mut self, _hp: u8) {}
 
     /// Basically the "hot" team strength - the team strength with mid-trial effects applied like Trick and Overheal.
     /// other effects like param boost may get rolled into this too.
     /// name may need to change if everything does get rolled into here because the name implies it's just
     /// overheal but that's a tbd.
-    fn overheal_strength(&self, _locked: bool) -> u64 {
+    fn heart_strength(&self, _locked: bool) -> u64 {
         debug_assert!(false, "tap scored as if heart could be hearted.");
         0
     }
@@ -261,17 +262,17 @@ pub(in crate::play) trait Lasting<'q> {
 
     /// SRU currently active flags.
     #[inline(always)]
-    fn boosted(&self, _now: Time) -> bool {
+    fn sru_boosted(&self, _now: Time) -> bool {
         false
     }
 
     /// card and acc activations rates while current SRU is active.
-    fn rates(&self, _lane: u32) -> [Rate; 2] {
+    fn sru_rates(&self, _lane: u32) -> [Rate; 2] {
         debug_assert!(false, "no SRU on this team, buddy.");
         [0; 2]
     }
 
-    fn sru(&mut self, _lane: u32, _now: Time, _duration: Ms, _value: u32) {
+    fn sru_land(&mut self, _lane: u32, _now: Time, _duration: Ms, _value: u32) {
         debug_assert!(false, "no SRU on this team, buddy.");
     }
 
@@ -281,30 +282,30 @@ pub(in crate::play) trait Lasting<'q> {
     }
 
     /// Team strength with any Appeal Boost running and the Trick if `locked`.
-    fn strength(&self, _locked: bool) -> u32 {
+    fn param_strength(&self, _locked: bool) -> u32 {
         debug_assert!(false, "no Appeal Boost on this team, buddy.");
         0
     }
 
-    /// `strength` * heart multiplier.
-    fn hearted_strength(&self, _locked: bool) -> u64 {
+    /// `param_strength` * heart multiplier.
+    fn param_hearted_strength(&self, _locked: bool) -> u64 {
         debug_assert!(false, "no Appeal Boost on this team, buddy.");
         0
     }
 
     /// `worn` just means the accessory rolled and the card didn't.
-    fn param(&mut self, _lane: u32, _worn: bool, _now: Time, _duration: Ms, _value: u32) {
+    fn param_land(&mut self, _lane: u32, _worn: bool, _now: Time, _duration: Ms, _value: u32) {
         debug_assert!(false, "no Appeal Boost on this team, buddy.");
     }
 
     /// Bit of the lane it copied (or 0 if nothing to copy)
-    fn sync(&mut self, _lane: u32, _worn: bool, _now: Time, _duration: Ms) -> u16 {
+    fn sync_land(&mut self, _lane: u32, _worn: bool, _now: Time, _duration: Ms) -> u16 {
         debug_assert!(false, "no Sync on this team, buddy.");
         0
     }
 
-    /// `param` at the percent an Amplify raised it to.
-    fn param_at(
+    /// `param_land` at the percent an Amplify raised it to.
+    fn param_land_at(
         &mut self,
         _lane: u32,
         _worn: bool,
@@ -326,38 +327,34 @@ pub(in crate::play) trait Lasting<'q> {
     /// the second's in 16..32
     /// the last's in 0..16
     /// Each of these represents a right to left activation.
-    fn order(&self, mask: u16) -> u64 {
+    fn amp_order(&self, mask: u16) -> u64 {
         debug_assert!(false, "no Amplify on this team, buddy.");
         u64::from(mask)
     }
 
     /// For amp, spends an active amp.
-    /// Probably a confusing very to use because Spark spends charge of Encore activations
-    /// what verb am I supposed to use for that why are there so many different skills remember
-    /// when SIF was just Scorers, Healers and Perfect Locks? Take me back to the good ol' days.
-    fn spend(&mut self, _take: bool) -> u32 {
+    fn amp_spend(&mut self, _take: bool) -> u32 {
         debug_assert!(false, "no Amplify on this team, buddy.");
         0
     }
 
     /// This is what's in charge of bumping the skill level itself for an amp.
-    fn payload(&self, _lane: u32, _worn: bool, _levels: u32, _scoring: &Scoring) -> Payload {
+    fn amp_payload(&self, _lane: u32, _worn: bool, _levels: u32, _scoring: &Scoring) -> Payload {
         debug_assert!(false, "no Amplify on this team, buddy.");
         Payload::default()
     }
 
-    fn amp(&mut self, _levels: u32) {
+    fn amp_land(&mut self, _levels: u32) {
         debug_assert!(false, "no Amplify on this team, buddy.");
     }
 
-    /// Encore's verbs are `write` and `copy`.
     /// The first skill to proc at a givenl moment that isn't Encore
-    fn write(&mut self, _landed: Copied) {
+    fn encore_write(&mut self, _landed: Copied) {
         debug_assert!(false, "no Encore on this team, buddy.");
     }
 
-    /// Reads the skill written by `write`.
-    fn copy(&mut self) -> Option<Copied> {
+    /// Reads the skill written by `encore_write`.
+    fn encore_copy(&mut self) -> Option<Copied> {
         debug_assert!(false, "no Encore on this team, buddy.");
         None
     }
@@ -368,25 +365,19 @@ pub(in crate::play) trait Lasting<'q> {
     ///
     /// Encore's copy of Param Boost.
     /// Boosts the original's targets, blocks the lane aka `hold`.
-    fn param_copy(&mut self, _hold: u32, _from: Copied, _now: Time, _payload: Payload) {
+    fn encore_param(&mut self, _hold: u32, _from: Copied, _now: Time, _payload: Payload) {
         debug_assert!(false, "no Appeal Boost on this team, buddy.");
     }
 
     /// Encore's copy of a Sync.
     /// Here,`hold` copies one of `targets` (the lane that the original copied).
-    fn sync_to(&mut self, _hold: u32, _targets: u16, _now: Time, _duration: Ms) {
+    fn encore_sync(&mut self, _hold: u32, _targets: u16, _now: Time, _duration: Ms) {
         debug_assert!(false, "no Sync on this team, buddy.");
     }
 
-    /// This verb this has gotten out of hand I'm sorry I really regret not just prefixing the
-    /// verbs with the skill they're relevant to but I made the decision not to do so early because
-    /// I thought it'd be more modular and more of these verbs would be used by more skills.
-    /// Instead we're stuck with each skill having their own verbs and no clean way of telling
-    /// which is which and instead of fixing it each new skill implementation makes it worse.
-    ///
-    /// Anyway, this is for Encore+Sync. It's the bit of the lane Sync last copied (or 0 if no valid target).
+    /// For Encore+Sync. It's the bit of the lane Sync last copied (or 0 if no valid target).
     /// Encore needs to keep a copy of this in its slot else it'd have no way to resolve which was picked (hence the name).
-    fn picked(&self, _lane: u32) -> u16 {
+    fn encore_picked(&self, _lane: u32) -> u16 {
         debug_assert!(false, "no Encore on this team, buddy.");
         0
     }
@@ -429,12 +420,12 @@ impl Lasting<'_> for Instant {
     }
 
     #[inline(always)]
-    fn lock(&mut self, _: u32, _: Time, _: Ms) {
+    fn lock_land(&mut self, _: u32, _: Time, _: Ms) {
         debug_assert!(false, "A PL did not schedule an expiration event.");
     }
 
     #[inline(always)]
-    fn trick(&mut self, _: u32, _: Time, _: Ms) {
+    fn total_trick_land(&mut self, _: u32, _: Time, _: Ms) {
         debug_assert!(false, "A Total Trick did not schedule an expiration event.");
     }
 }
@@ -478,15 +469,15 @@ pub(super) fn pay<'q>(
     };
     out.skill = out.skill.saturating_add(u64::from(paid));
     match effect {
-        SkillEffect::PerfectLock => expiry.lock(lane, now, duration),
-        SkillEffect::TotalTrick => expiry.trick(lane, now, duration),
-        SkillEffect::Healer => expiry.heal(hp),
-        SkillEffect::ComboFever => expiry.fever(lane, now, duration, value, out.notes),
-        SkillEffect::PerfectScoreUp => expiry.psu(lane, now, duration, value, out.perfects),
-        SkillEffect::SkillRateUp => expiry.sru(lane, now, duration, value),
-        SkillEffect::AppealBoost => expiry.param(lane, worn, now, duration, value),
+        SkillEffect::PerfectLock => expiry.lock_land(lane, now, duration),
+        SkillEffect::TotalTrick => expiry.total_trick_land(lane, now, duration),
+        SkillEffect::Healer => expiry.healer_land(hp),
+        SkillEffect::ComboFever => expiry.fever_land(lane, now, duration, value, out.notes),
+        SkillEffect::PerfectScoreUp => expiry.psu_land(lane, now, duration, value, out.perfects),
+        SkillEffect::SkillRateUp => expiry.sru_land(lane, now, duration, value),
+        SkillEffect::AppealBoost => expiry.param_land(lane, worn, now, duration, value),
         SkillEffect::Sync => {
-            expiry.sync(lane, worn, now, duration);
+            expiry.sync_land(lane, worn, now, duration);
         }
         SkillEffect::Scorer | SkillEffect::Encore | SkillEffect::Amplify | SkillEffect::Spark => {}
     }
@@ -509,27 +500,27 @@ pub(super) fn land<'q, E>(
     E: Lasting<'q>,
 {
     let from = if E::REPEAT && effect == SkillEffect::Encore {
-        let Some(copy) = expiry.copy() else {
+        let Some(copy) = expiry.encore_copy() else {
             return;
         };
         copy
     } else {
-        let levels = expiry.spend(effect != SkillEffect::Encore);
+        let levels = expiry.amp_spend(effect != SkillEffect::Encore);
         let landed = Copied { lane, worn, effect, levels };
-        expiry.write(landed);
+        expiry.encore_write(landed);
         landed
     };
-    let payload = expiry.payload(from.lane, from.worn, from.levels, scoring);
+    let payload = expiry.amp_payload(from.lane, from.worn, from.levels, scoring);
     // If Param Boost or Sync are copied, they need to read the original's lane AND the the lane holding this.
     if E::REPEAT
         && effect == SkillEffect::Encore
         && matches!(from.effect, SkillEffect::AppealBoost | SkillEffect::Sync)
     {
         if from.effect == SkillEffect::AppealBoost {
-            expiry.param_copy(lane, from, now, payload);
+            expiry.encore_param(lane, from, now, payload);
         } else {
-            let targets = expiry.picked(from.lane);
-            expiry.sync_to(lane, targets, now, payload.duration);
+            let targets = expiry.encore_picked(from.lane);
+            expiry.encore_sync(lane, targets, now, payload.duration);
         }
         return;
     }
@@ -558,17 +549,17 @@ fn pay_at<'q>(
     };
     out.skill = out.skill.saturating_add(u64::from(paid));
     match effect {
-        SkillEffect::PerfectLock => expiry.lock(lane, now, duration),
-        SkillEffect::TotalTrick => expiry.trick(lane, now, duration),
-        SkillEffect::Healer => expiry.heal(u8::try_from(extra).unwrap_or(u8::MAX)),
-        SkillEffect::ComboFever => expiry.fever(lane, now, duration, value, out.notes),
-        SkillEffect::PerfectScoreUp => expiry.psu(lane, now, duration, value, out.perfects),
-        SkillEffect::SkillRateUp => expiry.sru(lane, now, duration, value),
-        SkillEffect::AppealBoost => expiry.param_at(lane, worn, now, duration, value, extra),
+        SkillEffect::PerfectLock => expiry.lock_land(lane, now, duration),
+        SkillEffect::TotalTrick => expiry.total_trick_land(lane, now, duration),
+        SkillEffect::Healer => expiry.healer_land(u8::try_from(extra).unwrap_or(u8::MAX)),
+        SkillEffect::ComboFever => expiry.fever_land(lane, now, duration, value, out.notes),
+        SkillEffect::PerfectScoreUp => expiry.psu_land(lane, now, duration, value, out.perfects),
+        SkillEffect::SkillRateUp => expiry.sru_land(lane, now, duration, value),
+        SkillEffect::AppealBoost => expiry.param_land_at(lane, worn, now, duration, value, extra),
         SkillEffect::Sync => {
-            expiry.sync(lane, worn, now, duration);
+            expiry.sync_land(lane, worn, now, duration);
         }
-        SkillEffect::Amplify => expiry.amp(value),
+        SkillEffect::Amplify => expiry.amp_land(value),
         SkillEffect::Scorer | SkillEffect::Encore | SkillEffect::Spark => {}
     }
 }

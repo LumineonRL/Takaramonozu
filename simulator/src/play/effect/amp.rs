@@ -75,13 +75,13 @@ where
     const REPEAT: bool = R::ON;
 
     forward! {
-        admit, next, release, converted, locked, lock, trick, occupy, tap, worth,
-        heal, overheal_strength, heart_multiplier,
-        fever, fevered, read_running, fever_paid,
-        psu, expire, psu_tap, psu_paid,
-        boosted, rates, sru,
-        strength, hearted_strength, param, param_at,
-        param_copy, sync_to,
+        admit, next, release, converted, locked, lock_land, total_trick_land, occupy, total_trick_tap, total_trick_worth,
+        healer_land, heart_strength, heart_multiplier,
+        fever_land, fever_tap, fever_per_note, fever_paid,
+        psu_land, expire, psu_tap, psu_paid,
+        sru_boosted, sru_rates, sru_land,
+        param_strength, param_hearted_strength, param_land, param_land_at,
+        encore_param, encore_sync,
     }
 
     #[inline]
@@ -153,14 +153,14 @@ where
     }
 
     #[inline(always)]
-    fn order(&self, mask: u16) -> u64 {
+    fn amp_order(&self, mask: u16) -> u64 {
         let [first, second, last] =
             [self.first, self.second, self.encores].map(|g| u64::from(mask & g));
         (first << 32) | (second << 16) | last
     }
 
     #[inline(always)]
-    fn spend(&mut self, take: bool) -> u32 {
+    fn amp_spend(&mut self, take: bool) -> u32 {
         let levels = if take { self.standing } else { 0 };
         self.standing = if take { 0 } else { self.standing };
         levels
@@ -171,7 +171,7 @@ where
         clippy::indexing_slicing,
         reason = "same lanes as everywhere else in the repo, a bool, amp levels bounded to 16."
     )]
-    fn payload(&self, lane: u32, worn: bool, levels: u32, scoring: &Scoring) -> Payload {
+    fn amp_payload(&self, lane: u32, worn: bool, levels: u32, scoring: &Scoring) -> Payload {
         let (lane, half) = (lane as usize, usize::from(worn));
         let row = (levels.saturating_sub(1) & (MOST - 1)) as usize;
         *if levels == 0 {
@@ -183,7 +183,7 @@ where
 
     /// Only one amp can trigger per moment.
     #[inline(always)]
-    fn amp(&mut self, levels: u32) {
+    fn amp_land(&mut self, levels: u32) {
         self.fresh = if self.fresh == 0 {
             levels.min(MOST)
         } else {
@@ -192,24 +192,24 @@ where
     }
 
     #[inline(always)]
-    fn write(&mut self, landed: Copied) {
+    fn encore_write(&mut self, landed: Copied) {
         self.slot.write(landed);
     }
 
     #[inline(always)]
-    fn copy(&mut self) -> Option<Copied> {
+    fn encore_copy(&mut self) -> Option<Copied> {
         self.slot.copy()
     }
 
     #[inline(always)]
-    fn sync(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) -> u16 {
-        let picked = self.lasting.sync(lane, worn, now, duration);
+    fn sync_land(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) -> u16 {
+        let picked = self.lasting.sync_land(lane, worn, now, duration);
         self.slot.pick(lane, picked);
         picked
     }
 
     #[inline(always)]
-    fn picked(&self, lane: u32) -> u16 {
+    fn encore_picked(&self, lane: u32) -> u16 {
         self.slot.picked(lane)
     }
 }

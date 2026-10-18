@@ -116,14 +116,14 @@ impl Lasting<'_> for Expiry {
     }
 
     #[inline]
-    fn lock(&mut self, lane: u32, now: Time, duration: Ms) {
+    fn lock_land(&mut self, lane: u32, now: Time, duration: Ms) {
         let end = self.start(lane, now, duration);
         self.lock = self.lock.max(end);
     }
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "nothing")]
-    fn trick(&mut self, _: u32, _: Time, _: Ms) {
+    fn total_trick_land(&mut self, _: u32, _: Time, _: Ms) {
         debug_assert!(false, "A Total Trick needs to schedule a duration end.");
     }
 
@@ -180,14 +180,14 @@ impl Lasting<'_> for Tricked {
     }
 
     #[inline]
-    fn lock(&mut self, lane: u32, now: Time, duration: Ms) {
+    fn lock_land(&mut self, lane: u32, now: Time, duration: Ms) {
         let end = self.expiry.start(lane, now, duration);
         self.expiry.lock = self.expiry.lock.max(end);
         self.convert = self.convert.max(end);
     }
 
     #[inline]
-    fn trick(&mut self, lane: u32, now: Time, duration: Ms) {
+    fn total_trick_land(&mut self, lane: u32, now: Time, duration: Ms) {
         let end = self.expiry.start(lane, now, duration);
         self.convert = self.convert.max(end);
     }
@@ -199,14 +199,22 @@ impl Lasting<'_> for Tricked {
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "benchmarked")]
-    fn tap(&self, now: Time, head: bool, tail: bool, combo: u16, lane: u16, note: u16) -> u64 {
-        worth_score(self.worth(now, head, tail), combo, lane, note)
+    fn total_trick_tap(
+        &self,
+        now: Time,
+        head: bool,
+        tail: bool,
+        combo: u16,
+        lane: u16,
+        note: u16,
+    ) -> u64 {
+        worth_score(self.total_trick_worth(now, head, tail), combo, lane, note)
     }
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "as `tap`")]
     #[expect(clippy::indexing_slicing, reason = "bool")]
-    fn worth(&self, now: Time, head: bool, tail: bool) -> u64 {
+    fn total_trick_worth(&self, now: Time, head: bool, tail: bool) -> u64 {
         self.worth.row(self.converted(now), self.locked(now))[usize::from(head)][usize::from(tail)]
     }
 }

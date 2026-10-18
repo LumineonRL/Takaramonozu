@@ -156,7 +156,7 @@ where
         expiry.seed(config.seed);
     }
     if E::FEVER && SCORE {
-        expiry.read_running();
+        expiry.fever_per_note();
     }
     let mut timer_cursor = 0_usize;
     let mut next_timer = Time(timer_at[0]);
@@ -251,7 +251,7 @@ where
                 let converted = E::ANY && expiry.converted(time);
                 let locked = E::ANY && expiry.locked(time);
                 out.tap = out.tap.saturating_add(if E::TRICKS {
-                    expiry.tap(
+                    expiry.total_trick_tap(
                         time,
                         head,
                         tail,
@@ -266,9 +266,9 @@ where
                 } else if E::HEARTS {
                     overheal_score(
                         if E::PARAM {
-                            expiry.hearted_strength(locked)
+                            expiry.param_hearted_strength(locked)
                         } else {
-                            expiry.overheal_strength(locked)
+                            expiry.heart_strength(locked)
                         },
                         queue.combo()[tap],
                         scoring.lanes.get(lane).copied().unwrap_or(UNIT),
@@ -278,7 +278,7 @@ where
                 } else {
                     note_score(
                         if E::PARAM {
-                            expiry.strength(locked)
+                            expiry.param_strength(locked)
                         } else if locked {
                             tricked
                         } else {
@@ -292,7 +292,7 @@ where
                 });
                 out.notes = out.notes.saturating_add(1);
                 if E::FEVER && SCORE {
-                    out.skill = out.skill.saturating_add(expiry.fevered(time, out.notes));
+                    out.skill = out.skill.saturating_add(expiry.fever_tap(time, out.notes));
                 }
                 let perfect = converted || (head & tail);
                 out.perfects = out.perfects.saturating_add(u32::from(perfect));

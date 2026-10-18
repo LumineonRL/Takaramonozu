@@ -53,8 +53,8 @@ where
     const PARAM: bool = true;
 
     forward! {
-        converted, locked, lock, trick, occupy,
-        overheal_strength, heart_multiplier,
+        converted, locked, lock_land, total_trick_land, occupy,
+        heart_strength, heart_multiplier,
     }
 
     #[inline]
@@ -107,19 +107,27 @@ where
 
     #[inline(always)]
     #[expect(clippy::indexing_slicing, reason = "bool")]
-    fn strength(&self, locked: bool) -> u32 {
+    fn param_strength(&self, locked: bool) -> u32 {
         self.strengths[usize::from(locked)]
     }
 
     #[inline(always)]
     #[expect(clippy::indexing_slicing, reason = "bool")]
-    fn hearted_strength(&self, locked: bool) -> u64 {
+    fn param_hearted_strength(&self, locked: bool) -> u64 {
         self.hearts[usize::from(locked)]
     }
 
     #[inline(always)]
-    fn tap(&self, now: Time, head: bool, tail: bool, combo: u16, lane: u16, note: u16) -> u64 {
-        let worth = self.worth(now, head, tail);
+    fn total_trick_tap(
+        &self,
+        now: Time,
+        head: bool,
+        tail: bool,
+        combo: u16,
+        lane: u16,
+        note: u16,
+    ) -> u64 {
+        let worth = self.total_trick_worth(now, head, tail);
         if E::HEARTS {
             overheal_score_val(worth, combo, lane, note, self.lasting.heart_multiplier())
         } else {
@@ -129,14 +137,14 @@ where
 
     #[inline(always)]
     #[expect(clippy::indexing_slicing, reason = "bool")]
-    fn worth(&self, now: Time, head: bool, tail: bool) -> u64 {
+    fn total_trick_worth(&self, now: Time, head: bool, tail: bool) -> u64 {
         let row = self.table.row(self.lasting.converted(now), self.lasting.locked(now));
         row[usize::from(head)][usize::from(tail)]
     }
 
     #[inline(always)]
-    fn heal(&mut self, hp: u8) {
-        self.lasting.heal(hp);
+    fn healer_land(&mut self, hp: u8) {
+        self.lasting.healer_land(hp);
         if E::HEARTS {
             let multiplier = self.lasting.heart_multiplier();
             self.hearts = self.strengths.map(|s| hearted(s, multiplier));
@@ -148,7 +156,7 @@ where
     /// but I really just mean that it doesn't extend or overwrite the current duration.
     #[inline(never)]
     #[expect(clippy::indexing_slicing, reason = "lane bits")]
-    fn param(&mut self, lane: u32, worn: bool, now: Time, duration: Ms, value: u32) {
+    fn param_land(&mut self, lane: u32, worn: bool, now: Time, duration: Ms, value: u32) {
         if !self.open(lane, lane, worn, now, duration, value) {
             return;
         }
@@ -157,7 +165,7 @@ where
     }
 
     #[inline(never)]
-    fn param_at(
+    fn param_land_at(
         &mut self,
         lane: u32,
         worn: bool,
@@ -175,14 +183,14 @@ where
 
     #[inline(never)]
     #[expect(clippy::indexing_slicing, reason = "lane bits")]
-    fn sync(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) -> u16 {
+    fn sync_land(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) -> u16 {
         let targets = self.targets[lane as usize][usize::from(worn)];
         self.sync_onto(lane, targets, now, duration)
     }
 
     /// For encore. The original's targets and percent.
     #[inline(never)]
-    fn param_copy(&mut self, hold: u32, from: Copied, now: Time, payload: Payload) {
+    fn encore_param(&mut self, hold: u32, from: Copied, now: Time, payload: Payload) {
         if !self.open(hold, from.lane, from.worn, now, payload.duration, payload.value) {
             return;
         }
@@ -191,7 +199,7 @@ where
     }
 
     #[inline(never)]
-    fn sync_to(&mut self, hold: u32, targets: u16, now: Time, duration: Ms) {
+    fn encore_sync(&mut self, hold: u32, targets: u16, now: Time, duration: Ms) {
         self.sync_onto(hold, targets, now, duration);
     }
 

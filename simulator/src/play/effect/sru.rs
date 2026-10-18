@@ -30,12 +30,12 @@ where
     const PARAM: bool = E::PARAM;
 
     forward! {
-        admit, next, release, converted, locked, lock, trick, occupy, tap, worth,
-        heal, overheal_strength,
-        fever, fevered, read_running, fever_paid,
-        psu, expire, psu_tap, psu_paid,
-        strength, hearted_strength, param, param_at, sync, seed,
-        param_copy, sync_to,
+        admit, next, release, converted, locked, lock_land, total_trick_land, occupy, total_trick_tap, total_trick_worth,
+        healer_land, heart_strength,
+        fever_land, fever_tap, fever_per_note, fever_paid,
+        psu_land, expire, psu_tap, psu_paid,
+        param_strength, param_hearted_strength, param_land, param_land_at, sync_land, seed,
+        encore_param, encore_sync,
     }
 
     #[inline]
@@ -63,19 +63,19 @@ where
     }
 
     #[inline(always)]
-    fn boosted(&self, now: Time) -> bool {
+    fn sru_boosted(&self, now: Time) -> bool {
         now < self.boosting
     }
 
     #[inline(always)]
     #[expect(clippy::indexing_slicing, reason = "lane bits")]
-    fn rates(&self, lane: u32) -> [Rate; 2] {
+    fn sru_rates(&self, lane: u32) -> [Rate; 2] {
         self.rates[lane as usize]
     }
 
     /// SRU activating while another is active does not do anything.
     #[inline(never)]
-    fn sru(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
+    fn sru_land(&mut self, lane: u32, now: Time, duration: Ms, value: u32) {
         if now < self.until {
             return;
         }

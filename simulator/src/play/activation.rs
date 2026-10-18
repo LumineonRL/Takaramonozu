@@ -375,7 +375,7 @@ impl<'a> Tally<'a> {
     }
 }
 
-/// Ties happen right to left. On a team with an Amplify, in the groups `Lasting::order` gives.
+/// Ties happen right to left. On a team with an Amplify, in the groups `Lasting::amp_order` gives.
 /// `MOMENT` is when `mask` is the whole moment, so an Amplify landing in it stands from the next.
 #[inline(always)]
 #[expect(clippy::inline_always, reason = "I benchmarked.")]
@@ -404,8 +404,8 @@ where
         let [duration, worn_duration] =
             scoring.durations.get(lane as usize).copied().unwrap_or_default();
         let [hp, worn_hp] = scoring.heals.get(lane as usize).copied().unwrap_or_default();
-        let chance = if expiry.boosted(now) {
-            expiry.rates(lane)[0]
+        let chance = if expiry.sru_boosted(now) {
+            expiry.sru_rates(lane)[0]
         } else {
             skill.chance
         };
@@ -421,8 +421,8 @@ where
         let Some(accessory) = scoring.accessories.get(lane as usize) else {
             continue;
         };
-        let worn_chance = if expiry.boosted(now) {
-            expiry.rates(lane)[1]
+        let worn_chance = if expiry.sru_boosted(now) {
+            expiry.sru_rates(lane)[1]
         } else {
             accessory.chance
         };
@@ -464,7 +464,7 @@ where
 {
     let mut landed = 0;
     let admitted = expiry.admit(mask, now);
-    let mut bits = expiry.order(admitted);
+    let mut bits = expiry.amp_order(admitted);
     while let Some(at) = bits.highest_one() {
         bits ^= bits.isolate_highest_one();
         let lane = at & 0xF;
@@ -472,8 +472,8 @@ where
         let Some(skill) = scoring.skills.get(lane as usize) else {
             continue;
         };
-        let chance = if expiry.boosted(now) {
-            expiry.rates(lane)[0]
+        let chance = if expiry.sru_boosted(now) {
+            expiry.sru_rates(lane)[0]
         } else {
             skill.chance
         };
@@ -489,8 +489,8 @@ where
         let Some(accessory) = scoring.accessories.get(lane as usize) else {
             continue;
         };
-        let worn_chance = if expiry.boosted(now) {
-            expiry.rates(lane)[1]
+        let worn_chance = if expiry.sru_boosted(now) {
+            expiry.sru_rates(lane)[1]
         } else {
             accessory.chance
         };

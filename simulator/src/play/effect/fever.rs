@@ -58,12 +58,12 @@ where
     const PARAM: bool = E::PARAM;
 
     forward! {
-        admit, next, release, converted, locked, lock, trick, occupy, tap, worth,
-        heal, overheal_strength,
-        psu, expire, psu_tap, psu_paid,
-        begin, boosted, rates, sru,
-        strength, hearted_strength, param, param_at, sync, seed,
-        param_copy, sync_to,
+        admit, next, release, converted, locked, lock_land, total_trick_land, occupy, total_trick_tap, total_trick_worth,
+        healer_land, heart_strength,
+        psu_land, expire, psu_tap, psu_paid,
+        begin, sru_boosted, sru_rates, sru_land,
+        param_strength, param_hearted_strength, param_land, param_land_at, sync_land, seed,
+        encore_param, encore_sync,
     }
 
     #[inline]
@@ -85,7 +85,7 @@ where
     }
 
     #[expect(clippy::indexing_slicing, reason = "is safe")]
-    fn fever(&mut self, lane: u32, now: Time, duration: Ms, value: u32, notes: u32) {
+    fn fever_land(&mut self, lane: u32, now: Time, duration: Ms, value: u32, notes: u32) {
         let end = self.lasting.occupy(lane, now, duration);
         if self.running {
             if now >= self.next {
@@ -111,7 +111,7 @@ where
 
     #[inline(always)]
     #[expect(clippy::integer_division, reason = "game mechanic")]
-    fn fevered(&mut self, now: Time, combo: u32) -> u64 {
+    fn fever_tap(&mut self, now: Time, combo: u32) -> u64 {
         if now >= self.next {
             self.lapse(now);
         }
@@ -123,7 +123,7 @@ where
     }
 
     #[inline(always)]
-    fn read_running(&mut self) {
+    fn fever_per_note(&mut self) {
         self.running = true;
     }
 

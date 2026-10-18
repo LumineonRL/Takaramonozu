@@ -22,7 +22,7 @@ where
     const HEARTS: bool = true;
 
     forward! {
-        admit, next, release, converted, locked, lock, trick, occupy, worth,
+        admit, next, release, converted, locked, lock_land, total_trick_land, occupy, total_trick_worth,
     }
 
     #[inline]
@@ -34,19 +34,27 @@ where
     }
 
     #[inline(always)]
-    fn tap(&self, now: Time, head: bool, tail: bool, combo: u16, lane: u16, note: u16) -> u64 {
-        let worth = self.lasting.worth(now, head, tail);
+    fn total_trick_tap(
+        &self,
+        now: Time,
+        head: bool,
+        tail: bool,
+        combo: u16,
+        lane: u16,
+        note: u16,
+    ) -> u64 {
+        let worth = self.lasting.total_trick_worth(now, head, tail);
         overheal_score_val(worth, combo, lane, note, self.hearts.multiplier)
     }
 
     #[inline(always)]
-    fn heal(&mut self, hp: u8) {
+    fn healer_land(&mut self, hp: u8) {
         self.hearts.heal(hp);
     }
 
     #[inline(always)]
     #[expect(clippy::indexing_slicing, reason = "bool")]
-    fn overheal_strength(&self, locked: bool) -> u64 {
+    fn heart_strength(&self, locked: bool) -> u64 {
         self.hearts.strength[usize::from(locked)]
     }
 

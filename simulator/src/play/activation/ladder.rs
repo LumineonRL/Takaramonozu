@@ -300,7 +300,7 @@ where
     expiry.begin();
     let mut landed = 0;
     if E::AMP {
-        let mut bits = expiry.order(due);
+        let mut bits = expiry.amp_order(due);
         while let Some(at) = bits.highest_one() {
             bits ^= bits.isolate_highest_one();
             let bit = 1_u16.checked_shl(at & 0xF).unwrap_or(0);
