@@ -1,6 +1,7 @@
 use core::fmt;
 use core::marker::PhantomData;
 use core::mem;
+use core::num::NonZeroU16;
 use std::io;
 use std::path::Path;
 
@@ -55,20 +56,21 @@ pub trait Entry: Copy + Eq + fmt::Debug {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(transparent)]
-pub struct EntryId(u16);
+pub struct EntryId(NonZeroU16);
 
 impl EntryId {
     /// # Panics
-    /// Past 65,536 entries, which `MAX_ROWS` is what stops.
+    /// Past 65,535 entries
     #[must_use]
     #[expect(clippy::expect_used, reason = "capacity bound, documented above")]
     pub fn from_index(i: usize) -> Self {
-        Self(u16::try_from(i).expect("entry index fits u16"))
+        let n = u16::try_from(i).ok().and_then(|n| n.checked_add(1)).and_then(NonZeroU16::new);
+        Self(n.expect("entry index fits u16"))
     }
 
     #[must_use]
     pub const fn index(self) -> usize {
-        self.0 as usize
+        self.0.get().saturating_sub(1) as usize
     }
 }
 

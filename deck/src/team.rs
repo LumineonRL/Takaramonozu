@@ -1,5 +1,7 @@
 //! A slot for each lane + a guest
 
+use core::num::NonZeroU16;
+
 use simulator::accessory::{Accessory, AccessoryDb};
 use simulator::card::{Card, CardDb, LeaderId};
 use simulator::sis::{Sis, SisDb};
@@ -143,7 +145,7 @@ impl TeamSlot {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub struct Team {
     slots: [Option<TeamSlot>; LANES],
-    guest: Option<LeaderId>,
+    guest: Option<NonZeroU16>,
 }
 
 impl Team {
@@ -154,7 +156,10 @@ impl Team {
 
     #[must_use]
     pub const fn guest(&self) -> Option<LeaderId> {
-        self.guest
+        match self.guest {
+            Some(g) => Some(LeaderId(g.get().saturating_sub(1))),
+            None => None,
+        }
     }
 
     /// # Errors
@@ -163,7 +168,8 @@ impl Team {
         if ctx.cards.leaders.get(usize::from(guest.0)).is_none() {
             return Err(Problem::Unknown);
         }
-        self.guest = Some(guest);
+        self.guest =
+            Some(guest.0.checked_add(1).and_then(NonZeroU16::new).ok_or(Problem::Unknown)?);
         Ok(())
     }
 
@@ -363,7 +369,7 @@ impl Team {
 
 #[cfg(test)]
 mod tests {
-    use super::{Context, Problem, Team};
+    use super::{Context, Problem, Team, TeamSlot};
     use crate::accessory::{Accessories, tests::accessories};
     use crate::card::{Deck, Gallery, tests::cards};
     use crate::manager::{EntryId, Manager};
@@ -566,6 +572,13 @@ mod tests {
         for (id, _) in f.inventory.entries() {
             assert_eq!(team.can_equip_sis(0, id, f.ctx()).is_ok(), legal.contains(&id));
         }
+    }
+
+    #[test]
+    fn check_a_team_is_two_cache_lines() {
+        assert_eq!(size_of::<Option<EntryId>>(), 2);
+        assert_eq!(size_of::<TeamSlot>(), 14);
+        assert_eq!(size_of::<Team>(), 128);
     }
 
     #[test]
