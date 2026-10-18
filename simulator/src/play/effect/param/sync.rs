@@ -51,14 +51,14 @@ impl Copies {
 
     /// Holds a copy of each lane with a valid target until expiry.
     /// Sync passes on what it copies. does not pass along its own boost.
-    /// This would just be false if there's no valid copy targets.
+    /// Returns the bit of the lane it copied (or 0 if there's no one to copy)
     #[inline(always)]
     #[expect(clippy::indexing_slicing, reason = "lane bits")]
-    pub(super) fn land(&mut self, lane: u32, targets: u16, until: Time, boost: (u16, u16)) -> bool {
+    pub(super) fn land(&mut self, lane: u32, targets: u16, until: Time, boost: (u16, u16)) -> u16 {
         let seed = self.seed;
         let picks = self.picks.get_or_insert_with(|| Rng::new(seed, Rng::SYNC));
         let Some(target) = pick(targets, picks) else {
-            return false;
+            return 0;
         };
         let (reach, percent) = boost;
         let bit = 1_u16.checked_shl(target).unwrap_or(0);
@@ -76,7 +76,7 @@ impl Copies {
         self.copied[lane as usize] = copy;
         self.until[lane as usize] = until;
         self.synced |= own;
-        true
+        bit
     }
 
     /// In charge of setting stats back to normal when durations end.

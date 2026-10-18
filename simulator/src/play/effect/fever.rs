@@ -63,6 +63,7 @@ where
         psu, expire, psu_tap, psu_paid,
         begin, boosted, rates, sru,
         strength, hearted_strength, param, param_at, sync, seed,
+        param_copy, sync_to,
     }
 
     #[inline]

@@ -1,7 +1,9 @@
 //! Perfect Score Up aka PSU.
 
+use super::encore::Copied;
 use super::{Lasting, NEVER};
 use crate::play::Scoring;
+use crate::play::activation::Payload;
 use crate::play::queue::Queue;
 use crate::scalar::Ms;
 use crate::song::{LANES, Time};
@@ -152,11 +154,12 @@ where
     }
 
     #[inline(always)]
-    fn sync(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) {
-        self.lasting.sync(lane, worn, now, duration);
+    fn sync(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) -> u16 {
+        let picked = self.lasting.sync(lane, worn, now, duration);
         if E::PARAM {
             self.wake = self.wake.min(self.lasting.next());
         }
+        picked
     }
 
     #[inline(always)]
@@ -170,6 +173,22 @@ where
         percent: u16,
     ) {
         self.lasting.param_at(lane, worn, now, duration, value, percent);
+        if E::PARAM {
+            self.wake = self.wake.min(self.lasting.next());
+        }
+    }
+
+    #[inline(always)]
+    fn param_copy(&mut self, hold: u32, from: Copied, now: Time, payload: Payload) {
+        self.lasting.param_copy(hold, from, now, payload);
+        if E::PARAM {
+            self.wake = self.wake.min(self.lasting.next());
+        }
+    }
+
+    #[inline(always)]
+    fn sync_to(&mut self, hold: u32, targets: u16, now: Time, duration: Ms) {
+        self.lasting.sync_to(hold, targets, now, duration);
         if E::PARAM {
             self.wake = self.wake.min(self.lasting.next());
         }

@@ -31,6 +31,7 @@
 //! 116 scorer -> 125 encore copy again. Only ever one cycle if the activations aren't simultaneous.
 
 use crate::skill::SkillEffect;
+use crate::song::LANES;
 
 /// skill encore can replay, including amp boosts
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -41,43 +42,148 @@ pub(in crate::play) struct Copied {
     pub levels: u32,
 }
 
-#[derive(Clone, Copy, Default, Debug)]
-pub(in crate::play) struct Slot {
-    last: Option<Copied>,
-    /// First skill to proc on a moment
-    temp: Option<Copied>,
-    /// If an encore copied something this moment
-    copied: bool,
+const EFFECTS: [SkillEffect; 12] = [
+    SkillEffect::Scorer,
+    SkillEffect::Healer,
+    SkillEffect::PerfectLock,
+    SkillEffect::Encore,
+    SkillEffect::Amplify,
+    SkillEffect::TotalTrick,
+    SkillEffect::PerfectScoreUp,
+    SkillEffect::SkillRateUp,
+    SkillEffect::AppealBoost,
+    SkillEffect::ComboFever,
+    SkillEffect::Sync,
+    SkillEffect::Spark,
+];
+
+impl Copied {
+    /// The lane, whether it was a card/acc, the effect, and the level it proc'd at.
+    /// Basically everything an Encore needs to resolve its skill packed into the smallest
+    /// data structure I could get.
+    #[expect(clippy::cast_possible_truncation, reason = "a lane and at most 16 levels")]
+    #[expect(clippy::host_endian_bytes, reason = "gets packed and unpacked in the same trial")]
+    const fn pack(self) -> u32 {
+        let levels = (self.levels as u8).saturating_add(1);
+        u32::from_ne_bytes([self.lane as u8, self.worn as u8, self.effect as u8, levels])
+    }
+
+    #[expect(clippy::host_endian_bytes, reason = "gets packed and unpacked in the same trial")]
+    fn unpack(packed: u32) -> Option<Self> {
+        let [lane, worn, effect, levels] = packed.to_ne_bytes();
+        Some(Self {
+            lane: u32::from(lane),
+            worn: worn != 0,
+            effect: *EFFECTS.get(usize::from(effect))?,
+            levels: u32::from(levels.checked_sub(1)?),
+        })
+    }
 }
 
-impl Slot {
+#[derive(Clone, Copy, Default, Debug)]
+pub(in crate::play) struct Slot {
+    /// The `pack`'d version of the last skill, see above.
+    last: u32,
+    /// First skill to proc on a moment
+    temp: u32,
+    /// If an encore copied something this moment
+    copied: bool,
+    /// Specifically for Sync (why do the worst skills need the most edge-case handling? Total Trick was the same.)
+    /// This is specifically the bit of the lane each lane's last Sync copied (or 0).
+    /// That lane then gets copied.
+    picks: [u16; LANES],
+}
+
+/// This one is specifically for Amp+Encore
+/// The slot on the team with Amp if Amp is present.
+pub(in crate::play) trait Repeats: Default {
+    const ON: bool;
+    fn write(&mut self, landed: Copied);
+    fn copy(&mut self) -> Option<Copied>;
+    fn end(&mut self);
+    fn pick(&mut self, lane: u32, picked: u16);
+    fn picked(&self, lane: u32) -> u16;
+}
+
+/// This one's for an Amplify team with no Encore and is entirely here for performance reasons.
+/// Basically if a team has Amplify but does not have an Encore, we pass this dummy struct that looks
+/// like Encore with ZSTs so nothing different needs to be done.
+/// Legit a 7% performance hit to not have this struct
+#[derive(Clone, Copy, Default, Debug)]
+pub(in crate::play) struct NoRepeat;
+
+impl Repeats for NoRepeat {
+    const ON: bool = false;
+
     #[inline(always)]
-    pub(in crate::play) fn write(&mut self, landed: Copied) {
-        self.temp = self.temp.or(Some(landed));
+    fn write(&mut self, _: Copied) {}
+
+    #[inline(always)]
+    fn copy(&mut self) -> Option<Copied> {
+        None
+    }
+
+    #[inline(always)]
+    fn end(&mut self) {}
+
+    #[inline(always)]
+    fn pick(&mut self, _: u32, _: u16) {}
+
+    #[inline(always)]
+    fn picked(&self, _: u32) -> u16 {
+        0
+    }
+}
+
+impl Repeats for Slot {
+    const ON: bool = true;
+
+    #[inline(always)]
+    fn write(&mut self, landed: Copied) {
+        self.temp = if self.temp == 0 {
+            landed.pack()
+        } else {
+            self.temp
+        };
     }
 
     /// What an Encore proc now repeats. Updates mid-moment.
     #[inline(always)]
-    pub(in crate::play) fn copy(&mut self) -> Option<Copied> {
-        let target = self.temp.or(self.last);
-        self.copied |= target.is_some();
-        target
+    fn copy(&mut self) -> Option<Copied> {
+        let target = if self.temp == 0 { self.last } else { self.temp };
+        self.copied |= target != 0;
+        Copied::unpack(target)
     }
 
     #[inline(always)]
-    pub(in crate::play) fn end(&mut self) {
-        let kept = if self.copied { None } else { self.last };
-        self.last = self.temp.take().or(kept);
-        self.copied = false;
+    fn end(&mut self) {
+        let kept = if self.copied { 0 } else { self.last };
+        self.last = if self.temp == 0 { kept } else { self.temp };
+        (self.temp, self.copied) = (0, false);
+    }
+
+    #[inline(always)]
+    #[expect(clippy::indexing_slicing, reason = "lane bits")]
+    fn pick(&mut self, lane: u32, picked: u16) {
+        self.picks[lane as usize] = picked;
+    }
+
+    #[inline(always)]
+    #[expect(clippy::indexing_slicing, reason = "lane bits")]
+    fn picked(&self, lane: u32) -> u16 {
+        self.picks[lane as usize]
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::play::Scoring;
-    use crate::play::activation::{Skill, Triggers};
-    use crate::play::effect::tests::{FLIP, TEAM, draws, lock, others_first};
+    use crate::play::activation::{AMP_LEVELS, Payload, Skill, Triggers};
+    use crate::play::effect::tests::{
+        FLIP, STATS, TEAM, clocked, draws, lock, others_first, param, sync,
+    };
     use crate::play::queue::Queue;
+    use crate::play::rng::Rng;
     use crate::play::tests::{ALWAYS, fifty_one, only, play, scorer, seeded, worn};
     use crate::scalar::Rate;
     use crate::skill::{SkillEffect, TriggerType};
@@ -186,5 +292,110 @@ mod tests {
         copied.durations[8][0] = 2500;
         copied.skills[4].threshold = 5;
         assert_eq!(play(&queue, &copied).activations, 1 + 6 + 1, "5 to 30, then once at 6800");
+    }
+
+    /// Param boost every 2s for 1s,
+    /// copied on icon 26 at 3900. Checking that it gets boosted like one of the Encore's
+    /// own would. So it reads the original's targets and a Sync at combo 22 copies lane 1 boosted
+    /// and the duration begins in the Encore's lane.
+    /// Then lane 8 procs at 4000 rather BUT that lane is blocked. phew. Did you get all that?
+    #[test]
+    fn check_copied_param() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut copied = Scoring { stats: STATS, ..Scoring::flat(TEAM) };
+        param(&mut copied, 8, TriggerType::Time, 2, ALWAYS, 12_000, 1000);
+        (copied.targets[8][0], copied.boosts[8][0]) = (1 << 1, 50);
+        sync(&mut copied, 0, TriggerType::Combo, 22, ALWAYS, 1000, 1 << 1);
+        copied.skills[4] = encore(26, ALWAYS);
+        let mut own = copied;
+        param(&mut own, 4, TriggerType::RhythmIcons, 26, ALWAYS, 12_000, 1000);
+        (own.targets[4][0], own.boosts[4][0]) = (1 << 1, 50);
+        let mut idle = copied;
+        idle.skills[4] = scorer(26, ALWAYS, 0);
+        let out = play(&queue, &copied);
+        assert_eq!(out, play(&queue, &own));
+        assert_ne!(out.tap, play(&queue, &idle).tap, "lane 8 boosted at 4000");
+
+        let mut blocked = Scoring { stats: STATS, ..Scoring::flat(TEAM) };
+        param(&mut blocked, 8, TriggerType::RhythmIcons, 30, ALWAYS, 12_000, 2500);
+        blocked.skills[4] = encore(5, ALWAYS);
+        assert_eq!(play(&queue, &blocked).activations, 1 + 10, "lane was not blocked by Encore");
+    }
+
+    /// Amplify at 4000 boosts the skill at 5000 to 100%.
+    /// Encore at 6000 copies it at that percent.
+    /// Then a Sync at combo 41 at the exact same time only gets the copied boost.
+    #[test]
+    fn check_copied_param_at_its_amped_percent() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut amped = Scoring { stats: STATS, ..Scoring::flat(TEAM) };
+        param(&mut amped, 8, TriggerType::Time, 5, ALWAYS, 12_000, 300);
+        (amped.targets[8][0], amped.boosts[8][0]) = (1 << 1, 50);
+        amped.amplified[8][0] = [Payload { value: 24_000, duration: 300, extra: 100 }; AMP_LEVELS];
+        amped.skills[7] = Skill {
+            effect: SkillEffect::Amplify,
+            ..clocked(TriggerType::Time, 4, ALWAYS, 4)
+        };
+        amped.skills[4] = Skill { trigger: TriggerType::Time, ..encore(6, ALWAYS) };
+        sync(&mut amped, 0, TriggerType::Combo, 41, ALWAYS, 500, 1 << 1);
+        let mut plain = amped;
+        plain.skills[7] = clocked(TriggerType::Time, 4, ALWAYS, 0);
+        (plain.skills[8].value, plain.boosts[8][0]) = (24_000, 100);
+        let mut idle = amped;
+        idle.skills[4] = clocked(TriggerType::Time, 6, ALWAYS, 0);
+        let out = play(&queue, &amped);
+        assert_eq!(out, play(&queue, &plain));
+        assert!(out.tap > play(&queue, &idle).tap, "the copy boosted");
+    }
+
+    /// Sync on icon 30 picks has two options, either lanes 0 or 1.
+    /// Encore on 40 copying it syncs to the same lane, whichever rolled before.
+    #[test]
+    fn check_copied_sync() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut copied = Scoring { stats: STATS, ..Scoring::flat(TEAM) };
+        sync(&mut copied, 8, TriggerType::RhythmIcons, 30, ALWAYS, 300, 0b11);
+        copied.skills[4] = encore(40, ALWAYS);
+        let mut idle = copied;
+        idle.skills[4] = scorer(40, ALWAYS, 0);
+        let mut seen = [false; 2];
+        for seed in 0..16 {
+            let lane = Rng::new(seed, Rng::SYNC).below(2);
+            let mut own = copied;
+            sync(&mut own, 4, TriggerType::RhythmIcons, 40, ALWAYS, 300, 1 << lane);
+            let out = seeded(&queue, &copied, seed);
+            assert_eq!(out, seeded(&queue, &own, seed), "seed {seed}");
+            assert_ne!(out.tap, seeded(&queue, &idle, seed).tap, "seed {seed}: the copy synced");
+            seen[lane as usize] = true;
+        }
+        assert_eq!(seen, [true; 2]);
+    }
+
+    #[test]
+    fn check_encore_counts_for_year_group() {
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut scoring = Scoring::flat(TEAM);
+        scoring.skills[4] = encore(10, ALWAYS);
+        scoring.skills[0] = clocked(TriggerType::YearGroup, 1 << 4, ALWAYS, 1000);
+        (scoring.members[4], scoring.members[0]) = (1 << 4, 1);
+        let out = play(&queue, &scoring);
+        assert_eq!((out.activations, out.skill), (5 + 5, (5 + 4) * 1000));
+    }
+
+    #[test]
+    fn check_packing() {
+        for (index, &effect) in super::EFFECTS.iter().enumerate() {
+            assert_eq!(effect as usize, index, "{effect:?}");
+            for (lane, worn, levels) in [(0, false, 0), (8, true, 16), (4, false, 7)] {
+                let copy = super::Copied { lane, worn, effect, levels };
+                assert_eq!(super::Copied::unpack(copy.pack()), Some(copy));
+            }
+        }
+        assert_eq!(super::EFFECTS.len(), SkillEffect::Spark as usize + 1);
+        assert_eq!(super::Copied::unpack(0), None);
     }
 }

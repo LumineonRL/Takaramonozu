@@ -4,6 +4,7 @@
 use super::activation::Triggers;
 use super::config::PlayConfig;
 use super::effect::amp::Amp;
+use super::effect::encore::{NoRepeat, Slot};
 use super::effect::fever::Fever;
 use super::effect::healing::Healing;
 use super::effect::locks::{Expiry, Tricked};
@@ -171,7 +172,10 @@ where
     E: Lasting<'q>,
 {
     // Encore always goes last
-    if (triggers.amp() | triggers.encore()) != 0 {
+    if triggers.encore() != 0 {
+        return repeated::<E>(queue, config, scoring, triggers, judgements);
+    }
+    if triggers.amp() != 0 {
         return amplified::<E>(queue, config, scoring, triggers, judgements);
     }
     years::<E>(queue, config, scoring, triggers, judgements)
@@ -188,7 +192,22 @@ fn amplified<'q, E>(
 where
     E: Lasting<'q>,
 {
-    years::<Amp<E>>(queue, config, scoring, triggers, judgements)
+    years::<Amp<E, NoRepeat>>(queue, config, scoring, triggers, judgements)
+}
+
+/// Encore teams get their own Amp copies
+#[inline(never)]
+fn repeated<'q, E>(
+    queue: &'q Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    E: Lasting<'q>,
+{
+    years::<Amp<E, Slot>>(queue, config, scoring, triggers, judgements)
 }
 
 /// Year Group gets its own too but this one makes more sense I don't see a clean way around it.

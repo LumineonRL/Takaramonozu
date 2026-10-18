@@ -35,6 +35,7 @@ where
         fever, fevered, read_running, fever_paid,
         psu, expire, psu_tap, psu_paid,
         strength, hearted_strength, param, param_at, sync, seed,
+        param_copy, sync_to,
     }
 
     #[inline]

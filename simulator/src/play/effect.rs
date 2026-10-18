@@ -73,7 +73,7 @@ macro_rules! forward {
     (@ sync) => {
         forward!(fn sync(
             &mut self, lane: u32, worn: bool, now: crate::song::Time, duration: crate::scalar::Ms
-        ));
+        ) -> u16);
     };
     (@ param_at) => {
         forward!(fn param_at(
@@ -82,6 +82,17 @@ macro_rules! forward {
         ));
     };
     (@ seed) => { forward!(fn seed(&mut self, seed: u64)); };
+    (@ param_copy) => {
+        forward!(fn param_copy(
+            &mut self, hold: u32, from: crate::play::effect::encore::Copied,
+            now: crate::song::Time, payload: crate::play::activation::Payload
+        ));
+    };
+    (@ sync_to) => {
+        forward!(fn sync_to(
+            &mut self, hold: u32, targets: u16, now: crate::song::Time, duration: crate::scalar::Ms
+        ));
+    };
     (fn $name:ident(&self $(, $arg:ident: $ty:ty)* $(,)?) -> $ret:ty) => {
         #[inline(always)]
         fn $name(&self $(, $arg: $ty)*) -> $ret {
@@ -142,8 +153,10 @@ pub(in crate::play) trait Lasting<'q> {
     /// I'm running out of verbs to go with each skill and it's actually getting very
     /// confusing to remember which skills get which verbs (and which are just generic that apply to all skills)
     /// so I'm going to start writing it down so it's easier to find.
-    /// Amp's verbs are  `land` and `order`.
+    /// Amp's (and Encore's fwiw) verbs are  `land` and `order`.
     const AMP: bool = false;
+
+    const REPEAT: bool = false;
 
     /// `last` is the final judgement aka end of song.
     fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self;
@@ -284,8 +297,10 @@ pub(in crate::play) trait Lasting<'q> {
         debug_assert!(false, "no Appeal Boost on this team, buddy.");
     }
 
-    fn sync(&mut self, _lane: u32, _worn: bool, _now: Time, _duration: Ms) {
+    /// Bit of the lane it copied (or 0 if nothing to copy)
+    fn sync(&mut self, _lane: u32, _worn: bool, _now: Time, _duration: Ms) -> u16 {
         debug_assert!(false, "no Sync on this team, buddy.");
+        0
     }
 
     /// `param` at the percent an Amplify raised it to.
@@ -320,7 +335,7 @@ pub(in crate::play) trait Lasting<'q> {
     /// Probably a confusing very to use because Spark spends charge of Encore activations
     /// what verb am I supposed to use for that why are there so many different skills remember
     /// when SIF was just Scorers, Healers and Perfect Locks? Take me back to the good ol' days.
-    fn spend(&mut self) -> u32 {
+    fn spend(&mut self, _take: bool) -> u32 {
         debug_assert!(false, "no Amplify on this team, buddy.");
         0
     }
@@ -345,6 +360,35 @@ pub(in crate::play) trait Lasting<'q> {
     fn copy(&mut self) -> Option<Copied> {
         debug_assert!(false, "no Encore on this team, buddy.");
         None
+    }
+
+    /// Trying to track down the interactions between Encore and Param Boost / Sync was a nightmare.
+    /// I feel quite confident that what's modeled here is true to the game and sifcord Discord logs
+    /// and my own testing seem to support it.
+    ///
+    /// Encore's copy of Param Boost.
+    /// Boosts the original's targets, blocks the lane aka `hold`.
+    fn param_copy(&mut self, _hold: u32, _from: Copied, _now: Time, _payload: Payload) {
+        debug_assert!(false, "no Appeal Boost on this team, buddy.");
+    }
+
+    /// Encore's copy of a Sync.
+    /// Here,`hold` copies one of `targets` (the lane that the original copied).
+    fn sync_to(&mut self, _hold: u32, _targets: u16, _now: Time, _duration: Ms) {
+        debug_assert!(false, "no Sync on this team, buddy.");
+    }
+
+    /// This verb this has gotten out of hand I'm sorry I really regret not just prefixing the
+    /// verbs with the skill they're relevant to but I made the decision not to do so early because
+    /// I thought it'd be more modular and more of these verbs would be used by more skills.
+    /// Instead we're stuck with each skill having their own verbs and no clean way of telling
+    /// which is which and instead of fixing it each new skill implementation makes it worse.
+    ///
+    /// Anyway, this is for Encore+Sync. It's the bit of the lane Sync last copied (or 0 if no valid target).
+    /// Encore needs to keep a copy of this in its slot else it'd have no way to resolve which was picked (hence the name).
+    fn picked(&self, _lane: u32) -> u16 {
+        debug_assert!(false, "no Encore on this team, buddy.");
+        0
     }
 }
 
@@ -441,7 +485,9 @@ pub(super) fn pay<'q>(
         SkillEffect::PerfectScoreUp => expiry.psu(lane, now, duration, value, out.perfects),
         SkillEffect::SkillRateUp => expiry.sru(lane, now, duration, value),
         SkillEffect::AppealBoost => expiry.param(lane, worn, now, duration, value),
-        SkillEffect::Sync => expiry.sync(lane, worn, now, duration),
+        SkillEffect::Sync => {
+            expiry.sync(lane, worn, now, duration);
+        }
         SkillEffect::Scorer | SkillEffect::Encore | SkillEffect::Amplify | SkillEffect::Spark => {}
     }
 }
@@ -451,46 +497,44 @@ pub(super) fn pay<'q>(
 /// This processes an Amp activation so the increased skill level reading the enhanced value/duration
 /// and a skill check because Encore does not consume Amp.
 #[inline(always)]
-pub(super) fn land<'q>(
+pub(super) fn land<'q, E>(
     lane: u32,
     worn: bool,
     effect: SkillEffect,
     now: Time,
     scoring: &Scoring,
     out: &mut Outcome,
-    expiry: &mut impl Lasting<'q>,
-) {
-    if effect == SkillEffect::Encore {
-        if let Some(copy) = expiry.copy() {
-            replay(lane, worn, copy, now, scoring, out, expiry);
+    expiry: &mut E,
+) where
+    E: Lasting<'q>,
+{
+    let from = if E::REPEAT && effect == SkillEffect::Encore {
+        let Some(copy) = expiry.copy() else {
+            return;
+        };
+        copy
+    } else {
+        let levels = expiry.spend(effect != SkillEffect::Encore);
+        let landed = Copied { lane, worn, effect, levels };
+        expiry.write(landed);
+        landed
+    };
+    let payload = expiry.payload(from.lane, from.worn, from.levels, scoring);
+    // If Param Boost or Sync are copied, they need to read the original's lane AND the the lane holding this.
+    if E::REPEAT
+        && effect == SkillEffect::Encore
+        && matches!(from.effect, SkillEffect::AppealBoost | SkillEffect::Sync)
+    {
+        if from.effect == SkillEffect::AppealBoost {
+            expiry.param_copy(lane, from, now, payload);
+        } else {
+            let targets = expiry.picked(from.lane);
+            expiry.sync_to(lane, targets, now, payload.duration);
         }
         return;
     }
-    let levels = expiry.spend();
-    expiry.write(Copied { lane, worn, effect, levels });
-    let payload = expiry.payload(lane, worn, levels, scoring);
-    pay_at(lane, worn, effect, payload.value, payload.duration, payload.extra, now, out, expiry);
-}
-
-/// For encore to replay the previous skill
-#[inline(always)]
-fn replay<'q>(
-    lane: u32,
-    worn: bool,
-    copy: Copied,
-    now: Time,
-    scoring: &Scoring,
-    out: &mut Outcome,
-    expiry: &mut impl Lasting<'q>,
-) {
-    // TODO: Param Boost and syncs who they copy and how it works need to bust out that ol' discord search feature
-    // and watch back some private server recordings.
-    if matches!(copy.effect, SkillEffect::AppealBoost | SkillEffect::Sync) {
-        return;
-    }
-    let payload = expiry.payload(copy.lane, copy.worn, copy.levels, scoring);
     let (value, duration, extra) = (payload.value, payload.duration, payload.extra);
-    pay_at(lane, worn, copy.effect, value, duration, extra, now, out, expiry);
+    pay_at(lane, worn, from.effect, value, duration, extra, now, out, expiry);
 }
 
 /// `extra` can either be Healer's HP or an Appeal Boost's percent I wasn't sure what to do with them.
@@ -521,7 +565,9 @@ fn pay_at<'q>(
         SkillEffect::PerfectScoreUp => expiry.psu(lane, now, duration, value, out.perfects),
         SkillEffect::SkillRateUp => expiry.sru(lane, now, duration, value),
         SkillEffect::AppealBoost => expiry.param_at(lane, worn, now, duration, value, extra),
-        SkillEffect::Sync => expiry.sync(lane, worn, now, duration),
+        SkillEffect::Sync => {
+            expiry.sync(lane, worn, now, duration);
+        }
         SkillEffect::Amplify => expiry.amp(value),
         SkillEffect::Scorer | SkillEffect::Encore | SkillEffect::Spark => {}
     }

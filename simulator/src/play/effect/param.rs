@@ -4,8 +4,10 @@
 
 mod sync;
 
+use super::encore::Copied;
 use super::{Lasting, NEVER};
 use crate::play::Scoring;
+use crate::play::activation::Payload;
 use crate::play::queue::Queue;
 use crate::play::tap::{Worth, overheal_score_val, worth_score};
 use crate::scalar::Ms;
@@ -147,7 +149,7 @@ where
     #[inline(never)]
     #[expect(clippy::indexing_slicing, reason = "lane bits")]
     fn param(&mut self, lane: u32, worn: bool, now: Time, duration: Ms, value: u32) {
-        if !self.open(lane, worn, now, duration, value) {
+        if !self.open(lane, lane, worn, now, duration, value) {
             return;
         }
         self.percent = self.percents[lane as usize][usize::from(worn)];
@@ -164,7 +166,7 @@ where
         value: u32,
         percent: u16,
     ) {
-        if !self.open(lane, worn, now, duration, value) {
+        if !self.open(lane, lane, worn, now, duration, value) {
             return;
         }
         self.percent = percent;
@@ -173,15 +175,24 @@ where
 
     #[inline(never)]
     #[expect(clippy::indexing_slicing, reason = "lane bits")]
-    fn sync(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) {
-        let until = self.lasting.occupy(lane, now, duration);
+    fn sync(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) -> u16 {
         let targets = self.targets[lane as usize][usize::from(worn)];
-        if !self.copies.land(lane, targets, until, (self.reach, self.percent)) {
+        self.sync_onto(lane, targets, now, duration)
+    }
+
+    /// For encore. The original's targets and percent.
+    #[inline(never)]
+    fn param_copy(&mut self, hold: u32, from: Copied, now: Time, payload: Payload) {
+        if !self.open(hold, from.lane, from.worn, now, payload.duration, payload.value) {
             return;
         }
-        self.ending = self.ending.min(until);
-        self.wake = self.wake.min(until);
+        self.percent = payload.extra;
         self.refresh();
+    }
+
+    #[inline(never)]
+    fn sync_to(&mut self, hold: u32, targets: u16, now: Time, duration: Ms) {
+        self.sync_onto(hold, targets, now, duration);
     }
 
     #[inline(always)]
@@ -194,19 +205,41 @@ impl<'q, E> Param<E>
 where
     E: Lasting<'q>,
 {
-    /// Activates the boost unless the boost is already active
+    /// Activates the boost unless the boost is already active.
+    ///`hold` is the lane being boosted. Encore needs `hold` to know what to boost.
     #[inline(always)]
     #[expect(clippy::indexing_slicing, reason = "lane bits")]
-    fn open(&mut self, lane: u32, worn: bool, now: Time, duration: Ms, value: u32) -> bool {
+    fn open(
+        &mut self,
+        hold: u32,
+        lane: u32,
+        worn: bool,
+        now: Time,
+        duration: Ms,
+        value: u32,
+    ) -> bool {
         if now < self.until {
             return false;
         }
-        self.until = self.lasting.occupy(lane, now, duration);
+        self.until = self.lasting.occupy(hold, now, duration);
         self.ending = self.ending.min(self.until);
         self.wake = self.wake.min(self.until);
         self.boost = value;
         self.reach = self.targets[lane as usize][usize::from(worn)];
         true
+    }
+
+    #[inline(always)]
+    fn sync_onto(&mut self, hold: u32, targets: u16, now: Time, duration: Ms) -> u16 {
+        let until = self.lasting.occupy(hold, now, duration);
+        let picked = self.copies.land(hold, targets, until, (self.reach, self.percent));
+        if picked == 0 {
+            return 0;
+        }
+        self.ending = self.ending.min(until);
+        self.wake = self.wake.min(until);
+        self.refresh();
+        picked
     }
 
     fn refresh(&mut self) {

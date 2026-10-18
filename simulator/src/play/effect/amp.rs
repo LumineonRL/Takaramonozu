@@ -28,19 +28,19 @@
 //! search up `coinflip` in this codebase, I don't remember which module it's in. `rng.rs`, I think.
 
 use super::Lasting;
-use super::encore::{Copied, Slot};
+use super::encore::{Copied, Repeats};
 use crate::play::Scoring;
 use crate::play::activation::{AMP_LEVELS, Payload};
 use crate::play::queue::Queue;
 use crate::play::rng::Rng;
-use crate::scalar::RATE_UNIT;
+use crate::scalar::{Ms, RATE_UNIT};
 use crate::skill::SkillEffect;
 use crate::song::{LANES, Time};
 
 #[expect(clippy::cast_possible_truncation, reason = "16")]
 const MOST: u32 = AMP_LEVELS as u32;
 
-pub(in crate::play) struct Amp<E> {
+pub(in crate::play) struct Amp<E, R> {
     lasting: E,
     /// Number of levels the next skill will be boosted by
     standing: u32,
@@ -54,13 +54,16 @@ pub(in crate::play) struct Amp<E> {
     second: u16,
     /// card then acc you know the drill by now.
     base: [[Payload; 2]; LANES],
-    /// Needed for Encore
-    slot: Slot,
+    /// Unfortunately `E` was already taken, so`R` is for Encore's slot aka Repeater.
+    /// And the funny thing is I don't even remember what the `E` on `lasting` was supposed to stand for LMAO.
+    /// Like why wouldn't I use `L`?
+    slot: R,
 }
 
-impl<'q, E> Lasting<'q> for Amp<E>
+impl<'q, E, R> Lasting<'q> for Amp<E, R>
 where
     E: Lasting<'q>,
+    R: Repeats,
 {
     const ANY: bool = E::ANY;
     const TRICKS: bool = E::TRICKS;
@@ -69,6 +72,7 @@ where
     const PSU: bool = E::PSU;
     const PARAM: bool = E::PARAM;
     const AMP: bool = true;
+    const REPEAT: bool = R::ON;
 
     forward! {
         admit, next, release, converted, locked, lock, trick, occupy, tap, worth,
@@ -76,7 +80,8 @@ where
         fever, fevered, read_running, fever_paid,
         psu, expire, psu_tap, psu_paid,
         boosted, rates, sru,
-        strength, hearted_strength, param, param_at, sync,
+        strength, hearted_strength, param, param_at,
+        param_copy, sync_to,
     }
 
     #[inline]
@@ -116,7 +121,7 @@ where
             first: amps,
             second: others,
             base,
-            slot: Slot::default(),
+            slot: R::default(),
         }
     }
 
@@ -155,8 +160,10 @@ where
     }
 
     #[inline(always)]
-    fn spend(&mut self) -> u32 {
-        core::mem::take(&mut self.standing)
+    fn spend(&mut self, take: bool) -> u32 {
+        let levels = if take { self.standing } else { 0 };
+        self.standing = if take { 0 } else { self.standing };
+        levels
     }
 
     #[inline(always)]
@@ -192,6 +199,18 @@ where
     #[inline(always)]
     fn copy(&mut self) -> Option<Copied> {
         self.slot.copy()
+    }
+
+    #[inline(always)]
+    fn sync(&mut self, lane: u32, worn: bool, now: Time, duration: Ms) -> u16 {
+        let picked = self.lasting.sync(lane, worn, now, duration);
+        self.slot.pick(lane, picked);
+        picked
+    }
+
+    #[inline(always)]
+    fn picked(&self, lane: u32) -> u16 {
+        self.slot.picked(lane)
     }
 }
 
