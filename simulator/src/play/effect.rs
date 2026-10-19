@@ -120,6 +120,7 @@ pub(super) mod healing;
 pub(super) mod locks;
 pub(super) mod param;
 pub(super) mod psu;
+pub(super) mod spark;
 pub(super) mod sru;
 
 use super::activation::Payload;
@@ -137,7 +138,7 @@ const NEVER: Time = Time(u32::MAX);
 /// For Duration effects. Perfect Lock, Total Trick, Combo Fever, Perfect Score Up, Skill Rate Up, Appeal Boost and Sync.
 ///
 /// A method only one skill uses is prefixed with that skill (`lock_`, `total_trick_`, `healer_`, `heart_`,
-/// `fever_`, `psu_`, `sru_`, `param_`, `sync_`, `amp_`, `encore_`), and its landing is `<skill>_land`.
+/// `fever_`, `psu_`, `sru_`, `param_`, `sync_`, `amp_`, `encore_`, `spark_`), and its landing is `<skill>_land`.
 /// The unprefixed ones (`admit`, `next`, `release`, `occupy`, `expire`, `converted`, `locked`, `begin`, `end`,
 /// `seed`) are shared.
 pub(in crate::play) trait Lasting<'q> {
@@ -158,6 +159,8 @@ pub(in crate::play) trait Lasting<'q> {
     const AMP: bool = false;
 
     const REPEAT: bool = false;
+
+    const SPARK: bool = false;
 
     /// `last` is the final judgement aka end of song.
     fn new(last: Time, queue: &'q Queue<'_>, scoring: &Scoring) -> Self;
@@ -381,6 +384,26 @@ pub(in crate::play) trait Lasting<'q> {
         debug_assert!(false, "no Encore on this team, buddy.");
         0
     }
+
+    /// Have enough charges of spark stored up so that the skill could activate.
+    fn spark_ready(&self, _threshold: u8) -> bool {
+        debug_assert!(false, "no Spark on this team, buddy.");
+        true
+    }
+
+    /// Spends spark chages.
+    /// Going to document this since it was something I was unsure of, but as many
+    /// charges that can be spent get spent. If you have 17 charges and the Spark skill needs 5,
+    /// it will spend 15 charges.
+    fn spark_spend(&mut self, _threshold: u8) -> u32 {
+        debug_assert!(false, "no Spark on this team, buddy.");
+        0
+    }
+
+    /// There's some nuance to what actually banks a spark. See the top of `spark.rs`.
+    fn spark_bank(&mut self, _lane: u32, _effect: SkillEffect) {
+        debug_assert!(false, "no Spark on this team, buddy.");
+    }
 }
 
 pub(in crate::play) struct Instant;
@@ -483,7 +506,7 @@ pub(super) fn pay<'q>(
     }
 }
 
-/// Specifically for teams with Amplify or Encore. No amp means we don't worry about this (actually that applies to nearly every skill
+/// Specifically for teams with Amplify, Encore or Spark. No amp means we don't worry about this (actually that applies to nearly every skill
 /// in this repo).
 /// This processes an Amp activation so the increased skill level reading the enhanced value/duration
 /// and a skill check because Encore does not consume Amp.
@@ -511,6 +534,19 @@ pub(super) fn land<'q, E>(
         landed
     };
     let payload = expiry.amp_payload(from.lane, from.worn, from.levels, scoring);
+    // Spark, (or I guess also a copy of one because Encore can do that)
+    // It activates for a multiple of its threshold times how many charges get spent.
+    // TODO: Spark value does nothing yet.
+    let value = if E::SPARK && from.effect == SkillEffect::Spark {
+        let threshold = scoring.sparks.get(from.lane as usize).copied().unwrap_or(0);
+        payload.value.saturating_mul(expiry.spark_spend(threshold))
+    } else {
+        payload.value
+    };
+    // spark copies don't spend their own charges.
+    if E::SPARK {
+        expiry.spark_bank(lane, from.effect);
+    }
     // If Param Boost or Sync are copied, they need to read the original's lane AND the the lane holding this.
     if E::REPEAT
         && effect == SkillEffect::Encore
@@ -524,7 +560,7 @@ pub(super) fn land<'q, E>(
         }
         return;
     }
-    let (value, duration, extra) = (payload.value, payload.duration, payload.extra);
+    let (duration, extra) = (payload.duration, payload.extra);
     pay_at(lane, worn, from.effect, value, duration, extra, now, out, expiry);
 }
 
@@ -595,6 +631,10 @@ mod tests {
 
     pub(super) fn clocked(trigger: TriggerType, threshold: u16, chance: Rate, value: u32) -> Skill {
         Skill { trigger, ..scorer(threshold, chance, value) }
+    }
+
+    pub(super) fn encore(threshold: u16, chance: Rate) -> Skill {
+        Skill { effect: SkillEffect::Encore, ..scorer(threshold, chance, 0) }
     }
 
     pub(super) fn lasting(

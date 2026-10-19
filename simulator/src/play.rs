@@ -51,6 +51,7 @@ pub struct Scoring {
     pub boosts: [[u16; 2]; LANES],
     /// Card then accessory, at own level + 1..=16 for an Amplify.
     pub amplified: [[[Payload; AMP_LEVELS]; 2]; LANES],
+    pub sparks: [u8; LANES],
 }
 
 impl Scoring {
@@ -72,6 +73,7 @@ impl Scoring {
             targets: [[0; 2]; LANES],
             boosts: [[0; 2]; LANES],
             amplified: [[[Payload { value: 0, duration: 0, extra: 0 }; AMP_LEVELS]; 2]; LANES],
+            sparks: [0; LANES],
         }
     }
 }

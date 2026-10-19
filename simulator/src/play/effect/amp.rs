@@ -73,6 +73,7 @@ where
     const PARAM: bool = E::PARAM;
     const AMP: bool = true;
     const REPEAT: bool = R::ON;
+    const SPARK: bool = R::SPARK;
 
     forward! {
         admit, next, release, converted, locked, lock_land, total_trick_land, occupy, total_trick_tap, total_trick_worth,
@@ -211,6 +212,26 @@ where
     #[inline(always)]
     fn encore_picked(&self, lane: u32) -> u16 {
         self.slot.picked(lane)
+    }
+
+    #[inline(always)]
+    fn spark_ready(&self, threshold: u8) -> bool {
+        self.slot.ready(threshold)
+    }
+
+    #[inline(always)]
+    fn spark_spend(&mut self, threshold: u8) -> u32 {
+        self.slot.spend(threshold)
+    }
+
+    /// Amp needs this because of a weird spark interaction.
+    /// If an encore goes off and copies an Amp that fired at the exact same moment, no charge is banked.
+    #[inline(always)]
+    fn spark_bank(&mut self, lane: u32, effect: SkillEffect) {
+        let repeater = self.encores & 1_u16.checked_shl(lane).unwrap_or(0) != 0;
+        if repeater && (effect != SkillEffect::Amplify || self.fresh == 0) {
+            self.slot.bank();
+        }
     }
 }
 

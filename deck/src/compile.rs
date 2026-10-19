@@ -201,6 +201,7 @@ impl Compiled {
             targets: self.slots.map(|s| s.targets),
             boosts: self.slots.map(|s| s.boosts),
             amplified: self.slots.map(|s| s.amplified),
+            sparks: [0; LANES],
         }
     }
 }

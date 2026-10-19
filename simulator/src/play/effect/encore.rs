@@ -98,11 +98,26 @@ pub(in crate::play) struct Slot {
 /// The slot on the team with Amp if Amp is present.
 pub(in crate::play) trait Repeats: Default {
     const ON: bool;
+    const SPARK: bool = false;
     fn write(&mut self, landed: Copied);
     fn copy(&mut self) -> Option<Copied>;
     fn end(&mut self);
     fn pick(&mut self, lane: u32, picked: u16);
     fn picked(&self, lane: u32) -> u16;
+
+    fn ready(&self, _threshold: u8) -> bool {
+        debug_assert!(false, "no Spark");
+        true
+    }
+
+    fn spend(&mut self, _threshold: u8) -> u32 {
+        debug_assert!(false, "no Spark");
+        0
+    }
+
+    fn bank(&mut self) {
+        debug_assert!(false, "no Spark");
+    }
 }
 
 /// This one's for an Amplify team with no Encore and is entirely here for performance reasons.
@@ -180,17 +195,12 @@ mod tests {
     use crate::play::Scoring;
     use crate::play::activation::{AMP_LEVELS, Payload, Skill, Triggers};
     use crate::play::effect::tests::{
-        FLIP, STATS, TEAM, clocked, draws, lock, others_first, param, sync,
+        FLIP, STATS, TEAM, clocked, draws, encore, lock, others_first, param, sync,
     };
     use crate::play::queue::Queue;
     use crate::play::rng::Rng;
     use crate::play::tests::{ALWAYS, fifty_one, only, play, scorer, seeded, worn};
-    use crate::scalar::Rate;
     use crate::skill::{SkillEffect, TriggerType};
-
-    fn encore(threshold: u16, chance: Rate) -> Skill {
-        Skill { effect: SkillEffect::Encore, ..scorer(threshold, chance, 0) }
-    }
 
     /// Scorer every 10 icons, Encore every 5.
     /// Each scorer gets copied on its own icon and next Encore then the slot empties.

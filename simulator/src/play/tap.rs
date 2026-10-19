@@ -11,7 +11,6 @@ const BASE: u64 = 80;
 pub(super) const UNIT: u16 = 100;
 
 /// Note multipliers can have an extra decimal. A swing hold gets a 0.625x multiplier. The scrape dropped the
-/// swing bit off all 520 of them, and `scripts/fix_swing_holds.py` put it back.
 /// Update: swing holds are very much real, it was the data that was wrong.
 /// This is pretty big actually because affects burrito's sim too.
 const NOTE_UNIT: u16 = 1000;

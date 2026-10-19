@@ -174,6 +174,7 @@ pub struct Triggers {
     sync: u16,
     amp: u16,
     encore: u16,
+    spark: u16,
 }
 
 impl Triggers {
@@ -203,6 +204,7 @@ impl Triggers {
             sync: lanes_with(scoring, |effect| effect == SkillEffect::Sync),
             amp: lanes_with(scoring, |effect| effect == SkillEffect::Amplify),
             encore: lanes_with(scoring, |effect| effect == SkillEffect::Encore),
+            spark: lanes_with(scoring, |effect| effect == SkillEffect::Spark),
         }
     }
 
@@ -297,6 +299,11 @@ impl Triggers {
     #[must_use]
     pub const fn encore(&self) -> u16 {
         self.encore
+    }
+
+    #[must_use]
+    pub const fn spark(&self) -> u16 {
+        self.spark
     }
 
     #[must_use]
@@ -494,7 +501,10 @@ where
         } else {
             accessory.chance
         };
-        if accessory.is_inert() || !rng.roll(worn_chance) {
+        // Spark can't activate if it doesn't have enough charges.
+        let short = E::SPARK
+            && !expiry.spark_ready(scoring.sparks.get(lane as usize).copied().unwrap_or(0));
+        if accessory.is_inert() || short || !rng.roll(worn_chance) {
             continue;
         }
         out.accessory_activations = out.accessory_activations.saturating_add(1);

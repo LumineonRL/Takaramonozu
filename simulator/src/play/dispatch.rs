@@ -10,6 +10,7 @@ use super::effect::healing::Healing;
 use super::effect::locks::{Expiry, Tricked};
 use super::effect::param::Param;
 use super::effect::psu::Psu;
+use super::effect::spark::Charged;
 use super::effect::sru::Sru;
 use super::effect::{Instant, Lasting};
 use super::judgement::Judgements;
@@ -171,6 +172,9 @@ pub(super) fn effects<'q, E>(
 where
     E: Lasting<'q>,
 {
+    if triggers.spark() != 0 {
+        return charged::<E>(queue, config, scoring, triggers, judgements);
+    }
     // Encore always goes last
     if triggers.encore() != 0 {
         return repeated::<E>(queue, config, scoring, triggers, judgements);
@@ -208,6 +212,21 @@ where
     E: Lasting<'q>,
 {
     years::<Amp<E, Slot>>(queue, config, scoring, triggers, judgements)
+}
+
+/// Charges for Spark. The thing that you get when an Encore procs.
+#[inline(never)]
+fn charged<'q, E>(
+    queue: &'q Queue,
+    config: &PlayConfig,
+    scoring: &Scoring,
+    triggers: &Triggers,
+    judgements: &Judgements,
+) -> Outcome
+where
+    E: Lasting<'q>,
+{
+    years::<Amp<E, Charged>>(queue, config, scoring, triggers, judgements)
 }
 
 /// Year Group gets its own too but this one makes more sense I don't see a clean way around it.
