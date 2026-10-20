@@ -160,6 +160,9 @@ where
     if E::FEVER && SCORE {
         expiry.fever_per_note();
     }
+    if E::SPARK && SCORE {
+        expiry.spark_per_note();
+    }
     let mut timer_cursor = 0_usize;
     let mut next_timer = Time(timer_at[0]);
     let mut ladder = Ladder::new(scoring, if SCORE { triggers.score() } else { 0 });
@@ -296,6 +299,9 @@ where
                 if E::FEVER && SCORE {
                     out.skill = out.skill.saturating_add(expiry.fever_tap(time, out.notes));
                 }
+                if E::SPARK && SCORE {
+                    out.skill = out.skill.saturating_add(expiry.spark_tap(time));
+                }
                 let perfect = converted || (head & tail);
                 out.perfects = out.perfects.saturating_add(u32::from(perfect));
                 if E::PSU && SCORE {
@@ -348,6 +354,9 @@ where
     }
     if E::PSU && !SCORE {
         out.skill = out.skill.saturating_add(expiry.psu_paid(out.perfects));
+    }
+    if E::SPARK && !SCORE {
+        out.skill = out.skill.saturating_add(expiry.spark_paid());
     }
     out
 }

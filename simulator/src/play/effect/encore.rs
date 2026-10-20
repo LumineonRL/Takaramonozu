@@ -30,8 +30,9 @@
 //! 58 note scorer -> Encore copies it at 75 and poisons the slot -> note 100 nothing to copy
 //! 116 scorer -> 125 encore copy again. Only ever one cycle if the activations aren't simultaneous.
 
+use crate::play::queue::Queue;
 use crate::skill::SkillEffect;
-use crate::song::LANES;
+use crate::song::{LANES, Time};
 
 /// skill encore can replay, including amp boosts
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -96,9 +97,15 @@ pub(in crate::play) struct Slot {
 
 /// This one is specifically for Amp+Encore
 /// The slot on the team with Amp if Amp is present.
-pub(in crate::play) trait Repeats: Default {
+pub(in crate::play) trait Repeats<'q>: Default {
     const ON: bool;
     const SPARK: bool = false;
+
+    #[inline(always)]
+    fn new(_queue: &'q Queue<'_>) -> Self {
+        Self::default()
+    }
+
     fn write(&mut self, landed: Copied);
     fn copy(&mut self) -> Option<Copied>;
     fn end(&mut self);
@@ -118,6 +125,21 @@ pub(in crate::play) trait Repeats: Default {
     fn bank(&mut self) {
         debug_assert!(false, "no Spark");
     }
+
+    fn open(&mut self, _lane: u32, _end: Time, _bonus: u32, _notes: u32) {
+        debug_assert!(false, "no Spark");
+    }
+
+    fn tap(&mut self, _now: Time) -> u64 {
+        debug_assert!(false, "no Spark");
+        0
+    }
+
+    fn per_note(&mut self) {}
+
+    fn paid(&self) -> u64 {
+        0
+    }
 }
 
 /// This one's for an Amplify team with no Encore and is entirely here for performance reasons.
@@ -127,7 +149,7 @@ pub(in crate::play) trait Repeats: Default {
 #[derive(Clone, Copy, Default, Debug)]
 pub(in crate::play) struct NoRepeat;
 
-impl Repeats for NoRepeat {
+impl Repeats<'_> for NoRepeat {
     const ON: bool = false;
 
     #[inline(always)]
@@ -150,7 +172,7 @@ impl Repeats for NoRepeat {
     }
 }
 
-impl Repeats for Slot {
+impl Repeats<'_> for Slot {
     const ON: bool = true;
 
     #[inline(always)]

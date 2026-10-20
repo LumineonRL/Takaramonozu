@@ -172,7 +172,7 @@ pub(super) fn effects<'q, E>(
 where
     E: Lasting<'q>,
 {
-    if triggers.spark() != 0 {
+    if E::ANY && triggers.spark() != 0 {
         return charged::<E>(queue, config, scoring, triggers, judgements);
     }
     // Encore always goes last
@@ -226,7 +226,7 @@ fn charged<'q, E>(
 where
     E: Lasting<'q>,
 {
-    years::<Amp<E, Charged>>(queue, config, scoring, triggers, judgements)
+    years::<Amp<E, Charged<'q>>>(queue, config, scoring, triggers, judgements)
 }
 
 /// Year Group gets its own too but this one makes more sense I don't see a clean way around it.

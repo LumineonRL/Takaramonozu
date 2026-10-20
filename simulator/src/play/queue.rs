@@ -170,6 +170,19 @@ impl<'a> Queue<'a> {
     }
 }
 
+/// This was originally in `fever.rs` but Spark needs it too, so moving it here.
+/// Checks that a song hasn't ended because there's nothing to "`pay`" once a song is over
+/// where "a song is over" is defined by "any ms greater than the highest ms in the chart."
+#[inline(always)]
+pub(super) fn reach(scored: &[Time], buckets: &[u32], from: usize, end: Time) -> usize {
+    let bucket = ((end.0 >> BUCKET) as usize).min(buckets.len().saturating_sub(1));
+    let mut to = buckets.get(bucket).map_or(from, |&n| (n as usize).max(from));
+    while scored.get(to).is_some_and(|&t| t < end) {
+        to = to.saturating_add(1);
+    }
+    to
+}
+
 fn buckets(scored: &[Time]) -> Vec<u32> {
     let last = scored.last().map_or(0, |t| t.0 >> BUCKET);
     let mut out = Vec::with_capacity(last as usize + 2);

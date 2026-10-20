@@ -63,7 +63,7 @@ pub(in crate::play) struct Amp<E, R> {
 impl<'q, E, R> Lasting<'q> for Amp<E, R>
 where
     E: Lasting<'q>,
-    R: Repeats,
+    R: Repeats<'q>,
 {
     const ANY: bool = E::ANY;
     const TRICKS: bool = E::TRICKS;
@@ -122,7 +122,7 @@ where
             first: amps,
             second: others,
             base,
-            slot: R::default(),
+            slot: R::new(queue),
         }
     }
 
@@ -232,6 +232,29 @@ where
         if repeater && (effect != SkillEffect::Amplify || self.fresh == 0) {
             self.slot.bank();
         }
+    }
+
+    #[inline(always)]
+    fn spark_land(&mut self, lane: u32, now: Time, duration: Ms, bonus: u32, notes: u32) {
+        if R::SPARK {
+            let end = self.lasting.occupy(lane, now, duration);
+            self.slot.open(lane, end, bonus, notes);
+        }
+    }
+
+    #[inline(always)]
+    fn spark_tap(&mut self, now: Time) -> u64 {
+        self.slot.tap(now)
+    }
+
+    #[inline(always)]
+    fn spark_per_note(&mut self) {
+        self.slot.per_note();
+    }
+
+    #[inline(always)]
+    fn spark_paid(&self) -> u64 {
+        self.slot.paid()
     }
 }
 

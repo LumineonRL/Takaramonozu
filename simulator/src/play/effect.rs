@@ -404,6 +404,22 @@ pub(in crate::play) trait Lasting<'q> {
     fn spark_bank(&mut self, _lane: u32, _effect: SkillEffect) {
         debug_assert!(false, "no Spark on this team, buddy.");
     }
+
+    fn spark_land(&mut self, _lane: u32, _now: Time, _duration: Ms, _bonus: u32, _notes: u32) {
+        debug_assert!(false, "no Spark on this team, buddy.");
+    }
+
+    fn spark_tap(&mut self, _now: Time) -> u64 {
+        debug_assert!(false, "no Spark on this team, buddy.");
+        0
+    }
+
+    fn spark_per_note(&mut self) {}
+
+    fn spark_paid(&self) -> u64 {
+        debug_assert!(false, "no Spark on this team, buddy.");
+        0
+    }
 }
 
 pub(in crate::play) struct Instant;
@@ -453,7 +469,6 @@ impl Lasting<'_> for Instant {
     }
 }
 
-/// TODO: Maybe Spark too.
 pub(super) const fn lasts(effect: SkillEffect) -> bool {
     matches!(
         effect,
@@ -464,6 +479,7 @@ pub(super) const fn lasts(effect: SkillEffect) -> bool {
             | SkillEffect::SkillRateUp
             | SkillEffect::AppealBoost
             | SkillEffect::Sync
+            | SkillEffect::Spark
     )
 }
 
@@ -536,7 +552,6 @@ pub(super) fn land<'q, E>(
     let payload = expiry.amp_payload(from.lane, from.worn, from.levels, scoring);
     // Spark, (or I guess also a copy of one because Encore can do that)
     // It activates for a multiple of its threshold times how many charges get spent.
-    // TODO: Spark value does nothing yet.
     let value = if E::SPARK && from.effect == SkillEffect::Spark {
         let threshold = scoring.sparks.get(from.lane as usize).copied().unwrap_or(0);
         payload.value.saturating_mul(expiry.spark_spend(threshold))
@@ -596,7 +611,8 @@ fn pay_at<'q>(
             expiry.sync_land(lane, worn, now, duration);
         }
         SkillEffect::Amplify => expiry.amp_land(value),
-        SkillEffect::Scorer | SkillEffect::Encore | SkillEffect::Spark => {}
+        SkillEffect::Spark => expiry.spark_land(lane, now, duration, value, out.notes),
+        SkillEffect::Scorer | SkillEffect::Encore => {}
     }
 }
 

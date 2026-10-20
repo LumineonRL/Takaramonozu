@@ -2,7 +2,7 @@
 
 use super::{Lasting, NEVER};
 use crate::play::Scoring;
-use crate::play::queue::{BUCKET, Queue};
+use crate::play::queue::{Queue, reach};
 use crate::play::tap::{FEVER_UNIT, fever_multiplier};
 use crate::scalar::Ms;
 use crate::song::{LANES, Time};
@@ -100,11 +100,7 @@ where
             return;
         }
         let from = (notes as usize).min(self.times.len());
-        let bucket = ((end.0 >> BUCKET) as usize).min(self.buckets.len().saturating_sub(1));
-        let mut to = self.buckets.get(bucket).map_or(from, |&n| (n as usize).max(from));
-        while self.times.get(to).is_some_and(|&t| t < end) {
-            to = to.saturating_add(1);
-        }
+        let to = reach(self.times, self.buckets, from, end);
         let worth = self.sums[to].saturating_sub(self.sums[from]);
         self.paid = self.paid.saturating_add(u64::from(value).saturating_mul(u64::from(worth)));
     }
