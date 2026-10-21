@@ -1,5 +1,6 @@
 [package]
 name = "simulator"
+rust-version.workspace = true
 version.workspace = true
 edition.workspace = true
 

@@ -1,5 +1,6 @@
 [package]
 name = "deck"
+rust-version.workspace = true
 version.workspace = true
 edition.workspace = true
 
@@ -8,6 +9,9 @@ simulator = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 rkyv = { workspace = true }
+
+[dev-dependencies]
+preprocess = { path = "../preprocess" }
 
 [lints]
 workspace = true

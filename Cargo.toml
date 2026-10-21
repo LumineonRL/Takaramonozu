@@ -5,6 +5,9 @@ members = ["deck", "preprocess", "simulator"]
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.97"   # For the record my Rust is on 1.99.1 and I have no intention of maintaining
+                        # older versions if a useful new feature gets stabilized. This is just the minimal version
+                        # that rust msrv reports for the time being.
 
 [workspace.dependencies]
 simulator = { path = "simulator" }
