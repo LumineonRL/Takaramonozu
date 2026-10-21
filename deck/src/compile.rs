@@ -133,7 +133,8 @@ pub struct Slot {
     /// See `Scoring::heals`.
     pub heals: [u8; 2],
     pub sis: SisFlags,
-    _pad: u8,
+    /// See `Scoring::sparks`.
+    pub spark: u8,
     /// See `Scoring::stats`.
     pub strength: u32,
     /// See `Scoring::targets`.
@@ -156,7 +157,7 @@ impl Default for Slot {
             durations: [0; 2],
             heals: [0; 2],
             sis: SisFlags(0),
-            _pad: 0,
+            spark: 0,
             strength: 0,
             targets: [0; 2],
             boosts: [0; 2],
@@ -201,7 +202,7 @@ impl Compiled {
             targets: self.slots.map(|s| s.targets),
             boosts: self.slots.map(|s| s.boosts),
             amplified: self.slots.map(|s| s.amplified),
-            sparks: [0; LANES],
+            sparks: self.slots.map(|s| s.spark),
         }
     }
 }
@@ -289,6 +290,7 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
         (dst.skill, dst.accessory) = (skill, accessory);
         (dst.durations, dst.heals) = ([duration, worn_duration], [hp, worn_hp]);
         dst.amplified = [amped, worn_amped];
+        dst.spark = slot.accessory().map_or(0, |worn| spark(worn, ctx));
         if dst.skill.trigger == TriggerType::YearGroup {
             *year = skill_target(card, ctx.cards);
         }
@@ -378,8 +380,6 @@ fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> Reso
     (skill, duration, heal(def.effect, value), amped)
 }
 
-/// TODO: Spark. I'd prefer for this to also be generic enough to not need to reimplement every skill effect
-/// since accs have the same exact effects as cards besides spark.
 fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> Resolved<AccessorySkill> {
     let Some((accessory, level)) = ctx.accessory(worn) else {
         return NO_ACCESSORY;
@@ -387,9 +387,6 @@ fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> Resolved<Acc
     let Some(def) = ctx.acc_db.skills.def(accessory.skill) else {
         return NO_ACCESSORY;
     };
-    if def.effect == SkillEffect::Spark {
-        return NO_ACCESSORY;
-    }
     let (value, duration) = ctx.acc_db.skills.payload(def, level);
     let amped = amplify(def.effect, level, sis, |at| ctx.acc_db.skills.payload(def, at));
 
@@ -401,7 +398,18 @@ fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> Resolved<Acc
     (skill, duration, heal(def.effect, value), amped)
 }
 
-/// The payload at `level` + 1..=16, saturating at the table's last row as `payload` does.
+/// Spark's threshold (or just 0 for every other acc)
+fn spark(worn: EntryId, ctx: Context) -> u8 {
+    let Some((accessory, _)) = ctx.accessory(worn) else {
+        return 0;
+    };
+    let def = ctx.acc_db.skills.def(accessory.skill);
+    def.filter(|def| def.effect == SkillEffect::Spark)
+        .map_or(0, |def| def.threshold)
+}
+
+/// The number of skill levels to increase the card's skill level by, 1-16 inclusive.
+/// Clipped to 16 if that number comes out to more than 16.
 /// An Appeal Boost's rows become points in `reaches`.
 fn amplify(
     effect: SkillEffect,
@@ -569,22 +577,23 @@ const fn rate(chance: Pct) -> Rate {
     (chance as Rate).saturating_mul(RATE_UNIT / 100)
 }
 
-/// Scorer's points with Charm, Healer's points with Heal, or Combo Fever's and PSU's points.
+/// Scorer's points with Charm, Healer's points with Heal, or Combo Fever's, PSU's and Spark's points.
 /// And Amplify's levels.
 /// Appeal Boost stays a percent here and becomes points once every lane's stat is known.
 fn points(effect: SkillEffect, value: Centi, sis: SisFlags) -> Centi {
     match effect {
         SkillEffect::Scorer => payout(value, if sis.charm() { CHARM } else { MILLI_UNIT }),
         SkillEffect::Healer => payout(value, if sis.heal() { HEAL } else { 0 }),
-        SkillEffect::ComboFever | SkillEffect::PerfectScoreUp => payout(value, MILLI_UNIT),
+        SkillEffect::ComboFever | SkillEffect::PerfectScoreUp | SkillEffect::Spark => {
+            payout(value, MILLI_UNIT)
+        }
         SkillEffect::Amplify => levels(value),
         SkillEffect::PerfectLock
         | SkillEffect::Encore
         | SkillEffect::TotalTrick
         | SkillEffect::SkillRateUp
         | SkillEffect::AppealBoost
-        | SkillEffect::Sync
-        | SkillEffect::Spark => value,
+        | SkillEffect::Sync => value,
     }
 }
 
@@ -1053,6 +1062,32 @@ mod tests {
         assert_eq!(scoring.heals[0], [4, 8]);
         assert_eq!(scoring.heals[1], [0, 0]);
         assert_eq!((scoring.max_hp, scoring.per_heart, scoring.max_hearts), (12, 34, 589));
+    }
+
+    /// The fixture's Spark is threshold 5 at 11% for 1000 points per level.
+    /// Note that the raw data uses smaller values than what actually get applied, but the preprocessor
+    /// crate has actually already multiplied by the threshold, so this is just conversion to points.
+    #[test]
+    fn check_spark() {
+        let mut f = fixture();
+        let card = f.card(1, true, 8);
+        let medal = f.accessories.add(&f.acc_db, 13, 3).unwrap().0;
+        let charm = f.owns(15);
+        let mut team = Team::default();
+        team.equip_card(0, card, f.ctx()).unwrap();
+        team.equip_accessory(0, medal, f.ctx()).unwrap();
+        team.equip_sis(0, charm, f.ctx()).unwrap();
+
+        let out = f.run(&team);
+        let worn = out.slots[0].accessory;
+        assert_eq!(
+            (worn.effect, worn.value, worn.chance),
+            (SkillEffect::Spark, 3000, 1100),
+            "no Charm"
+        );
+        let rows: Vec<u32> = out.slots[0].amplified[1].iter().map(|row| row.value).collect();
+        assert_eq!(rows[..6], [4000, 5000, 6000, 7000, 8000, 8000]);
+        assert_eq!(out.scoring().sparks, [5, 0, 0, 0, 0, 0, 0, 0, 0]);
     }
 
     /// It would be bad if accessories used the card's skill level because someone made an oopsie.
