@@ -12,6 +12,7 @@ rkyv = { workspace = true }
 
 [dev-dependencies]
 preprocess = { path = "../preprocess" }
+rayon = { workspace = true }
 
 [lints]
 workspace = true

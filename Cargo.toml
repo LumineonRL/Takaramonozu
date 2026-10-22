@@ -17,6 +17,7 @@ rand_xoshiro = { version = "0.8.1", default-features = false }
 rkyv = "0.8.18"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
+rayon = "1.12.0"
 
 [profile.release]
 opt-level = 3
@@ -25,6 +26,11 @@ codegen-units = 1
 panic = "abort"
 strip = "symbols"
 debug = false
+
+[profile.profiling]
+inherits = "release"
+debug = "line-tables-only"
+strip = false
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }

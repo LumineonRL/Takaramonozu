@@ -137,8 +137,16 @@ where
     let tricked = scoring.team_strength.saturating_add(scoring.trick);
     let mut out = Outcome::default();
     let mut rng = Rng::new(config.seed, Rng::SKILLS);
-    let mut heads = [false; LANES];
-    let mut tap = 0_usize;
+    // Pre-allocated slices so LLVM can remove a bounds check.
+    // profiling showed bounds checks on each judgement as the hottest part of the code.
+    let mut heads = [false; 16];
+    let mut lane_bonus = [UNIT; 16];
+    lane_bonus[..LANES].copy_from_slice(&scoring.lanes);
+    let times = queue.times();
+    let n = times.len();
+    let events = &queue.events()[..n];
+    let combos = &queue.combo()[..n];
+    let judged = &judgements.perfect()[..n];
     let (icon_at, icon_lanes) = triggers.icons().columns();
     let (timer_at, timer_lanes) = triggers.time().columns();
     let mut spawns = Spawns {
@@ -168,8 +176,8 @@ where
     let mut ladder = Ladder::new(scoring, if SCORE { triggers.score() } else { 0 });
     let mut chain = Chain::new(if YEAR { triggers.year() } else { 0 });
 
-    loop {
-        let time = queue.times()[tap];
+    for tap in 0..n {
+        let time = times[tap];
 
         // Spawns and taps processed before time. Actually unsure if this is how
         // it works in-game, but it is how burrito's sim does it.
@@ -230,14 +238,12 @@ where
             &mut expiry,
         );
 
-        let event = queue.events()[tap];
+        let event = events[tap];
         let lane = event.lane() as usize;
         match event.kind() {
             EventKind::End => break,
             EventKind::HoldStart => {
-                if let Some(head) = heads.get_mut(lane) {
-                    *head = judgements.at(tap);
-                }
+                heads[lane] = judged[tap];
             }
 
             kind @ (EventKind::Tap | EventKind::HoldRelease) => {
@@ -251,17 +257,17 @@ where
                         &mut expiry,
                     );
                 }
-                let tail = judgements.at(tap);
-                let head = (kind == EventKind::Tap) | heads.get(lane).copied().unwrap_or(true);
+                let tail = judged[tap];
+                let head = (kind == EventKind::Tap) | heads[lane];
                 let converted = E::ANY && expiry.converted(time);
                 let locked = E::ANY && expiry.locked(time);
-                out.tap = out.tap.saturating_add(if E::TRICKS {
+                out.tap = out.tap.wrapping_add(if E::TRICKS {
                     expiry.total_trick_tap(
                         time,
                         head,
                         tail,
-                        queue.combo()[tap],
-                        scoring.lanes.get(lane).copied().unwrap_or(UNIT),
+                        combos[tap],
+                        lane_bonus[lane],
                         if E::HEARTS {
                             note_eighths(event)
                         } else {
@@ -275,8 +281,8 @@ where
                         } else {
                             expiry.heart_strength(locked)
                         },
-                        queue.combo()[tap],
-                        scoring.lanes.get(lane).copied().unwrap_or(UNIT),
+                        combos[tap],
+                        lane_bonus[lane],
                         note_eighths(event),
                         JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
                     )
@@ -289,13 +295,13 @@ where
                         } else {
                             scoring.team_strength
                         },
-                        queue.combo()[tap],
-                        scoring.lanes.get(lane).copied().unwrap_or(UNIT),
+                        combos[tap],
+                        lane_bonus[lane],
                         note_multiplier(event),
                         JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
                     )
                 });
-                out.notes = out.notes.saturating_add(1);
+                out.notes = out.notes.wrapping_add(1);
                 if E::FEVER && SCORE {
                     out.skill = out.skill.saturating_add(expiry.fever_tap(time, out.notes));
                 }
@@ -303,7 +309,7 @@ where
                     out.skill = out.skill.saturating_add(expiry.spark_tap(time));
                 }
                 let perfect = converted || (head & tail);
-                out.perfects = out.perfects.saturating_add(u32::from(perfect));
+                out.perfects = out.perfects.wrapping_add(u32::from(perfect));
                 if E::PSU && SCORE {
                     out.skill = out.skill.saturating_add(expiry.psu_tap(perfect));
                 }
@@ -344,8 +350,6 @@ where
                 }
             }
         }
-
-        tap = tap.saturating_add(1);
     }
 
     out.icons = u32::try_from(spawns.icon).unwrap_or(u32::MAX);

@@ -67,6 +67,13 @@ impl Judgements {
         self.perfect.get(judgement).copied().unwrap_or(true)
     }
 
+    /// For hoisting bounds checks in `play.rs`.
+    #[inline]
+    #[must_use]
+    pub(crate) fn perfect(&self) -> &[bool] {
+        &self.perfect
+    }
+
     #[must_use]
     pub fn records(&self) -> usize {
         self.perfect.len()
