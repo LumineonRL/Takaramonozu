@@ -52,7 +52,7 @@ pub(super) const HEART_UNIT: u16 = 10_000;
 pub(super) const HEART_CAP: u16 = 20_000;
 
 /// Some performance hacking here because overheal was tanking performance by 20% even when no
-/// healers were on the team. So the fun part is rewriring already implemented mechanics to help the
+/// healers were on the team. So the fun part is rewiring already implemented mechanics to help the
 /// compiler out. All of these decisions were made by manually inspecting and comparing the compiled assembly.
 /// So since every combo multiplier is a multiple of 5 and every note multiplier of 125,
 /// the heart's extra factor fits a `u64` once those come out of both sides.
@@ -179,8 +179,33 @@ pub(super) const fn note_eighths(event: Event) -> u16 {
     }
 }
 
+/// Max lane bonus is 1.1x * 1.1x = 1.21x with a matching attribute and group
+const MAX_LANE: u64 = 121;
+
+/// Largest possible team strength if an absolutely nutty, infeasible team to prove that even in the absolute
+/// worst case scenario, this number will not overflow.
+/// It takes the max combo bonus, max matching multiplier, the 1.08 true PL multiplier, and a hold note multiplier.
+/// There's a test that puts all of those multipliers on the most souped up team you've ever seen and guarantees
+/// that it's still below overflowing.
+#[expect(clippy::integer_division, reason = "for an upper bound so we can eliminate a bounds check")]
+const WIDEST: u64 = u64::MAX / (MAX_COMBO * MAX_LANE * 1250 * LOCKED_PERFECT as u64);
+#[expect(clippy::cast_possible_truncation, reason = "see assertion")]
+pub(super) const MAX_STRENGTH: u32 = WIDEST as u32;
+const _: () = assert!(MAX_STRENGTH as u64 == WIDEST, "fits a u32");
+
+/// Just grabs the max combo tier for the above check.
+const MAX_COMBO: u64 = match COMBO_BONUS.last() {
+    Some(&(_, bonus)) => bonus as u64,
+    None => 0,
+};
+
 /// `floor(team_strength * combo * lane * note * judgement / 500_000_000_000)`.
-/// Apparently putting the judgement first makes the code faster without changing the result.
+/// This was originally a `saturating_mul` rather than a wrapping_mul, but profiling showed the this was
+/// one of the hottest functions in the sim and looking through the assembly showed that the bounds check
+/// was not being yeeted by the compiler.
+/// Swapping in a `wrapping_mul` instead bumped this from 2.53 million trials/second across 24 threads, up to 2.61 million
+/// so not massive but actually kind of massive?
+/// I diff'd the assembly and it looks like the saturating version had an extra `mul` and `jo` on every note.
 #[expect(clippy::integer_division, reason = "Game mechanic.")]
 pub(super) fn note_score(
     team_strength: u32,
@@ -189,11 +214,12 @@ pub(super) fn note_score(
     note: u16,
     judgement: u16,
 ) -> u64 {
-    let factor = u32::from(note).saturating_mul(u32::from(judgement));
+    let factor = u64::from(u32::from(note).wrapping_mul(u32::from(judgement)));
+    debug_assert!(team_strength <= MAX_STRENGTH, "team strength {team_strength}");
+    debug_assert!(u64::from(lane) <= MAX_LANE, "lane bonus {lane}");
     u64::from(team_strength)
-        .saturating_mul(u64::from(combo))
-        .saturating_mul(u64::from(lane))
-        .saturating_mul(u64::from(factor))
+        .wrapping_mul(u64::from(combo))
+        .wrapping_mul(u64::from(lane).wrapping_mul(factor))
         / DIVISOR
 }
 
@@ -304,7 +330,7 @@ mod tests {
         assert_eq!(points_per_note(79), 0);
         assert_eq!(points_per_note(100_000), 1250);
 
-        // Checks that the int and float versions give the same resolve.
+        // Checks that the int and float versions give the same result.
         for team_strength in [1_u32, 999, 12_345, 250_000, 1_000_000, 2_700_000] {
             let float = (f64::from(team_strength) * 0.0125).floor();
             assert_eq!(f64::from(points_per_note(team_strength)), float, "at {team_strength}");
@@ -361,27 +387,60 @@ mod tests {
             assert_eq!(
                 super::note_score(team_strength, 135, 121, 1250, super::LOCKED_PERFECT),
                 u64::from(team_strength) * 135 * 121 * 1250 * 108 / 80_000_000_000,
-                "the widest possible product jere would not saturate"
+                "the widest possible product here would not saturate"
             );
         }
+    }
+
+    /// Safety proof that swapping `saturating_mul` for `wrapping_mul` will not have any negative
+    /// ramifications in the release code. Constructs an impossible team, gives it every possible boost
+    /// imaginable, and shows that it still comes out well under `u64::MAX`.
+    #[test]
+    fn check_no_team_reaches_max_strength() {
+        let ceil = |x: u64, milli: u64| (x * milli).div_ceil(1000);
+        // Card with the highest main attribute stat +, the non-promo level-500 cap bonus + `MAX_GALLERY`.
+        let base = 8940 + 12_450 + 50_000;
+        // Accessory with the highest stat.
+        let worn = base + 8442;
+        // Every SIS boost all at once. This is one of the impossible parts since you can't actually
+        // equip all of these SIS.
+        // It's a 74% self boost, 2050 flat boost, and 8.4% all-boost on all 9 cards.
+        let sis = ceil(worn, 1740) + 2050 + ceil(base, 9 * 84);
+        // Center and guest both with main 15% and extra 12% each
+        let led = sis + 2 * ceil(sis, 150) + 2 * ceil(sis, 120);
+        // This is the fun part! Again, this is impossible because the card chosen for this would not have
+        // different skills on each card, but here an Amp banks a +16, taken by a param boost. The highest
+        // param boost payout is 385%. Then syncs copy that lane and all share that 385% boost.
+        // Then apply perfect lock tap bonus (1.08x) and Trick SIS bonus (1.33x to param)
+        let lane = led + 2 * ceil(led, 3850) + ceil(led, 330);
+        let team = 9 * lane;
+        assert_eq!(team, 24_396_705); // add it all up and this is what it comes out to
+        assert!(team * 50 < u64::from(super::MAX_STRENGTH), "{}", super::MAX_STRENGTH); // and it's still waaaay under the max.
+
+        // The above didn't account for overheal hearts, but it's still safe with those included as well.
+        let hearts = 30_000 * 27 * 121 * 10 * 675;
+        assert!(team < u64::MAX / hearts, "{}", u64::MAX / hearts);
+
+        // QED.
     }
 
     #[test]
     fn check_ppn_calc() {
         let judgements = [super::GREAT_GREAT, super::PERFECT, super::LOCKED_PERFECT];
-        for team_strength in [0, 1, 80_400, 16_000_000, u32::MAX] {
+        for team_strength in [0, 1, 80_400, 16_000_000, super::MAX_STRENGTH] {
             for (note, judgement) in [625, 1000, 1250].into_iter().zip(judgements) {
                 let whole = u128::from(team_strength)
                     * 135
                     * 121
                     * u128::from(note)
                     * u128::from(judgement);
-                let want = u64::try_from(whole).unwrap_or(u64::MAX) / super::DIVISOR;
+                let want = u64::try_from(whole).expect("exact") / super::DIVISOR;
                 assert_eq!(super::note_score(team_strength, 135, 121, note, judgement), want);
             }
         }
-        let widest = u128::from(u32::MAX) * 135 * 121 * 1250 * 675;
-        assert!(widest > u128::from(u64::MAX), "saturated");
+        let widest = |strength: u32| u128::from(strength) * 135 * 121 * 1250 * 675;
+        assert!(widest(super::MAX_STRENGTH) <= u128::from(u64::MAX), "exact at the limit");
+        assert!(widest(super::MAX_STRENGTH + 1) > u128::from(u64::MAX), "and the limit is tight");
     }
 
     #[test]
@@ -391,9 +450,13 @@ mod tests {
             (true, false, super::CONVERTED),
             (true, true, super::JUDGEMENT[1]),
         ];
-        for (team_strength, trick) in
-            [(0, 0), (1, 7), (80_400, 26_532), (16_000_000, 1), (u32::MAX, 9)]
-        {
+        for (team_strength, trick) in [
+            (0, 0),
+            (1, 7),
+            (80_400, 26_532),
+            (16_000_000, 1),
+            (super::MAX_STRENGTH - 9, 9),
+        ] {
             let worth = super::Worth::new(team_strength, trick);
             for (converted, locked, judgements) in rows {
                 let strength = if converted {
