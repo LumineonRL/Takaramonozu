@@ -286,7 +286,7 @@ mod tests {
     }
 
     /// Charge every icon + Spark with threshold 1 for 10s
-    /// Every icon: it procs on icon 2 with 1 charge and is active for notes 1–5. 
+    /// Every icon: it procs on icon 2 with 1 charge and is active for notes 1–5.
     /// Then its lane is blocked and it can't roll again.
     /// Each release re-rolls with the 10 charges banked.
     #[test]

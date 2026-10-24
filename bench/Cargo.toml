@@ -1,0 +1,26 @@
+[package]
+name = "bench"
+rust-version.workspace = true
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+bench = false
+
+[dependencies]
+deck = { path = "../deck" }
+simulator = { workspace = true }
+rkyv = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+divan = "0.1.21"
+
+[[bench]]
+name = "trial"
+harness = false
+
+[lints]
+workspace = true

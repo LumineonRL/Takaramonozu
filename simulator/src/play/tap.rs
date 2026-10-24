@@ -187,7 +187,10 @@ const MAX_LANE: u64 = 121;
 /// It takes the max combo bonus, max matching multiplier, the 1.08 true PL multiplier, and a hold note multiplier.
 /// There's a test that puts all of those multipliers on the most souped up team you've ever seen and guarantees
 /// that it's still below overflowing.
-#[expect(clippy::integer_division, reason = "for an upper bound so we can eliminate a bounds check")]
+#[expect(
+    clippy::integer_division,
+    reason = "for an upper bound so we can eliminate a bounds check"
+)]
 const WIDEST: u64 = u64::MAX / (MAX_COMBO * MAX_LANE * 1250 * LOCKED_PERFECT as u64);
 #[expect(clippy::cast_possible_truncation, reason = "see assertion")]
 pub(super) const MAX_STRENGTH: u32 = WIDEST as u32;
@@ -200,7 +203,7 @@ const MAX_COMBO: u64 = match COMBO_BONUS.last() {
 };
 
 /// `floor(team_strength * combo * lane * note * judgement / 500_000_000_000)`.
-/// This was originally a `saturating_mul` rather than a wrapping_mul, but profiling showed the this was
+/// This was originally a `saturating_mul` rather than a `wrapping_mul`, but profiling showed the this was
 /// one of the hottest functions in the sim and looking through the assembly showed that the bounds check
 /// was not being yeeted by the compiler.
 /// Swapping in a `wrapping_mul` instead bumped this from 2.53 million trials/second across 24 threads, up to 2.61 million
