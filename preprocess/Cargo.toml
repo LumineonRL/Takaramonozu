@@ -4,6 +4,9 @@ rust-version.workspace = true
 version.workspace = true
 edition.workspace = true
 
+[lib]
+bench = false
+
 [dependencies]
 simulator = { workspace = true }
 serde = { workspace = true }
