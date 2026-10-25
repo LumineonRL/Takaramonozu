@@ -1,0 +1,11 @@
+{
+  "run_burrito": false,
+  "chart": { "title": "Bokura no LIVE Kimi to no LIFE", "difficulty": "Master" },
+  "lanes": [
+    { "card": 2127 }, { "card": 2439 }, { "card": 762 },
+    { "card": 550 }, { "card": 884 }, { "card": 1257 },
+    { "card": 2438 }, { "card": 197 }, { "card": 609 }
+  ],
+  "accuracy": 10000,
+  "speed": 10
+}
