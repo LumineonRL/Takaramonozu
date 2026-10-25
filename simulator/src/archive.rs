@@ -20,7 +20,7 @@ use rkyv::api::high::HighSerializer;
 use rkyv::rancor; // only using rancor::Error but don't want to conflict io::Error.
 use rkyv::ser::allocator::ArenaHandle;
 use rkyv::util::AlignedVec;
-use rkyv::{Archive, Portable, Serialize};
+use rkyv::{Archive, Serialize};
 
 /// Also the alignment of the body, which is what `AlignedVec` gives.
 const HEADER: usize = 16;
@@ -70,10 +70,7 @@ pub struct Mapped<T> {
     kind: PhantomData<fn() -> T>,
 }
 
-impl<T: Archive + Kind> Mapped<T>
-where
-    T::Archived: Portable,
-{
+impl<T: Archive + Kind> Mapped<T> {
     const ALIGNED: () =
         assert!(align_of::<T::Archived>() <= HEADER, "the body is only aligned to HEADER");
 
@@ -230,7 +227,6 @@ mod tests {
         T: Kind
             + Archive
             + for<'a> Serialize<HighSerializer<AlignedVec, ArenaHandle<'a>, rancor::Error>>,
-        T::Archived: Portable,
     {
         let path = path::<T>(name);
         write(&path, value).expect("write");
