@@ -1,0 +1,17 @@
+{
+  "run_burrito": false,
+  "chart": { "title": "Jimoai Mantan Summer Life", "difficulty": "Expert" },
+  "lanes": [
+    { "card": 1665, "skill_level": 8, "cap_level": 100, "accessory": { "id": 22, "skill_level": 4 }, "sis": [33] },
+    { "card": 2127 },
+    { "card": 66, "skill_level": 8, "cap_level": 500, "sis": [33] },
+    { "card": 2439 },
+    { "card": 265, "skill_level": 1, "cap_level": 500 },
+    { "card": 550 },
+    { "card": 1859, "skill_level": 4, "cap_level": 100, "sis": [33] },
+    { "card": 884 },
+    { "card": 1257 }
+  ],
+  "accuracy": 5000,
+  "speed": 6
+}

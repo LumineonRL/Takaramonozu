@@ -1,0 +1,17 @@
+{
+  "run_burrito": true,
+  "chart": { "title": "Soldier Game", "difficulty": "Master" },
+  "lanes": [
+    { "card": 2805, "skill_level": 8 },
+    { "card": 2859, "skill_level": 8 },
+    { "card": 2650, "skill_level": 8 },
+    { "card": 2536, "skill_level": 8 },
+    { "card": 2663, "skill_level": 8 },
+    { "card": 2871, "skill_level": 8 },
+    { "card": 1417, "skill_level": 8 },
+    { "card": 2494, "skill_level": 8 },
+    { "card": 2524, "skill_level": 8 }
+  ],
+  "accuracy": 9500,
+  "speed": 4
+}

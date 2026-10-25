@@ -1,0 +1,17 @@
+{
+  "run_burrito": true,
+  "chart": { "title": "Super LOVE = Super LIVE!", "difficulty": "Master" },
+  "lanes": [
+    { "card": 3554, "skill_level": 8 },
+    { "card": 2937, "skill_level": 8 },
+    { "card": 2560, "skill_level": 8 },
+    { "card": 3851, "skill_level": 8 },
+    { "card": 3885, "skill_level": 8 },
+    { "card": 3858, "skill_level": 8 },
+    { "card": 2619, "skill_level": 8 },
+    { "card": 3021, "skill_level": 8 },
+    { "card": 2979, "skill_level": 8 }
+  ],
+  "accuracy": 9800,
+  "speed": 2
+}

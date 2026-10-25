@@ -1,0 +1,17 @@
+{
+  "run_burrito": true,
+  "chart": { "title": "Dreaming Energy", "difficulty": "Master" },
+  "lanes": [
+    { "card": 581, "skill_level": 8 },
+    { "card": 556, "skill_level": 8 },
+    { "card": 3634, "skill_level": 8 },
+    { "card": 600, "skill_level": 8 },
+    { "card": 3683, "skill_level": 8 },
+    { "card": 330, "skill_level": 8 },
+    { "card": 464, "skill_level": 8 },
+    { "card": 126, "skill_level": 8 },
+    { "card": 3729, "skill_level": 8 }
+  ],
+  "accuracy": 9250,
+  "speed": 10
+}

@@ -1,0 +1,17 @@
+{
+  "run_burrito": true,
+  "chart": { "title": "Tokonatsu☆Sunshine", "difficulty": "Master" },
+  "lanes": [
+    { "card": 3387, "skill_level": 8 },
+    { "card": 3634, "skill_level": 8 },
+    { "card": 1642, "skill_level": 8 },
+    { "card": 2054, "skill_level": 8 },
+    { "card": 3683, "skill_level": 8 },
+    { "card": 2157, "skill_level": 8 },
+    { "card": 1454, "skill_level": 8 },
+    { "card": 3729, "skill_level": 8 },
+    { "card": 3809, "skill_level": 8 }
+  ],
+  "accuracy": 10000,
+  "speed": 8
+}

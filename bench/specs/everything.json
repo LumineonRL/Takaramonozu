@@ -1,0 +1,17 @@
+{
+  "run_burrito": false,
+  "chart": { "title": "Manatsu wa Dare no Mono?", "difficulty": "Master" },
+  "lanes": [
+    { "card": 206, "skill_level": 8, "accessory": { "id": 82, "skill_level": 8 } },
+    { "card": 1538, "skill_level": 8, "accessory": { "id": 68, "skill_level": 8 } },
+    { "card": 107, "skill_level": 8, "accessory": { "id": 102, "skill_level": 8 } },
+    { "card": 330, "skill_level": 8, "accessory": { "id": 25, "skill_level": 8 } },
+    { "card": 2051, "skill_level": 8, "accessory": { "id": 1, "skill_level": 8 } },
+    { "card": 1665, "skill_level": 8, "accessory": { "id": 217, "skill_level": 8 } },
+    { "card": 3318, "skill_level": 8, "accessory": { "id": 319, "skill_level": 8 } },
+    { "card": 3736, "skill_level": 8, "accessory": { "id": 21, "skill_level": 8 }, "sis": [38] },
+    { "card": 2157, "skill_level": 8, "accessory": { "id": 22, "skill_level": 8 }, "sis": [37, 39] }
+  ],
+  "accuracy": 9250,
+  "speed": 9
+}

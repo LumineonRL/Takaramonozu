@@ -1,0 +1,17 @@
+{
+  "run_burrito": false,
+  "chart": { "title": "Thrilling One-way", "difficulty": "Master" },
+  "lanes": [
+    { "card": 1350, "skill_level": 8 },
+    { "card": 3676, "skill_level": 8 },
+    { "card": 1838, "skill_level": 8 },
+    { "card": 3860, "skill_level": 8 },
+    { "card": 3661, "skill_level": 8 },
+    { "card": 3581, "skill_level": 8 },
+    { "card": 1401, "skill_level": 8 },
+    { "card": 3577, "skill_level": 8 },
+    { "card": 3578, "skill_level": 8 }
+  ],
+  "accuracy": 9400,
+  "speed": 7
+}

@@ -1,0 +1,17 @@
+{
+  "run_burrito": true,
+  "chart": { "title": "Mirai wa Kaze no you ni", "difficulty": "Master" },
+  "lanes": [
+    { "card": 3851, "skill_level": 8 },
+    { "card": 1538, "skill_level": 8 },
+    { "card": 3360, "skill_level": 8 },
+    { "card": 3673, "skill_level": 8 },
+    { "card": 3885, "skill_level": 8 },
+    { "card": 3820, "skill_level": 8 },
+    { "card": 3315, "skill_level": 8 },
+    { "card": 3187, "skill_level": 8 },
+    { "card": 3892, "skill_level": 8 }
+  ],
+  "accuracy": 9000,
+  "speed": 6
+}

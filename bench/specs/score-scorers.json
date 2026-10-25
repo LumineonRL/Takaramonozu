@@ -1,0 +1,18 @@
+{
+  "run_burrito": false,
+  "chart": { "title": "Aqours HEROES", "difficulty": "Master" },
+  "lanes": [
+    { "card": 3054, "skill_level": 8, "cap_level": 500 },
+    { "card": 90, "skill_level": 8, "accessory": { "id": 524, "skill_level": 8 } },
+    { "card": 744, "skill_level": 8, "cap_level": 500 },
+    { "card": 162, "skill_level": 8, "accessory": { "id": 519, "skill_level": 8 } },
+    { "card": 426, "skill_level": 8, "cap_level": 500 },
+    { "card": 107, "skill_level": 8, "accessory": { "id": 516, "skill_level": 8 }, "sis": [31] },
+    { "card": 2235, "skill_level": 8, "cap_level": 500 },
+    { "card": 182, "skill_level": 8, "accessory": { "id": 518, "skill_level": 8 } },
+    { "card": 581, "skill_level": 8, "cap_level": 500 }
+  ],
+  "guest": 3054,
+  "accuracy": 9000,
+  "speed": 2
+}

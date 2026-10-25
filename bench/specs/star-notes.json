@@ -1,0 +1,17 @@
+{
+  "run_burrito": true,
+  "chart": { "title": "HEART to HEART!", "difficulty": "Master" },
+  "lanes": [
+    { "card": 3676, "skill_level": 8 },
+    { "card": 3370, "skill_level": 8 },
+    { "card": 3662, "skill_level": 8 },
+    { "card": 206, "skill_level": 8 },
+    { "card": 3054, "skill_level": 8 },
+    { "card": 3578, "skill_level": 8 },
+    { "card": 3387, "skill_level": 8 },
+    { "card": 3683, "skill_level": 8 },
+    { "card": 3809, "skill_level": 8 }
+  ],
+  "accuracy": 9300,
+  "speed": 1
+}

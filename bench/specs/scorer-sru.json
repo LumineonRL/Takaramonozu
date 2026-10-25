@@ -1,0 +1,17 @@
+{
+  "run_burrito": true,
+  "chart": { "title": "Kimochi mo Yume mo Issyo dane!", "difficulty": "Expert" },
+  "lanes": [
+    { "card": 3851, "skill_level": 8 },
+    { "card": 3858, "skill_level": 8 },
+    { "card": 3673, "skill_level": 8 },
+    { "card": 3358, "skill_level": 8 },
+    { "card": 3885, "skill_level": 8 },
+    { "card": 3564, "skill_level": 8 },
+    { "card": 3892, "skill_level": 8 },
+    { "card": 3891, "skill_level": 8 },
+    { "card": 3905, "skill_level": 8 }
+  ],
+  "accuracy": 9750,
+  "speed": 5
+}

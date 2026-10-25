@@ -1,0 +1,17 @@
+{
+  "run_burrito": true,
+  "chart": { "title": "LIVE with a smile! (Nijigasaki High School Idol Club Ver.)", "difficulty": "Expert" },
+  "lanes": [
+    { "card": 3360, "skill_level": 8 },
+    { "card": 3851, "skill_level": 8 },
+    { "card": 3315, "skill_level": 8 },
+    { "card": 3858, "skill_level": 8, "accessory": { "id": 217, "skill_level": 8 } },
+    { "card": 3885, "skill_level": 8 },
+    { "card": 3463, "skill_level": 8 },
+    { "card": 3820, "skill_level": 8 },
+    { "card": 3523, "skill_level": 8 },
+    { "card": 2800, "skill_level": 8 }
+  ],
+  "accuracy": 8500,
+  "speed": 8
+}

@@ -1,0 +1,17 @@
+{
+  "run_burrito": true,
+  "chart": { "title": "Storm in Lover", "difficulty": "Master" },
+  "lanes": [
+    { "card": 3851, "skill_level": 8, "sis": [37] },
+    { "card": 3736, "skill_level": 8, "sis": [38] },
+    { "card": 3858, "skill_level": 8, "sis": [37] },
+    { "card": 3840, "skill_level": 8, "sis": [38] },
+    { "card": 3885, "skill_level": 8, "sis": [37] },
+    { "card": 2021, "skill_level": 8, "sis": [38] },
+    { "card": 3820, "skill_level": 8, "sis": [37] },
+    { "card": 3519, "skill_level": 8, "sis": [38] },
+    { "card": 3564, "skill_level": 8, "sis": [37] }
+  ],
+  "accuracy": 9600,
+  "speed": 3
+}

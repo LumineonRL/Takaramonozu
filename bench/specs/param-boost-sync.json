@@ -1,0 +1,17 @@
+{
+  "run_burrito": false,
+  "chart": { "title": "Brightest Melody", "difficulty": "Master" },
+  "lanes": [
+    { "card": 1575, "skill_level": 8 },
+    { "card": 3091, "skill_level": 8 },
+    { "card": 2651, "skill_level": 8 },
+    { "card": 3851, "skill_level": 8 },
+    { "card": 3885, "skill_level": 8 },
+    { "card": 2564, "skill_level": 8 },
+    { "card": 3212, "skill_level": 8 },
+    { "card": 3820, "skill_level": 8 },
+    { "card": 3845, "skill_level": 8 }
+  ],
+  "accuracy": 8000,
+  "speed": 5
+}

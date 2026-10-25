@@ -1,0 +1,18 @@
+{
+  "run_burrito": true,
+  "chart": { "title": "Museum de Doushitai?", "difficulty": "Master" },
+  "lanes": [
+    { "card": 3847, "skill_level": 8, "cap_level": 500, "accessory": { "id": 319, "skill_level": 8 }, "sis": [78, 98] },
+    { "card": 3895, "skill_level": 8, "cap_level": 500, "accessory": { "id": 526, "skill_level": 5 }, "sis": [30, 27] },
+    { "card": 3725, "skill_level": 6, "cap_level": 400, "accessory": { "id": 439, "skill_level": 7 }, "sis": [78, 134, 6] },
+    { "card": 3649, "skill_level": 5, "cap_level": 300, "sis_slots": 6, "accessory": { "id": 223, "skill_level": 8 }, "sis": [42, 3] },
+    { "card": 3067, "skill_level": 8, "cap_level": 500, "accessory": { "id": 528, "skill_level": 8 }, "sis": [241, 27] },
+    { "card": 3661, "skill_level": 7, "cap_level": 500, "accessory": { "id": 297, "skill_level": 8 }, "sis": [189, 243] },
+    { "card": 3873, "skill_level": 8, "cap_level": 200, "accessory": { "id": 548, "skill_level": 3 }, "sis": [78, 30] },
+    { "card": 3796, "skill_level": 8, "cap_level": 500, "accessory": { "id": 277, "skill_level": 8 }, "sis": [54] },
+    { "card": 3896, "skill_level": 8, "cap_level": 500, "accessory": { "id": 527, "skill_level": 8 }, "sis": [37, 102] }
+  ],
+  "guest": 3817,
+  "accuracy": 8800,
+  "speed": 7
+}

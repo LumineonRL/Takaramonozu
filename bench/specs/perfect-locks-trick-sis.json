@@ -1,0 +1,17 @@
+{
+  "run_burrito": false,
+  "chart": { "title": "Cutie Panther", "difficulty": "Master" },
+  "lanes": [
+    { "card": 66, "skill_level": 8, "cap_level": 500, "sis": [33] },
+    { "card": 2127 },
+    { "card": 708, "skill_level": 8, "cap_level": 500, "sis": [33] },
+    { "card": 2439 },
+    { "card": 79, "skill_level": 1, "cap_level": 500, "sis": [33] },
+    { "card": 550 },
+    { "card": 744, "skill_level": 8, "cap_level": 500, "sis": [33] },
+    { "card": 426, "skill_level": 8, "cap_level": 500, "accessory": { "id": 22, "skill_level": 4 }, "sis": [33] },
+    { "card": 187, "skill_level": 8, "cap_level": 500, "sis": [33] }
+  ],
+  "accuracy": 7000,
+  "speed": 8
+}
