@@ -16,6 +16,11 @@ const fn scores(event: Event) -> bool {
 /// step in parallel and get processed a little bit differently.
 pub(super) const BUCKET: u32 = 6;
 
+/// Most notes that can appear at one time, AC's 4 simultaneous notes.
+/// If there's ever a custom chart in the future and for some reason this repo was used for it that had 5+ notes at the same instant,
+/// everything should still work but it will probably be slower. But that's also untested.
+const DEPTH: usize = 4;
+
 const fn spawns_icon(event: Event) -> bool {
     matches!(event.kind(), EventKind::Tap | EventKind::HoldStart)
 }
@@ -177,6 +182,14 @@ impl<'a> Queue<'a> {
 pub(super) fn reach(scored: &[Time], buckets: &[u32], from: usize, end: Time) -> usize {
     let bucket = ((end.0 >> BUCKET) as usize).min(buckets.len().saturating_sub(1));
     let mut to = buckets.get(bucket).map_or(from, |&n| (n as usize).max(from));
+    // `DEPTH` forces the loop to run EXACTLY 4 times every single call.
+    // This helped DRASTICALLY with branch mispredictions.
+    // And I mean drastically. -16% wall clock, -16% cycles, -25% mispredicts for PSU teams.
+    // -8% wall clock and -8% cycles, -25% mispredicts for CF teams
+    for _ in 0..DEPTH {
+        to = to.saturating_add(usize::from(scored.get(to).is_some_and(|&t| t < end)));
+    }
+    // fallback if there's more than 4 notes at once.
     while scored.get(to).is_some_and(|&t| t < end) {
         to = to.saturating_add(1);
     }

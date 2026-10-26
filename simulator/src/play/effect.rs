@@ -129,11 +129,78 @@ use super::tap::HEART_UNIT;
 use super::{Outcome, Scoring};
 use crate::scalar::{Centi, Ms, Rate};
 use crate::skill::SkillEffect;
-use crate::song::Time;
+use crate::song::{LANES, Time};
 use encore::Copied;
 
 /// No lane is waiting to roll.
 const NEVER: Time = Time(u32::MAX);
+
+// I'm about to over-comment this just because there's a lot going on and it's a pretty big change.
+// and I know I won't remember any of this a month or two from now.
+//
+// SO this is fun. 9 is a very awkward number. Previously, 9 lanes were represented by having
+// 16 lanes and just padding and ignoring the other 7.
+// However, there was a bottleneck for duration-based skills that locked their own lanes.
+// Now it's 8 lanes + 1 completely on its own.
+//
+// The big todo now is to get LLVM to emit the instructions automatically using safe Rust without
+// the unsafe version below where it's pretty much "hey, these are the instructions you should be using. for this. Use them."
+const _: () = assert!(LANES == 9, "8 lanes in one vec, the other by its lonesome.");
+
+/// Check the first 8 lanes to see if an effect ended
+/// Then check if the 9th lane's effect ended.
+/// Then stitch them together.
+#[inline(always)]
+#[cfg(all(target_feature = "avx512f", target_feature = "avx512vl"))]
+#[expect(clippy::multiple_unsafe_ops_per_block, reason = "they're all related I don't know how to separate them")]
+fn ended(until: &[Time; LANES], now: Time) -> u16 {
+    use core::arch::x86_64::{_mm256_cmple_epu32_mask, _mm256_loadu_si256, _mm256_set1_epi32};
+    let [.., last] = *until;
+    // SAFETY: the `cfg` guarantees the CPU has the necessary AVX-512F and VL.
+    let low = unsafe {
+        let low = _mm256_loadu_si256(until.as_ptr().cast());
+        _mm256_cmple_epu32_mask(low, _mm256_set1_epi32(now.0.cast_signed()))
+    };
+    u16::from(low) | (u16::from(last <= now) << 8)
+}
+
+/// The fallback (that's also probably slow but I didn't actually test). Just loops over the lanes one-by-one.
+#[inline(always)]
+#[cfg(not(all(target_feature = "avx512f", target_feature = "avx512vl")))]
+fn ended(until: &[Time; LANES], now: Time) -> u16 {
+    let mut lanes = 0;
+    for (lane, &end) in until.iter().enumerate() {
+        lanes |= u16::from(end <= now) << lane;
+    }
+    lanes
+}
+
+/// Computes which lane's duration will complete next.
+/// Once again, there's the unsafe version that does this as 8+1 and then glues together because fast
+/// and there's the traditional safe version below it that just takes all lanes one-by-one
+#[inline(always)]
+#[cfg(all(target_feature = "avx512f", target_feature = "avx512vl"))]
+#[expect(clippy::multiple_unsafe_ops_per_block, reason = "they're all related I don't know how to separate them")]
+fn earliest(until: &[Time; LANES], lanes: u16) -> Time {
+    use core::arch::x86_64::{_mm256_loadu_si256, _mm512_mask_reduce_min_epu32, _mm512_zextsi256_si512};
+    let [.., last] = *until;
+    // SAFETY: the `cfg` guarantees the CPU has the necessary AVX-512F and VL.
+    let low = unsafe {
+        let low = _mm256_loadu_si256(until.as_ptr().cast());
+        _mm512_mask_reduce_min_epu32(lanes & 0xFF, _mm512_zextsi256_si512(low))
+    };
+    Time(low).min(if lanes & 0x100 == 0 { NEVER } else { last })
+}
+
+#[inline(always)]
+#[cfg(not(all(target_feature = "avx512f", target_feature = "avx512vl")))]
+fn earliest(until: &[Time; LANES], lanes: u16) -> Time {
+    let mut next = NEVER;
+    for (lane, &end) in until.iter().enumerate() {
+        next = if (lanes >> lane) & 1 == 0 { next } else { next.min(end) };
+    }
+    next
+}
 
 /// For Duration effects. Perfect Lock, Total Trick, Combo Fever, Perfect Score Up, Skill Rate Up, Appeal Boost and Sync.
 ///
@@ -483,7 +550,6 @@ pub(super) const fn lasts(effect: SkillEffect) -> bool {
     )
 }
 
-/// TODO: every other effect.
 #[inline(always)]
 #[expect(
     clippy::too_many_arguments,

@@ -1,6 +1,6 @@
 //! Perfect Lock and Total Trick.
 
-use super::{Lasting, NEVER};
+use super::{Lasting, NEVER, earliest, ended};
 use crate::play::Scoring;
 use crate::play::queue::Queue;
 use crate::play::tap::{Worth, worth_score};
@@ -85,23 +85,13 @@ impl Lasting<'_> for Expiry {
         self.next
     }
 
-    #[expect(clippy::indexing_slicing, reason = "`held` has all of the bits of the lane.")]
+    /// Old version of this checked lanes one at a time. It was slow.
+    /// Now it checks 8 lanes at once and then the final lane on its own.
     fn release(&mut self, at: Time) -> u16 {
-        let mut due = 0;
-        let mut next = NEVER;
-        let mut bits = self.held;
-        while let Some(lane) = bits.lowest_one() {
-            let bit = bits.isolate_lowest_one();
-            bits ^= bit;
-            let until = self.until[lane as usize];
-            if until <= at {
-                due |= bit;
-            } else {
-                next = next.min(until);
-            }
-        }
+        let due = self.held & ended(&self.until, at);
         self.held ^= due;
-        self.next = next;
+        self.open &= !due;
+        self.next = earliest(&self.until, self.held);
         due
     }
 

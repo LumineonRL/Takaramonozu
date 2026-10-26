@@ -1,7 +1,7 @@
 //! Perfect Score Up aka PSU.
 
 use super::encore::Copied;
-use super::{Lasting, NEVER};
+use super::{Lasting, NEVER, earliest, ended};
 use crate::play::Scoring;
 use crate::play::activation::Payload;
 use crate::play::queue::Queue;
@@ -37,21 +37,15 @@ where
     #[expect(clippy::indexing_slicing, reason = "lane bits")]
     fn lapse(&mut self, now: Time, perfects: u32) {
         self.settle(perfects);
-        let mut next = NEVER;
-        let mut bits = self.open;
+        let lapsed = self.open & ended(&self.until, now);
+        let mut bits = lapsed;
         while let Some(lane) = bits.lowest_one() {
-            let bit = bits.isolate_lowest_one();
-            bits ^= bit;
-            let until = self.until[lane as usize];
-            if until <= now {
-                self.open ^= bit;
-                self.sum = self.sum.saturating_sub(self.value[lane as usize]);
-            } else {
-                next = next.min(until);
-            }
+            bits ^= bits.isolate_lowest_one();
+            self.sum = self.sum.saturating_sub(self.value[lane as usize]);
         }
-        self.ending = next;
-        self.wake = self.lasting.next().min(next);
+        self.open ^= lapsed;
+        self.ending = earliest(&self.until, self.open);
+        self.wake = self.lasting.next().min(self.ending);
     }
 }
 
