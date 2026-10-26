@@ -1,7 +1,6 @@
 #![expect(clippy::expect_used, reason = "it's a benchmark so it's okay")]
 
 /// Higher level orchestrator of trial.rs. For benchmarking on different thread counts.
-
 use std::sync::LazyLock;
 
 use bench::{Archives, Prepared, catalog, root};
@@ -12,8 +11,7 @@ use simulator::play::judgement::Judgements;
 
 const TABLES: u64 = 64;
 
-static ARCHIVES: LazyLock<Archives> =
-    LazyLock::new(|| Archives::open(&root()).expect("rkyvs"));
+static ARCHIVES: LazyLock<Archives> = LazyLock::new(|| Archives::open(&root()).expect("rkyvs"));
 
 static TEAMS: LazyLock<Vec<Prepared<'static>>> = LazyLock::new(|| {
     let specs = catalog(&root().join("bench/specs")).expect("specs");

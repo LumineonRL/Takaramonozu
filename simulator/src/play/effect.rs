@@ -152,7 +152,10 @@ const _: () = assert!(LANES == 9, "8 lanes in one vec, the other by its lonesome
 /// Then stitch them together.
 #[inline(always)]
 #[cfg(all(target_feature = "avx512f", target_feature = "avx512vl"))]
-#[expect(clippy::multiple_unsafe_ops_per_block, reason = "they're all related I don't know how to separate them")]
+#[expect(
+    clippy::multiple_unsafe_ops_per_block,
+    reason = "they're all related I don't know how to separate them"
+)]
 fn ended(until: &[Time; LANES], now: Time) -> u16 {
     use core::arch::x86_64::{_mm256_cmple_epu32_mask, _mm256_loadu_si256, _mm256_set1_epi32};
     let [.., last] = *until;
@@ -180,9 +183,14 @@ fn ended(until: &[Time; LANES], now: Time) -> u16 {
 /// and there's the traditional safe version below it that just takes all lanes one-by-one
 #[inline(always)]
 #[cfg(all(target_feature = "avx512f", target_feature = "avx512vl"))]
-#[expect(clippy::multiple_unsafe_ops_per_block, reason = "they're all related I don't know how to separate them")]
+#[expect(
+    clippy::multiple_unsafe_ops_per_block,
+    reason = "they're all related I don't know how to separate them"
+)]
 fn earliest(until: &[Time; LANES], lanes: u16) -> Time {
-    use core::arch::x86_64::{_mm256_loadu_si256, _mm512_mask_reduce_min_epu32, _mm512_zextsi256_si512};
+    use core::arch::x86_64::{
+        _mm256_loadu_si256, _mm512_mask_reduce_min_epu32, _mm512_zextsi256_si512,
+    };
     let [.., last] = *until;
     // SAFETY: the `cfg` guarantees the CPU has the necessary AVX-512F and VL.
     let low = unsafe {
@@ -197,7 +205,11 @@ fn earliest(until: &[Time; LANES], lanes: u16) -> Time {
 fn earliest(until: &[Time; LANES], lanes: u16) -> Time {
     let mut next = NEVER;
     for (lane, &end) in until.iter().enumerate() {
-        next = if (lanes >> lane) & 1 == 0 { next } else { next.min(end) };
+        next = if (lanes >> lane) & 1 == 0 {
+            next
+        } else {
+            next.min(end)
+        };
     }
     next
 }
