@@ -31,7 +31,7 @@ use simulator::play::{Outcome, Scoring, run};
 use simulator::scalar::Rate;
 use simulator::sis::SisDb;
 use simulator::skill::Targets;
-use simulator::song::{ChartRows, Difficulty, Matching, SongDb};
+use simulator::song::{Chart, ChartRows, Difficulty, Matching, SongDb};
 
 pub type Failed = Box<dyn Error + Send + Sync>;
 
@@ -190,18 +190,41 @@ impl Archives {
             .charts()
             .iter()
             .find(|c| usize::from(c.song.0) == idx && c.difficulty == difficulty)
+            .copied()
             .ok_or_else(|| format!("{}: no {difficulty:?} chart of {title:?}", spec.name))?;
         let matching = Matching::new(song.attribute, song.group.as_ref().copied(), &self.groups)
             .ok_or("missing song")?;
-        let scoring = self.compiled(&spec, matching).map_err(|e| format!("{}: {e}", spec.name))?;
-        let queue = Queue::build(&songs.charts, chart).ok_or("an unterminated stream")?;
+        let built = self.build(&spec, matching).map_err(|e| format!("{}: {e}", spec.name))?;
+        let scoring = self.compile(&built);
+        let queue = self.queue(&chart).ok_or("an unterminated stream")?;
         let triggers = Triggers::build(&queue, &scoring);
         let speed = NoteSpeed::new(spec.speed).ok_or("bad approach rate")?;
         let config = PlayConfig::new(speed, spec.accuracy, 0);
-        Ok(Prepared { spec, queue, scoring, triggers, config })
+        Ok(Prepared { spec, built, chart, queue, scoring, triggers, config })
     }
 
-    fn compiled(&self, spec: &Spec, matching: Matching) -> Result<Scoring, Failed> {
+    #[must_use]
+    pub fn compile(&self, built: &Built) -> Scoring {
+        compile(&built.team, self.context(built), &self.caps, built.matching).scoring()
+    }
+
+    #[must_use]
+    pub fn queue(&self, chart: &Chart) -> Option<Queue<'_>> {
+        Queue::build(&self.songs.root().charts, chart)
+    }
+
+    const fn context<'a>(&'a self, built: &'a Built) -> Context<'a> {
+        Context {
+            deck: &built.deck,
+            accessories: &built.accessories,
+            inventory: &built.inventory,
+            cards: &self.cards,
+            acc_db: &self.accessories,
+            sis_db: &self.sis,
+        }
+    }
+
+    fn build(&self, spec: &Spec, matching: Matching) -> Result<Built, Failed> {
         let cards = &self.cards;
         let mut deck = Deck::new(spec.name.clone(), Gallery::default());
         let mut accessories = Accessories::new(spec.name.clone());
@@ -261,12 +284,22 @@ impl Archives {
                 .leader;
             team.set_guest(leader, ctx).map_err(|p| format!("guest {card_id}: {p:?}"))?;
         }
-        Ok(compile(&team, ctx, &self.caps, matching).scoring())
+        Ok(Built { deck, accessories, inventory, team, matching })
     }
+}
+
+pub struct Built {
+    deck: Deck,
+    accessories: Accessories,
+    inventory: SisInventory,
+    team: Team,
+    matching: Matching,
 }
 
 pub struct Prepared<'a> {
     pub spec: Spec,
+    pub built: Built,
+    pub chart: Chart,
     pub queue: Queue<'a>,
     pub scoring: Scoring,
     pub triggers: Triggers,
@@ -300,7 +333,6 @@ where
 fn mapped<T>(path: &Path) -> Result<Mapped<T>, Failed>
 where
     T: rkyv::Archive + Kind,
-    T::Archived: rkyv::Portable,
 {
     // SAFETY: rkyv built here
     let mapped = unsafe { Mapped::open(path) };
@@ -310,8 +342,7 @@ where
 fn owned<T>(path: &Path) -> Result<T, Failed>
 where
     T: rkyv::Archive + Kind,
-    T::Archived: rkyv::Portable
-        + rkyv::Deserialize<T, rkyv::api::high::HighDeserializer<rkyv::rancor::Error>>,
+    T::Archived: rkyv::Deserialize<T, rkyv::api::high::HighDeserializer<rkyv::rancor::Error>>,
 {
     Ok(rkyv::deserialize::<T, rkyv::rancor::Error>(mapped::<T>(path)?.root())?)
 }

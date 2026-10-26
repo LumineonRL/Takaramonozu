@@ -17,9 +17,14 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 divan = "0.1.21"
+rayon = { workspace = true }
 
 [[bench]]
 name = "trial"
+harness = false
+
+[[bench]]
+name = "tiers"
 harness = false
 
 [lints]

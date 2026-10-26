@@ -1,18 +1,19 @@
 #![expect(clippy::expect_used, reason = "it's a benchmark so it's okay")]
 
-//! Single threaded for now. Next todo will be to wrap it in rayon and loop
-//! run a 1 thread and max thread version. idk if I'll do any threads in between
-//! I frankly don't care how well this performs on say like, 8 out of 24 threads
-//! I care about 1 thread to compare to the other one thread sim and 24 threads
-//! because that's what my cpu has and what I will be using.
+//! Lower-level that controls the configuration of a single trial of a benchmark irrespective of how many
+//! threads its running across.
 //!
-//! cargo bench -p bench [fuzzy match on spec json title]
+//! cargo bench -p bench --bench trial [fuzzy match on spec json title]
 
 use std::sync::LazyLock;
 
 use bench::{Archives, Prepared, catalog, root};
 use divan::Bencher;
 use divan::counter::ItemsCount;
+use rayon::prelude::*;
+
+/// Number of seeds
+const BATCH: u64 = 50000;
 
 static ARCHIVES: LazyLock<Archives> =
     LazyLock::new(|| Archives::open(&root()).expect("the archives"));
@@ -26,16 +27,34 @@ fn names() -> impl Iterator<Item = &'static str> {
     TEAMS.iter().map(|t| t.spec.name.as_str())
 }
 
+fn team(name: &str) -> &'static Prepared<'static> {
+    TEAMS.iter().find(|t| t.spec.name == name).expect("team")
+}
+
 fn main() {
     divan::main();
 }
 
 #[divan::bench(args = names())]
-fn trial(bencher: Bencher, name: &str) {
-    let team = TEAMS.iter().find(|t| t.spec.name == name).expect("team");
+fn one_thread(bencher: Bencher, name: &str) {
+    let team = team(name);
     let mut seed = 0_u64;
     bencher.counter(ItemsCount::new(1_usize)).bench_local(|| {
         seed = seed.wrapping_add(1);
         team.trial(seed)
+    });
+}
+
+#[divan::bench(args = names())]
+fn all_threads(bencher: Bencher, name: &str) {
+    let team = team(name);
+    let mut first = 0_u64;
+    bencher.counter(ItemsCount::new(BATCH)).bench_local(|| {
+        let seeds = first..first.wrapping_add(BATCH);
+        first = first.wrapping_add(BATCH);
+        seeds
+            .into_par_iter()
+            .map(|seed| team.trial(seed).score())
+            .reduce(|| 0, u64::wrapping_add)
     });
 }
