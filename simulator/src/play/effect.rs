@@ -135,41 +135,8 @@ use encore::Copied;
 /// No lane is waiting to roll.
 const NEVER: Time = Time(u32::MAX);
 
-// I'm about to over-comment this just because there's a lot going on and it's a pretty big change.
-// and I know I won't remember any of this a month or two from now.
-//
-// SO this is fun. 9 is a very awkward number. Previously, 9 lanes were represented by having
-// 16 lanes and just padding and ignoring the other 7.
-// However, there was a bottleneck for duration-based skills that locked their own lanes.
-// Now it's 8 lanes + 1 completely on its own.
-//
-// The big todo now is to get LLVM to emit the instructions automatically using safe Rust without
-// the unsafe version below where it's pretty much "hey, these are the instructions you should be using. for this. Use them."
-const _: () = assert!(LANES == 9, "8 lanes in one vec, the other by its lonesome.");
-
-/// Check the first 8 lanes to see if an effect ended
-/// Then check if the 9th lane's effect ended.
-/// Then stitch them together.
+/// Identifies which lanes have finished their duration effect
 #[inline(always)]
-#[cfg(all(target_feature = "avx512f", target_feature = "avx512vl"))]
-#[expect(
-    clippy::multiple_unsafe_ops_per_block,
-    reason = "they're all related I don't know how to separate them"
-)]
-fn ended(until: &[Time; LANES], now: Time) -> u16 {
-    use core::arch::x86_64::{_mm256_cmple_epu32_mask, _mm256_loadu_si256, _mm256_set1_epi32};
-    let [.., last] = *until;
-    // SAFETY: the `cfg` guarantees the CPU has the necessary AVX-512F and VL.
-    let low = unsafe {
-        let low = _mm256_loadu_si256(until.as_ptr().cast());
-        _mm256_cmple_epu32_mask(low, _mm256_set1_epi32(now.0.cast_signed()))
-    };
-    u16::from(low) | (u16::from(last <= now) << 8)
-}
-
-/// The fallback (that's also probably slow but I didn't actually test). Just loops over the lanes one-by-one.
-#[inline(always)]
-#[cfg(not(all(target_feature = "avx512f", target_feature = "avx512vl")))]
 fn ended(until: &[Time; LANES], now: Time) -> u16 {
     let mut lanes = 0;
     for (lane, &end) in until.iter().enumerate() {
@@ -178,40 +145,25 @@ fn ended(until: &[Time; LANES], now: Time) -> u16 {
     lanes
 }
 
-/// Computes which lane's duration will complete next.
-/// Once again, there's the unsafe version that does this as 8+1 and then glues together because fast
-/// and there's the traditional safe version below it that just takes all lanes one-by-one
+/// Finds the lane whose effect will expire next. This is only for duration effects.
 #[inline(always)]
-#[cfg(all(target_feature = "avx512f", target_feature = "avx512vl"))]
-#[expect(
-    clippy::multiple_unsafe_ops_per_block,
-    reason = "they're all related I don't know how to separate them"
-)]
-fn earliest(until: &[Time; LANES], lanes: u16) -> Time {
-    use core::arch::x86_64::{
-        _mm256_loadu_si256, _mm512_mask_reduce_min_epu32, _mm512_zextsi256_si512,
-    };
-    let [.., last] = *until;
-    // SAFETY: the `cfg` guarantees the CPU has the necessary AVX-512F and VL.
-    let low = unsafe {
-        let low = _mm256_loadu_si256(until.as_ptr().cast());
-        _mm512_mask_reduce_min_epu32(lanes & 0xFF, _mm512_zextsi256_si512(low))
-    };
-    Time(low).min(if lanes & 0x100 == 0 { NEVER } else { last })
-}
-
-#[inline(always)]
-#[cfg(not(all(target_feature = "avx512f", target_feature = "avx512vl")))]
-fn earliest(until: &[Time; LANES], lanes: u16) -> Time {
-    let mut next = NEVER;
-    for (lane, &end) in until.iter().enumerate() {
-        next = if (lanes >> lane) & 1 == 0 {
-            next
-        } else {
-            next.min(end)
-        };
-    }
-    next
+fn earliest(until: &[Time; LANES], lanes: u16, now: Time) -> Time {
+    let start = now.0.wrapping_add(1);
+    let gaps: [u32; LANES] = core::array::from_fn(|lane| match until.get(lane) {
+        Some(end) if lanes & (1 << lane) != 0 => end.0.wrapping_sub(start),
+        _ => u32::MAX,
+    });
+    // Performance hacking magic. This was originally a loop but the LLVM did awful at vectorizing it.
+    // This specific shape with the manually-implemented tree reduction
+    // allowed for some baller SIMD instructions on AVX-512 I don't know how it does on other chips.
+    // I know these look like they're prefaced with ones (ten, eleven, twelve...), but they're actually lower-case ls.
+    // So lane 0 through lane 8.
+    let [l0, l1, l2, l3, l4, l5, l6, l7, l8] = gaps;
+    let [l0, l1, l2, l3] = [l0.min(l4), l1.min(l5), l2.min(l6), l3.min(l7)];
+    let [l0, l1] = [l0.min(l2), l1.min(l3)];
+    // except there's no clean way to tree reduce with 9 elements so we just manually handle the leftover lane.
+    let next = Time(l0.min(l1).min(l8).wrapping_add(start));
+    if next > now { next } else { NEVER }
 }
 
 /// For Duration effects. Perfect Lock, Total Trick, Combo Fever, Perfect Score Up, Skill Rate Up, Appeal Boost and Sync.
@@ -696,6 +648,7 @@ fn pay_at<'q>(
 
 #[cfg(test)]
 mod tests {
+    use super::NEVER;
     use crate::play::activation::{AccessorySkill, Skill};
     use crate::play::queue::Queue;
     use crate::play::rng::Rng;
@@ -703,6 +656,7 @@ mod tests {
     use crate::play::{Outcome, Scoring};
     use crate::scalar::{Ms, RATE_UNIT, Rate};
     use crate::skill::{SkillEffect, TriggerType};
+    use crate::song::{LANES, Time};
 
     #[expect(clippy::integer_division, reason = "a coin flip")]
     pub(super) const FLIP: Rate = RATE_UNIT / 2;
@@ -884,5 +838,26 @@ mod tests {
         let bare = seeded(&queue, &healed, 0);
         assert_eq!(bare, Outcome { skill: 0, ..seeded(&queue, &scored, 0) });
         assert!(bare.activations > 0);
+    }
+
+    /// For the manually implemented binary tree reduction to find the smallest element in `earliest`
+    #[test]
+    fn check_scans() {
+        const EDGES: [u32; 9] = [0, 1, 2, 499, 500, 501, u32::MAX - 2, u32::MAX - 1, u32::MAX];
+        let mut rng = Rng::new(0, Rng::SKILLS);
+        for _ in 0..256 {
+            let until: [Time; LANES] = core::array::from_fn(|_| Time(EDGES[rng.below(9) as usize]));
+            for now in EDGES.map(Time) {
+                let ended =
+                    until.iter().enumerate().fold(0, |m, (l, &t)| m | (u16::from(t <= now) << l));
+                assert_eq!(super::ended(&until, now), ended);
+                for lanes in 0..1 << LANES {
+                    let live = |&(l, t): &(usize, &Time)| lanes & (1 << l) != 0 && *t > now;
+                    let next = until.iter().enumerate().filter(live).map(|(_, &t)| t).min();
+                    let got = super::earliest(&until, lanes, now);
+                    assert_eq!(got, next.unwrap_or(NEVER), "{until:?} {lanes:#b} {now:?}");
+                }
+            }
+        }
     }
 }

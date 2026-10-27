@@ -87,11 +87,12 @@ impl Lasting<'_> for Expiry {
 
     /// Old version of this checked lanes one at a time. It was slow.
     /// Now it checks 8 lanes at once and then the final lane on its own.
+    #[inline]
     fn release(&mut self, at: Time) -> u16 {
         let due = self.held & ended(&self.until, at);
+        self.next = earliest(&self.until, self.held, at);
         self.held ^= due;
         self.open &= !due;
-        self.next = earliest(&self.until, self.held);
         due
     }
 

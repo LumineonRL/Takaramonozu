@@ -38,13 +38,13 @@ where
     fn lapse(&mut self, now: Time, perfects: u32) {
         self.settle(perfects);
         let lapsed = self.open & ended(&self.until, now);
+        self.ending = earliest(&self.until, self.open, now);
         let mut bits = lapsed;
         while let Some(lane) = bits.lowest_one() {
             bits ^= bits.isolate_lowest_one();
             self.sum = self.sum.saturating_sub(self.value[lane as usize]);
         }
         self.open ^= lapsed;
-        self.ending = earliest(&self.until, self.open);
         self.wake = self.lasting.next().min(self.ending);
     }
 }
