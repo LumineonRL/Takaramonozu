@@ -26,11 +26,8 @@ impl Judgements {
             rate => {
                 let mut rng = Rng::new(config.seed, Rng::ACCURACY);
                 let mut perfect = vec![false; records];
-                let mut hits = 0_usize;
-                for slot in perfect.iter_mut().take(rolls) {
-                    *slot = rng.roll(rate);
-                    hits = hits.saturating_add(usize::from(*slot));
-                }
+                let hits =
+                    perfect.split_last_mut().map_or(0, |(_, rolled)| rng.roll_into(rate, rolled));
                 (perfect, hits)
             }
         };

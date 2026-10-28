@@ -107,27 +107,40 @@ impl Schedule {
     fn build(count: u32, unit: u32, skills: &[Skill; LANES], clock: TriggerType) -> Self {
         const { assert!(LANES <= u16::BITS as usize, "u16") };
 
-        let mut dense = vec![0_u16; count as usize + 1];
-        for (lane, skill) in skills.iter().enumerate() {
-            if skill.trigger != clock || skill.threshold == 0 {
-                continue;
-            }
-            let bit = 1_u16.checked_shl(u32::try_from(lane).expect("9 lanes")).expect("u16");
-            let step = u32::from(skill.threshold);
-            let mut at = step;
-            while at <= count {
-                if let Some(mask) = dense.get_mut(at as usize) {
-                    *mask |= bit;
-                }
-                at += step;
+        // Most teams don't have most skill trigger types, so don't even check
+        // for the skill thresholds for those skills if they're not on the team.
+        let mut bound = 1_usize;
+        for skill in skills {
+            if skill.trigger == clock && skill.threshold != 0 {
+                let firings = count.checked_div(u32::from(skill.threshold)).unwrap_or(0);
+                bound = bound.saturating_add(firings as usize);
             }
         }
-
-        let mut out = Self { at: Vec::new(), lanes: Vec::new() };
-        for (at, &mask) in dense.iter().enumerate() {
-            if mask != 0 {
-                out.at.push(u32::try_from(at).unwrap_or(u32::MAX).saturating_mul(unit));
-                out.lanes.push(mask);
+        let mut out = Self {
+            at: Vec::with_capacity(bound),
+            lanes: Vec::with_capacity(bound),
+        };
+        if bound > 1 {
+            let mut dense = vec![0_u16; count as usize + 1];
+            for (lane, skill) in skills.iter().enumerate() {
+                if skill.trigger != clock || skill.threshold == 0 {
+                    continue;
+                }
+                let bit = 1_u16.checked_shl(u32::try_from(lane).expect("9 lanes")).expect("u16");
+                let step = u32::from(skill.threshold);
+                let mut at = step;
+                while at <= count {
+                    if let Some(mask) = dense.get_mut(at as usize) {
+                        *mask |= bit;
+                    }
+                    at += step;
+                }
+            }
+            for (at, &mask) in dense.iter().enumerate() {
+                if mask != 0 {
+                    out.at.push(u32::try_from(at).unwrap_or(u32::MAX).saturating_mul(unit));
+                    out.lanes.push(mask);
+                }
             }
         }
         out.at.push(u32::MAX);
@@ -521,7 +534,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{Skill, Triggers};
+    use super::{Schedule, Skill, Triggers};
     use crate::play::config::{NoteSpeed, PlayConfig};
     use crate::play::judgement::Judgements;
     use crate::play::queue::Queue;
@@ -532,7 +545,7 @@ mod tests {
     use crate::play::{Scoring, run};
     use crate::scalar::{RATE_UNIT, Rate};
     use crate::skill::TriggerType;
-    use crate::song::{Event, EventKind, Time};
+    use crate::song::{Event, EventKind, LANES, Time};
 
     #[expect(clippy::integer_division, reason = "a coin flip")]
     pub(super) const FLIP: Rate = RATE_UNIT / 2;
@@ -557,6 +570,67 @@ mod tests {
     pub(super) fn draws(seed: u64, n: usize) -> Vec<u64> {
         let mut rng = Rng::new(seed, Rng::SKILLS);
         core::iter::repeat_with(|| u64::from(rng.roll(FLIP))).take(n).collect()
+    }
+
+    /// Generates and schedules a whole bunch of skills so the next test can verify that it works correctly.
+    #[expect(clippy::arithmetic_side_effects, reason = "test")]
+    fn schedule_skills(count: u32, unit: u32, skills: &[Skill; LANES], clock: TriggerType) -> Schedule {
+        let mut out = Schedule { at: Vec::new(), lanes: Vec::new() };
+        for at in 1..=count {
+            let mask = (0_u32..)
+                .zip(skills)
+                .filter(|(_, s)| s.trigger == clock && s.threshold != 0)
+                .filter(|(_, s)| at.is_multiple_of(u32::from(s.threshold)))
+                .fold(0_u16, |mask, (lane, _)| mask | (1 << lane));
+            if mask != 0 {
+                out.at.push(at * unit);
+                out.lanes.push(mask);
+            }
+        }
+        out.at.push(u32::MAX);
+        out.lanes.push(0);
+        out
+    }
+
+    /// Previously `Triggers:build` would scan an array over an entire chart several times
+    /// for each of the Trigger Types and schedule their skills, even if that
+    /// trigger wasn't on the team. Tests that the new modification that skips that leads
+    /// to the same result.
+    #[test]
+    fn check_schedule_rng() {
+        const KINDS: [TriggerType; 6] = [
+            TriggerType::RhythmIcons,
+            TriggerType::Combo,
+            TriggerType::Perfects,
+            TriggerType::Time,
+            TriggerType::StarNotes,
+            TriggerType::Score,
+        ];
+        let mut rng = Rng::new(7, Rng::SKILLS);
+        let mut pick = |n: u16| u16::try_from(rng.below(u32::from(n))).expect("under n");
+        for _ in 0..4000 {
+            let count = u32::from(pick(1200));
+            let skills: [Skill; LANES] = core::array::from_fn(|_| {
+                let trigger = KINDS[usize::from(pick(6))];
+                let threshold = match pick(5) {
+                    0 => 0,
+                    1 => pick(3),
+                    2 => u16::MAX - pick(2),
+                    _ => pick(70),
+                };
+                Skill { threshold, trigger, ..Skill::NONE }
+            });
+            for clock in KINDS {
+                for unit in [1, Time::SECOND] {
+                    let want = schedule_skills(count, unit, &skills, clock);
+                    assert_eq!(
+                        Schedule::build(count, unit, &skills, clock),
+                        want,
+                        "{count} {clock:?}"
+                    );
+                }
+            }
+        }
     }
 
     /// A manually and meticulously selected seed where the first two rolls differ.

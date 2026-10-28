@@ -73,11 +73,99 @@ impl Rng {
     pub fn roll(&mut self, rate: Rate) -> bool {
         self.below(u32::from(RATE_UNIT)) < u32::from(rate)
     }
+
+    /// As a performance improvement, Judgement RNG is now rolled in batches rather than sequentially.
+    /// tldr rolling a batch at a time instead of one at a time leads to more vectorization
+    /// Note that it's ONLY for Judgements - the other 3 RNG streams can't (or at least I can't figure out how)
+    /// to have their rolls pre-computed up front like this.
+    ///
+    /// Much of this is a vectorized version of the existing `pcg32` from the `rand_pcg` crate.
+    /// See https://github.com/rust-random/rngs/blob/master/rand_pcg/src/pcg64.rs for more details.
+    /// Alsoalso yes, the linked file is pcg64, but pcg32 lives in there and the code here is pcg32.
+    #[expect(clippy::indexing_slicing, reason = "split into batches so it vectorizes.")]
+    pub fn roll_into(&mut self, rate: Rate, slots: &mut [bool]) -> usize {
+        let stream = self.0.stream();
+        if rate >= RATE_UNIT {
+            slots.fill(true);
+            self.0.advance(u64::try_from(slots.len()).unwrap_or(u64::MAX));
+            return slots.len();
+        }
+        let increment = stream.wrapping_shl(1) | 1;
+        let first = self.0.state();
+        let mut states = LANES
+            .map(|(mult, sum)| first.wrapping_mul(mult).wrapping_add(increment.wrapping_mul(sum)));
+        let (mult, sum) = JUMP;
+        let plus = increment.wrapping_mul(sum);
+        let cut = cut(rate);
+
+        let mut hits = 0_usize;
+        let (chunks, rest) = slots.as_chunks_mut::<BATCH>();
+        for chunk in chunks {
+            *chunk = states.map(|state| output(state) < cut);
+            hits = hits.wrapping_add(chunk.iter().map(|&hit| usize::from(hit)).sum::<usize>());
+            states = states.map(|state| state.wrapping_mul(mult).wrapping_add(plus));
+        }
+        for (slot, &state) in rest.iter_mut().zip(&states) {
+            *slot = output(state) < cut;
+            hits = hits.wrapping_add(usize::from(*slot));
+        }
+        self.0 = Pcg32::from_state(states[rest.len()], stream);
+        hits
+    }
+}
+
+/// Checks if a roll succeeds or not.
+/// Since this is only being used for judgements, basically accuracy gets passed into `roll_into`,
+/// which gets passed into `cut`, which determines as a batch which rolls are a perfect and a great.
+/// Left open ended though because idk maybe with simple skills like scorers only this could be done
+/// too but I don't know if it's worth the effort.
+fn cut(rate: Rate) -> u32 {
+    let cut = u64::from(rate).wrapping_shl(32).div_ceil(u64::from(RATE_UNIT));
+    u32::try_from(cut).unwrap_or(u32::MAX)
+}
+
+/// Tried a bunch of different values and 16 measured fastest on AVX-512.
+/// And AVX2. And SSE4.1.
+const BATCH: usize = 16;
+
+/// Copied directly from:
+/// https://github.com/rust-random/rngs/blob/84683fcacf9a5e346a945d1f620c772f91b4b82d/rand_pcg/src/pcg64.rs#L19
+const MULTIPLIER: u64 = 6_364_136_223_846_793_005;
+
+const fn step((mult, sum): (u64, u64)) -> (u64, u64) {
+    (mult.wrapping_mul(MULTIPLIER), sum.wrapping_mul(MULTIPLIER).wrapping_add(1))
+}
+
+/// The different lanes. A given lane starts `i` draws ahead.
+/// Also because this can be confusing, LANES is a SIMD term and a game mechanic.
+/// The lanes in this module are completely separate from the lanes in every other module.
+/// Keeping it because they're both the correct term.
+#[expect(clippy::indexing_slicing, reason = "bounded")]
+const LANES: [(u64, u64); BATCH] = {
+    let mut lanes = [(1, 0); BATCH];
+    let mut lane = 1;
+    while lane < BATCH {
+        lanes[lane] = step(lanes[lane - 1]);
+        lane += 1;
+    }
+    lanes
+};
+
+const JUMP: (u64, u64) = step(LANES[BATCH - 1]);
+
+/// See https://github.com/rust-random/rngs/blob/84683fcacf9a5e346a945d1f620c772f91b4b82d/rand_pcg/src/pcg64.rs#L149
+#[inline(always)]
+#[expect(clippy::cast_possible_truncation, reason = "XSH RR keeps the low 32 bits")]
+const fn output(state: u64) -> u32 {
+    let rot = (state >> 59) as u32;
+    let xsh = (((state >> 18) ^ state) >> 27) as u32;
+    xsh.rotate_right(rot)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Rng;
+    use super::{Rng, cut};
+    use crate::scalar::RATE_UNIT;
 
     #[test]
     fn check_the_draws_are_pinned() {
@@ -113,6 +201,43 @@ mod tests {
         // The first skill draw at seed 0 is the first row of the draw table in
         // `docs/skill_fixtures.md`.
         assert_eq!(Rng::new(0, Rng::SKILLS).below(10_000), 7530);
+    }
+
+    /// Checks that the vectorized lane RNG comes out the same as the regular RNG.
+    /// Tests it on all RNG streams. Just in case.
+    /// `u64::MAX` is to test a stream with its top bit set.
+    #[test]
+    fn check_roll_into() {
+        for stream in [Rng::SKILLS, Rng::ACCURACY, Rng::SYNC, Rng::COIN, u64::MAX] {
+            for seed in [0, 1, 2, 0x5C00_1D01, u64::MAX] {
+                for len in [0, 1, 2, 15, 16, 17, 31, 32, 33, 100, 1131] {
+                    for rate in [0, 1, 3, 4999, 9250, RATE_UNIT - 1, RATE_UNIT, 20_000] {
+                        let mut one = Rng::new(seed, stream);
+                        let want: Vec<bool> =
+                            core::iter::repeat_with(|| one.roll(rate)).take(len).collect();
+                        let mut batch = Rng::new(seed, stream);
+                        let mut got = vec![false; len];
+                        let hits = batch.roll_into(rate, &mut got);
+                        let case = format!("stream {stream} seed {seed} len {len} rate {rate}");
+                        assert_eq!(got, want, "{case}");
+                        assert_eq!(hits, want.iter().filter(|&&hit| hit).count(), "{case}");
+                        assert_eq!(batch.next_u32(), one.next_u32(), "{case}: left elsewhere");
+                    }
+                }
+            }
+        }
+    }
+
+    /// `cut` is the vectorized version of `below`. Ensures that they produce the exact same numbers.
+    #[test]
+    fn check_cut_matches_below() {
+        let hits = |draw: u32, rate| (u64::from(draw) * u64::from(RATE_UNIT)) >> 32 < rate;
+        assert_eq!(cut(0), 0);
+        for rate in 1..RATE_UNIT {
+            let cut = cut(rate);
+            assert!(hits(cut - 1, u64::from(rate)), "rate {rate}: {} misses", cut - 1);
+            assert!(!hits(cut, u64::from(rate)), "rate {rate}: {cut} hits");
+        }
     }
 
     #[expect(clippy::arithmetic_side_effects, reason = "u32 to i128 can't overflow")]
