@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use simulator::accessory::{AccessoryDb, StatRows};
+use simulator::accessory::{AccessoryDb, AccessoryIdx, StatRows};
 use simulator::scalar::Stats;
 
 use crate::manager::{Entry, EntryId, Manager, Repairs, Slots};
@@ -22,11 +22,15 @@ pub struct AccessoryEntry {
     acc_id: u16,
     #[serde(default = "skill_level::default")]
     skill_level: u8,
+    /// Row number of `accessories.rkyv` for this acc so the lookup can jump straight to it
+    /// instead of needing to search it based on the id.
+    #[serde(skip)]
+    at: u16,
 }
 
 impl AccessoryEntry {
     pub(crate) const fn new(acc_id: u16, skill_level: u8) -> Self {
-        Self { acc_id, skill_level }
+        Self { acc_id, skill_level, at: 0 }
     }
 
     #[must_use]
@@ -38,6 +42,11 @@ impl AccessoryEntry {
     pub const fn skill_level(self) -> u8 {
         self.skill_level
     }
+
+    #[must_use]
+    pub fn index(self, accessories: &AccessoryDb) -> Option<AccessoryIdx> {
+        accessories.index_with_hint(self.acc_id, AccessoryIdx(self.at))
+    }
 }
 
 impl Entry for AccessoryEntry {
@@ -47,10 +56,11 @@ impl Entry for AccessoryEntry {
     const CAPACITY: usize = MAX_ACCESSORIES;
     const FULL: Problem = Problem::Full;
 
-    fn vet(self, db: &AccessoryDb) -> Result<(Self, Repairs), Vec<Problem>> {
-        if db.index(self.acc_id).is_none() {
+    fn vet(mut self, db: &AccessoryDb) -> Result<(Self, Repairs), Vec<Problem>> {
+        let Some(at) = db.index(self.acc_id) else {
             return Err(vec![Problem::UnknownAccessory]);
-        }
+        };
+        self.at = at.0;
         if !skill_level::in_range(self.skill_level) {
             return Err(vec![Problem::SkillLevel]);
         }
@@ -96,7 +106,7 @@ impl Accessories {
     #[must_use]
     pub fn stats(&self, id: EntryId, accessories: &AccessoryDb) -> Option<Stats> {
         let entry = self.get(id)?;
-        let i = accessories.index(entry.acc_id())?.0 as usize;
+        let i = usize::from(entry.index(accessories)?.0);
         let accessory = accessories.accessories.get(i)?;
         Some(accessories.stats.get(accessory.stats, entry.skill_level()))
     }
@@ -191,6 +201,20 @@ pub(crate) mod tests {
 
     fn box_of(name: &str) -> Accessories {
         Accessories::new(name.to_owned())
+    }
+
+    #[test]
+    fn check_acc_entry_index() {
+        let (db, mut a) = (accessories(), box_of("test"));
+        let (id, _) = a.add(&db, 9, 1).unwrap();
+        let entry = a.get(id).unwrap();
+        let right = db.index(9);
+        assert_ne!(entry.at, 0, "vet stored it");
+        assert_eq!(entry.index(&db), right);
+        for at in [0, u16::MAX] {
+            assert_eq!(AccessoryEntry { at, ..entry }.index(&db), right, "{at}");
+        }
+        assert_eq!(AccessoryEntry { acc_id: 8, ..entry }.index(&db), None);
     }
 
     #[test]

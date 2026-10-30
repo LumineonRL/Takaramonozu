@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use simulator::sis::{Sis, SisDb};
+use simulator::sis::{Sis, SisDb, SisIdx};
 
 use crate::manager::{Entry, EntryId, Manager, Repairs, Slots};
 
@@ -17,20 +17,28 @@ pub enum Problem {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
-#[repr(transparent)]
 #[serde(transparent)]
 pub struct SisEntry {
     sis_id: u16,
+    /// Row number of `sis.rkyv` for this sis so the lookup can jump straight to it
+    /// instead of needing to search it based on the id.
+    #[serde(skip)]
+    at: u16,
 }
 
 impl SisEntry {
     pub(crate) const fn new(sis_id: u16) -> Self {
-        Self { sis_id }
+        Self { sis_id, at: 0 }
     }
 
     #[must_use]
     pub const fn sis_id(self) -> u16 {
         self.sis_id
+    }
+
+    #[must_use]
+    pub fn index(self, sis: &SisDb) -> Option<SisIdx> {
+        sis.index_with_hint(self.sis_id, SisIdx(self.at))
     }
 }
 
@@ -41,10 +49,11 @@ impl Entry for SisEntry {
     const CAPACITY: usize = MAX_SIS;
     const FULL: Problem = Problem::Full;
 
-    fn vet(self, db: &SisDb) -> Result<(Self, Repairs), Vec<Problem>> {
-        if db.index(self.sis_id).is_none() {
+    fn vet(mut self, db: &SisDb) -> Result<(Self, Repairs), Vec<Problem>> {
+        let Some(at) = db.index(self.sis_id) else {
             return Err(vec![Problem::UnknownSis]);
-        }
+        };
+        self.at = at.0;
         Ok((self, Repairs::default()))
     }
 }
@@ -81,7 +90,7 @@ impl SisInventory {
 
     #[must_use]
     pub fn sis(&self, id: EntryId, sis: &SisDb) -> Option<Sis> {
-        let i = sis.index(self.get(id)?.sis_id())?.0 as usize;
+        let i = usize::from(self.get(id)?.index(sis)?.0);
         sis.sis.get(i).copied()
     }
 }
@@ -133,6 +142,20 @@ pub(crate) mod tests {
 
     fn box_of(name: &str) -> SisInventory {
         SisInventory::new(name.to_owned())
+    }
+
+    #[test]
+    fn check_sis_entry_index() {
+        let (db, mut s) = (sis(), box_of("test"));
+        let (id, _) = s.add(&db, 13).unwrap();
+        let entry = s.get(id).unwrap();
+        let right = db.index(13);
+        assert_eq!(entry.at, 3, "vet stored it");
+        assert_eq!(entry.index(&db), right);
+        for at in [0, u16::MAX] {
+            assert_eq!(SisEntry { at, ..entry }.index(&db), right, "{at}");
+        }
+        assert_eq!(SisEntry { sis_id: 8, ..entry }.index(&db), None);
     }
 
     #[test]

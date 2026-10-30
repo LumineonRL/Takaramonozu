@@ -574,7 +574,12 @@ mod tests {
 
     /// Generates and schedules a whole bunch of skills so the next test can verify that it works correctly.
     #[expect(clippy::arithmetic_side_effects, reason = "test")]
-    fn schedule_skills(count: u32, unit: u32, skills: &[Skill; LANES], clock: TriggerType) -> Schedule {
+    fn schedule_skills(
+        count: u32,
+        unit: u32,
+        skills: &[Skill; LANES],
+        clock: TriggerType,
+    ) -> Schedule {
         let mut out = Schedule { at: Vec::new(), lanes: Vec::new() };
         for at in 1..=count {
             let mask = (0_u32..)

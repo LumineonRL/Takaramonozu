@@ -6,7 +6,7 @@ use core::num::NonZeroU8;
 use serde::de::{Deserializer, Error as _};
 use serde::{Deserialize, Serialize};
 
-use simulator::card::CardDb;
+use simulator::card::{CardDb, CardIdx};
 use simulator::scalar::{Attribute, Form, Rarity};
 
 use crate::level_cap::{self, LevelCaps};
@@ -112,6 +112,10 @@ pub struct DeckEntry {
     cap_level: u16,
     #[serde(skip)]
     hp: Option<NonZeroU8>,
+    /// Row number of `cards.rkyv` for this card so the lookup can jump straight to it
+    /// instead of needing to search it based on the id.
+    #[serde(skip)]
+    at: u16,
 }
 
 impl DeckEntry {
@@ -129,6 +133,7 @@ impl DeckEntry {
             sis_slots,
             cap_level,
             hp: None,
+            at: 0,
         }
     }
 
@@ -165,6 +170,13 @@ impl DeckEntry {
     pub const fn hp(self) -> Option<NonZeroU8> {
         self.hp
     }
+
+    /// Looks up where the card is in the card file so compilation can jump straight
+    /// there instead of searching for it.
+    #[must_use]
+    pub fn index(self, cards: &CardDb) -> Option<CardIdx> {
+        cards.index_with_hint(self.card_id, CardIdx(self.at))
+    }
 }
 
 impl Entry for DeckEntry {
@@ -175,10 +187,14 @@ impl Entry for DeckEntry {
     const FULL: Problem = Problem::Full;
 
     fn vet(mut self, db: &CardDb) -> Result<(Self, Repairs), Vec<Problem>> {
-        let i = db.index(self.card_id).map(|idx| usize::from(idx.0));
-        let Some((card, meta)) = i.and_then(|i| db.cards.get(i).zip(db.meta.get(i))) else {
+        let Some(at) = db.index(self.card_id) else {
             return Err(vec![Problem::UnknownCard]);
         };
+        let i = usize::from(at.0);
+        let Some((card, meta)) = db.cards.get(i).zip(db.meta.get(i)) else {
+            return Err(vec![Problem::UnknownCard]);
+        };
+        self.at = at.0;
         let mut repairs = Repairs::default();
         let mut problems = Vec::new();
 
@@ -262,14 +278,25 @@ impl Deck {
     }
 
     #[must_use]
+    pub fn base_stats(&self, id: EntryId, cards: &CardDb, caps: &LevelCaps) -> Option<[u32; 3]> {
+        let entry = self.get(id)?;
+        self.entry_stats(entry, entry.index(cards)?, cards, caps)
+    }
+
+    #[must_use]
     #[expect(
         clippy::arithmetic_side_effects,
         reason = "It's a u32 even the highest stat UR at level 500 with max gallery
         only hits like 70k."
     )]
-    pub fn base_stats(&self, id: EntryId, cards: &CardDb, caps: &LevelCaps) -> Option<[u32; 3]> {
-        let entry = self.get(id)?;
-        let i = cards.index(entry.card_id())?.0 as usize;
+    pub fn entry_stats(
+        &self,
+        entry: DeckEntry,
+        i: CardIdx,
+        cards: &CardDb,
+        caps: &LevelCaps,
+    ) -> Option<[u32; 3]> {
+        let i = usize::from(i.0);
         let (card, meta) = (cards.cards.get(i)?, cards.meta.get(i)?);
         let expandable = meta.rarity == Rarity::UR && entry.form() == Form::Idolized;
         let bonus = if expandable {
@@ -539,7 +566,22 @@ pub(crate) mod tests {
 
     #[test]
     fn check_hp_derived() {
-        assert_eq!(size_of::<DeckEntry>(), 8);
+        // `hp` landed in padding at 8; the index hint is the 2 past it.
+        assert_eq!(size_of::<DeckEntry>(), 10);
+    }
+
+    #[test]
+    fn check_card_entry_index() {
+        let (db, mut d) = (cards(), deck());
+        let (id, _) = d.add(&db, 2, false, 1, 8, 100).unwrap();
+        let entry = d.get(id).unwrap();
+        let right = db.index(2);
+        assert_eq!(entry.at, 1, "vet stored it");
+        assert_eq!(entry.index(&db), right);
+        for at in [0, u16::MAX] {
+            assert_eq!(DeckEntry { at, ..entry }.index(&db), right, "{at}");
+        }
+        assert_eq!(DeckEntry { card_id: 9, ..entry }.index(&db), None);
     }
 
     #[test]

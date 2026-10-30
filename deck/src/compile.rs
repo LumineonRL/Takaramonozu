@@ -10,7 +10,7 @@
 
 use core::num::NonZeroU8;
 
-use simulator::accessory::AccessoryRows;
+use simulator::accessory::{Accessory, AccessoryRows, AccessorySkillDef, StatRows};
 use simulator::card::{Card, CardDb, LeaderSkill, LeaderTargets};
 use simulator::play::Scoring;
 use simulator::play::activation::{AMP_LEVELS, AccessorySkill, Payload, Skill};
@@ -24,7 +24,7 @@ use simulator::song::Matching;
 use crate::activation_limit;
 use crate::card::DeckEntry;
 use crate::level_cap::LevelCaps;
-use crate::manager::{EntryId, Manager};
+use crate::manager::Manager;
 use crate::team::{CENTER, Context, LANES, Team};
 
 /// The tap bonus the heart count is capped one step past.
@@ -42,7 +42,8 @@ const NO_MATCH: u16 = 100;
 const ONE_MATCH: u16 = 110;
 const BOTH_MATCH: u16 = 121;
 const MILLI_UNIT: u32 = 1000;
-const PAYOUT_DIVISOR: u64 = MILLI_UNIT as u64 * 100;
+const KEEP: Milli = MILLI_UNIT * 100;
+const PAYOUT_DIVISOR: u64 = KEEP as u64;
 const CHARM: u32 = 2500;
 const HEAL: u32 = 480_000;
 
@@ -236,29 +237,42 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
     let mut out = Compiled::default();
     let mut sums = [Sums::default(); LANES];
     let mut chars = [None; LANES];
-    let mut years = [None; LANES];
+    let mut targets = [[None; 2]; LANES];
     let mut all = [0_u32; 3];
     let mut grouped = false;
     let mut center = None;
 
-    for (lane, (((dst, lane_sums), who), year)) in
-        out.slots.iter_mut().zip(&mut sums).zip(&mut chars).zip(&mut years).enumerate()
+    for (lane, (((dst, lane_sums), who), reach)) in out
+        .slots
+        .iter_mut()
+        .zip(&mut sums)
+        .zip(&mut chars)
+        .zip(&mut targets)
+        .enumerate()
     {
         let Some(slot) = team.slot(lane) else {
             continue;
         };
-        let (Some(card), Some(entry)) = (ctx.card(slot.card()), ctx.deck.get(slot.card())) else {
+        // Each lane's card and accessory are searched for once.
+        let Some(entry) = ctx.deck.get(slot.card()) else {
             continue;
         };
-        let Some(base) = ctx.deck.base_stats(slot.card(), ctx.cards, caps) else {
+        let Some(i) = entry.index(ctx.cards) else {
             continue;
         };
+        let (Some(card), Some(base)) = (
+            ctx.cards.cards.get(usize::from(i.0)),
+            ctx.deck.entry_stats(entry, i, ctx.cards, caps),
+        ) else {
+            continue;
+        };
+        let worn = slot.accessory().and_then(|w| ctx.accessory(w));
 
         // Base stats from cards and accs
         dst.stats = base;
         lane_sums.base = base;
-        if let Some(acc) = slot.accessory().and_then(|a| ctx.accessories.stats(a, ctx.acc_db)) {
-            for (s, a) in dst.stats.iter_mut().zip(acc.0) {
+        if let Some((acc, level)) = worn {
+            for (s, a) in dst.stats.iter_mut().zip(ctx.acc_db.stats.get(acc.stats, level).0) {
                 *s = s.saturating_add(u32::from(a));
             }
         }
@@ -283,24 +297,17 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
             }
         }
 
-        let (skill, duration, hp, amped) = resolve(card, entry, ctx.cards, dst.sis);
-        let (accessory, worn_duration, worn_hp, worn_amped) = slot
-            .accessory()
-            .map_or(NO_ACCESSORY, |worn| resolve_accessory(worn, ctx, dst.sis));
-        (dst.skill, dst.accessory) = (skill, accessory);
-        (dst.durations, dst.heals) = ([duration, worn_duration], [hp, worn_hp]);
-        dst.amplified = [amped, worn_amped];
-        dst.spark = slot.accessory().map_or(0, |worn| spark(worn, ctx));
-        if dst.skill.trigger == TriggerType::YearGroup {
-            *year = skill_target(card, ctx.cards);
-        }
+        *reach = skills(dst, card, entry, worn, ctx);
     }
 
     // I hate the name seats but slots is taken and year group cards (and other skill effects in the future)
     // need to track "Which characters are on this team".
     let seats = seats(&chars);
-    for (((dst, &seat), who), year) in out.slots.iter_mut().zip(&seats).zip(chars).zip(years) {
+    for (((dst, &seat), who), [target, _]) in
+        out.slots.iter_mut().zip(&seats).zip(chars).zip(targets)
+    {
         dst.member = seat;
+        let year = target.filter(|_| dst.skill.trigger == TriggerType::YearGroup);
         if let (Some(who), Some(year)) = (who, year) {
             dst.skill.threshold = waits_for(year, who, &chars, &seats);
         }
@@ -340,17 +347,43 @@ pub fn compile(team: &Team, ctx: Context, caps: &LevelCaps, song: Matching) -> C
         out.trick = out.trick.saturating_add(pick(slot.trick, song.attribute));
     }
     out.team_strength = pick(out.totals, song.attribute);
-    reaches(&mut out.slots, team, ctx, &chars, song.attribute);
+    reaches(&mut out.slots, &targets, &chars, song.attribute);
     out.per_heart = heart_bonus(out.max_hp);
     out.max_hearts = max_hearts(out.per_heart);
     out
 }
 
-/// A lane skill (value, duration) when Amp is active.
-type Resolved<S> = (S, Ms, u8, [Payload; AMP_LEVELS]);
+/// This was originally part of `compile` but clippy rightfully yelled at me for `too_many_lines`
+/// so here's some of it taken out.
+fn skills(
+    dst: &mut Slot,
+    card: &Card,
+    entry: DeckEntry,
+    worn: Option<(&Accessory, u8)>,
+    ctx: Context,
+) -> [Option<CharacterSet>; 2] {
+    let [card_rows, worn_rows] = &mut dst.amplified;
+    let (skill, duration, hp) = resolve(card, entry, ctx.cards, dst.sis, card_rows);
+    let worn = worn.and_then(|(acc, level)| Some((ctx.acc_db.skills.def(acc.skill)?, level)));
+    let (accessory, worn_duration, worn_hp) = worn.map_or(NO_ACCESSORY, |(def, level)| {
+        resolve_accessory(def, level, ctx, dst.sis, worn_rows)
+    });
+    (dst.skill, dst.accessory) = (skill, accessory);
+    (dst.durations, dst.heals) = ([duration, worn_duration], [hp, worn_hp]);
+    dst.spark = worn.map_or(0, |(def, _)| spark(def));
+    [
+        skill_target(card, ctx.cards),
+        worn.and_then(|(def, _)| ctx.acc_db.targets.set(def.target?)),
+    ]
+}
 
-const NO_ACCESSORY: Resolved<AccessorySkill> =
-    (AccessorySkill::NONE, 0, 0, [Payload { value: 0, duration: 0, extra: 0 }; AMP_LEVELS]);
+/// A lane's skill, duration, and heal value. That means at most one of the card or acc skill.
+/// For performance reasons. Previously returning this carried all rows for Amplify resolutions,
+/// which was a fat 128 byte copy. Now the `resolve` skill handles that.
+type Resolved<S> = (S, Ms, u8);
+
+/// small opt so teams with no accessory never need to call `resolve_accessory`.
+const NO_ACCESSORY: Resolved<AccessorySkill> = (AccessorySkill::NONE, 0, 0);
 
 /// Trigger at the card's skill level
 /// Payload at the value of the amp's skill level
@@ -359,16 +392,21 @@ const NO_ACCESSORY: Resolved<AccessorySkill> =
 /// For the SIF nerds out there, there was a modeling decision to pad every skill to 16 levels
 /// even lower rarities that might cap at only 11 like SRs. For performance it's easier to just
 /// pre-pad them all to 16 so in the hot loop we only worry about clamping to one value.
-fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> Resolved<Skill> {
+fn resolve(
+    card: &Card,
+    entry: DeckEntry,
+    cards: &CardDb,
+    sis: SisFlags,
+    rows: &mut [Payload; AMP_LEVELS],
+) -> Resolved<Skill> {
     let Some(def) = card.skill.and_then(|id| cards.skills.def(id)) else {
-        return (Skill::NONE, 0, 0, NO_ACCESSORY.3);
+        return (Skill::NONE, 0, 0);
     };
     let level = entry.skill_level();
     let trigger = cards.skills.trigger(def, level);
     let (value, duration) = cards.skills.payload(def, level);
-    let amped = amplify(def.effect, level, sis, |at| cards.skills.payload(def, at));
+    amplify(rows, def.effect, level, sis, |at| cards.skills.payload(def, at));
 
-    // TODO: Every other effect
     let skill = Skill {
         value: points(def.effect, value, sis),
         chance: rate(trigger.chance),
@@ -377,56 +415,57 @@ fn resolve(card: &Card, entry: DeckEntry, cards: &CardDb, sis: SisFlags) -> Reso
         trigger: def.trigger_type,
         limit: activation_limit::of(entry.card_id()),
     };
-    (skill, duration, heal(def.effect, value), amped)
+    (skill, duration, heal(def.effect, value))
 }
 
-fn resolve_accessory(worn: EntryId, ctx: Context, sis: SisFlags) -> Resolved<AccessorySkill> {
-    let Some((accessory, level)) = ctx.accessory(worn) else {
-        return NO_ACCESSORY;
-    };
-    let Some(def) = ctx.acc_db.skills.def(accessory.skill) else {
-        return NO_ACCESSORY;
-    };
+fn resolve_accessory(
+    def: &AccessorySkillDef,
+    level: u8,
+    ctx: Context,
+    sis: SisFlags,
+    rows: &mut [Payload; AMP_LEVELS],
+) -> Resolved<AccessorySkill> {
     let (value, duration) = ctx.acc_db.skills.payload(def, level);
-    let amped = amplify(def.effect, level, sis, |at| ctx.acc_db.skills.payload(def, at));
+    amplify(rows, def.effect, level, sis, |at| ctx.acc_db.skills.payload(def, at));
 
     let skill = AccessorySkill {
         value: points(def.effect, value, sis),
         chance: rate(ctx.acc_db.skills.chance(def, level)),
         effect: def.effect,
     };
-    (skill, duration, heal(def.effect, value), amped)
+    (skill, duration, heal(def.effect, value))
 }
 
 /// Spark's threshold (or just 0 for every other acc)
-fn spark(worn: EntryId, ctx: Context) -> u8 {
-    let Some((accessory, _)) = ctx.accessory(worn) else {
-        return 0;
-    };
-    let def = ctx.acc_db.skills.def(accessory.skill);
-    def.filter(|def| def.effect == SkillEffect::Spark)
-        .map_or(0, |def| def.threshold)
+fn spark(def: &AccessorySkillDef) -> u8 {
+    if def.effect == SkillEffect::Spark {
+        def.threshold
+    } else {
+        0
+    }
 }
 
 /// The number of skill levels to increase the card's skill level by, 1-16 inclusive.
 /// Clipped to 16 if that number comes out to more than 16.
 /// An Appeal Boost's rows become points in `reaches`.
 fn amplify(
+    rows: &mut [Payload; AMP_LEVELS],
     effect: SkillEffect,
     level: u8,
     sis: SisFlags,
     payload: impl Fn(u8) -> (Centi, Ms),
-) -> [Payload; AMP_LEVELS] {
+) {
+    let factor = factor(effect, sis);
     let mut above = level;
-    [(); AMP_LEVELS].map(|()| {
+    for row in rows {
         above = above.saturating_add(1);
         let (value, duration) = payload(above);
-        Payload {
-            value: points(effect, value, sis),
+        *row = Payload {
+            value: payout(value, factor),
             duration,
             extra: u16::from(heal(effect, value)),
-        }
-    })
+        };
+    }
 }
 
 fn skill_target(card: &Card, cards: &CardDb) -> Option<CharacterSet> {
@@ -439,20 +478,16 @@ fn skill_target(card: &Card, cards: &CardDb) -> Option<CharacterSet> {
 /// pre-computed from each lane's final stat, so this is the very end of stat calc.
 fn reaches(
     slots: &mut [Slot; LANES],
-    team: &Team,
-    ctx: Context,
+    targets: &[[Option<CharacterSet>; 2]; LANES],
     chars: &[Option<CharacterId>; LANES],
     attribute: Attribute,
 ) {
     let strengths = slots.map(|s| pick(s.stats, attribute));
-    for (lane, (dst, &strength)) in (0_u32..).zip(slots.iter_mut().zip(&strengths)) {
+    for (lane, ((dst, &strength), &[card, worn])) in
+        (0_u32..).zip(slots.iter_mut().zip(&strengths).zip(targets))
+    {
         dst.strength = strength;
-        let Some(slot) = team.slot(lane as usize) else {
-            continue;
-        };
         let own = 1_u16.checked_shl(lane).unwrap_or(0);
-        let card = ctx.card(slot.card()).and_then(|card| skill_target(card, ctx.cards));
-        let worn = slot.accessory().and_then(|worn| accessory_target(worn, ctx));
         let [(card_reach, card_boost), (worn_reach, worn_boost)] = [
             reach(dst.skill.effect, &mut dst.skill.value, card, own, chars, &strengths),
             reach(dst.accessory.effect, &mut dst.accessory.value, worn, own, chars, &strengths),
@@ -460,17 +495,26 @@ fn reaches(
         dst.targets = [card_reach, worn_reach];
         dst.boosts = [card_boost, worn_boost];
         let [card_rows, worn_rows] = &mut dst.amplified;
-        for (effect, rows, set) in [
-            (dst.skill.effect, card_rows, card),
-            (dst.accessory.effect, worn_rows, worn),
-        ] {
-            for row in rows.iter_mut() {
-                let (_, percent) = reach(effect, &mut row.value, set, own, chars, &strengths);
-                if effect == SkillEffect::AppealBoost {
-                    row.extra = percent;
-                }
-            }
-        }
+        boosted_rows(dst.skill.effect, card_rows, card, chars, &strengths);
+        boosted_rows(dst.accessory.effect, worn_rows, worn, chars, &strengths);
+    }
+}
+
+/// Essentially `reach` on each amplified row.
+/// Only an Param Boost's rows actually change though so every other affect skips them.
+fn boosted_rows(
+    effect: SkillEffect,
+    rows: &mut [Payload; AMP_LEVELS],
+    set: Option<CharacterSet>,
+    chars: &[Option<CharacterId>; LANES],
+    strengths: &[u32; LANES],
+) {
+    if effect != SkillEffect::AppealBoost {
+        return;
+    }
+    for row in rows {
+        row.extra = u16::try_from(row.value).unwrap_or(u16::MAX);
+        row.value = appeal(row.value, set, chars, strengths);
     }
 }
 
@@ -513,12 +557,6 @@ fn lanes(target: Option<CharacterSet>, chars: &[Option<CharacterId>; LANES]) -> 
         .zip(chars)
         .filter(|(_, who)| who.is_some_and(|c| set.contains(c)))
         .fold(0, |mask, (lane, _)| mask | 1_u16.checked_shl(lane).unwrap_or(0))
-}
-
-fn accessory_target(worn: EntryId, ctx: Context) -> Option<CharacterSet> {
-    let (accessory, _) = ctx.accessory(worn)?;
-    let def = ctx.acc_db.skills.def(accessory.skill)?;
-    ctx.acc_db.targets.set(def.target?)
 }
 
 /// `ceil(stat * value%)` on every lane that has a character that targets it.
@@ -581,25 +619,46 @@ const fn rate(chance: Pct) -> Rate {
 /// And Amplify's levels.
 /// Appeal Boost stays a percent here and becomes points once every lane's stat is known.
 fn points(effect: SkillEffect, value: Centi, sis: SisFlags) -> Centi {
+    payout(value, factor(effect, sis))
+}
+
+/// Computes a base multiplier based on skill/sis.
+/// Previously, card's skills and accessories were both stored individually
+/// for all 16 possible values they could take. This was done by looping
+/// over the values at each skill level, and doing a match one-by-one
+/// to determine if the skill needed any special treatment. This was redundant -
+/// the match would always return the exact same value because the effect variant itself doesn't
+/// change with levels.
+///
+/// So now the multiplier for the values of a given skill are pre-computed once
+/// and then used for every single one of the 16 rows for that card or acc's skill.
+const fn factor(effect: SkillEffect, sis: SisFlags) -> Milli {
     match effect {
-        SkillEffect::Scorer => payout(value, if sis.charm() { CHARM } else { MILLI_UNIT }),
-        SkillEffect::Healer => payout(value, if sis.heal() { HEAL } else { 0 }),
-        SkillEffect::ComboFever | SkillEffect::PerfectScoreUp | SkillEffect::Spark => {
-            payout(value, MILLI_UNIT)
+        SkillEffect::Scorer => {
+            if sis.charm() {
+                CHARM
+            } else {
+                MILLI_UNIT
+            }
         }
-        SkillEffect::Amplify => levels(value),
+        SkillEffect::Healer => {
+            if sis.heal() {
+                HEAL
+            } else {
+                0
+            }
+        }
+        SkillEffect::ComboFever
+        | SkillEffect::PerfectScoreUp
+        | SkillEffect::Spark
+        | SkillEffect::Amplify => MILLI_UNIT,
         SkillEffect::PerfectLock
         | SkillEffect::Encore
         | SkillEffect::TotalTrick
         | SkillEffect::SkillRateUp
         | SkillEffect::AppealBoost
-        | SkillEffect::Sync => value,
+        | SkillEffect::Sync => KEEP,
     }
-}
-
-#[expect(clippy::integer_division, reason = "exact")]
-const fn levels(value: Centi) -> Centi {
-    value / 100
 }
 
 #[expect(clippy::integer_division, reason = "exact")]
@@ -706,8 +765,8 @@ fn bit(c: CharacterId) -> u128 {
 #[cfg(test)]
 mod tests {
     use super::{
-        BOTH_MATCH, Compiled, MAX_TABLE_HP, MIN_TABLE_HP, NO_MATCH, ONE_MATCH, appeal, compile,
-        heart_bonus, lanes, max_hearts, percent, reach, seats, waits_for,
+        BOTH_MATCH, Compiled, MAX_TABLE_HP, MIN_TABLE_HP, NO_MATCH, ONE_MATCH, SisFlags, appeal,
+        compile, heart_bonus, lanes, max_hearts, percent, points, reach, seats, waits_for,
     };
     use crate::accessory::{Accessories, tests::accessories};
     use crate::card::{Deck, Gallery, tests::cards};
@@ -1009,6 +1068,32 @@ mod tests {
         let hp: Vec<u16> = slot.amplified[1].iter().map(|row| row.extra).collect();
         assert_eq!(hp[..6], [4, 5, 6, 7, 8, 8]);
         assert_eq!(slot.amplified[1][0].value, 4 * 480);
+    }
+
+    /// Ensures that the `factor` method maps multipliers correctly.
+    /// (`points` is what calls the `factor` method)
+    #[test]
+    #[expect(
+        clippy::integer_division,
+        reason = "How else would you test division by 100 to make sure the scale is correct. Multiplicative inverse I guess? In a test, though?"
+    )]
+    fn check_factors() {
+        let kept = [
+            SkillEffect::PerfectLock,
+            SkillEffect::Encore,
+            SkillEffect::TotalTrick,
+            SkillEffect::SkillRateUp,
+            SkillEffect::AppealBoost,
+            SkillEffect::Sync,
+        ];
+        for value in [0, 1, 99, 100, 101, 385, 14_824_000, u32::MAX] {
+            for sis in [SisFlags(0), SisFlags(3)] {
+                assert_eq!(points(SkillEffect::Amplify, value, sis), value / 100, "{value}");
+                for effect in kept {
+                    assert_eq!(points(effect, value, sis), value, "{effect:?} {value}");
+                }
+            }
+        }
     }
 
     /// card heals 4, acc 8.

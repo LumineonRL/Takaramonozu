@@ -55,21 +55,21 @@ impl<'a> Context<'a> {
     }
 
     fn equipped_by(self, entry: EntryId) -> Option<(u16, &'a Card)> {
-        let card_id = self.deck.get(entry)?.card_id();
-        let card = self.cards.cards.get(usize::from(self.cards.index(card_id)?.0))?;
-        Some((card_id, card))
+        let entry = self.deck.get(entry)?;
+        let card = self.cards.cards.get(usize::from(entry.index(self.cards)?.0))?;
+        Some((entry.card_id(), card))
     }
 
     #[must_use]
     pub fn accessory(self, entry: EntryId) -> Option<(&'a Accessory, u8)> {
         let owned = self.accessories.get(entry)?;
-        let i = usize::from(self.acc_db.index(owned.acc_id())?.0);
+        let i = usize::from(owned.index(self.acc_db)?.0);
         Some((self.acc_db.accessories.get(i)?, owned.skill_level()))
     }
 
     fn accessory_equips(self, acc: EntryId, card_id: u16, equipped_by: &Card) -> Option<bool> {
         let owned = self.accessories.get(acc)?;
-        let meta = self.acc_db.meta.get(usize::from(self.acc_db.index(owned.acc_id())?.0))?;
+        let meta = self.acc_db.meta.get(usize::from(owned.index(self.acc_db)?.0))?;
         Some(meta.equips(owned.skill_level(), card_id, equipped_by.character))
     }
 

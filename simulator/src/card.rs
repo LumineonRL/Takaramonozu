@@ -176,6 +176,17 @@ impl CardDb {
         Some(CardIdx(i as u16))
     }
 
+    /// Tries to jump to directly to the row number if available (and it always should be)
+    /// and if it's not it defaults to doing a binary search on the id to find the right
+    /// location.
+    #[must_use]
+    pub fn index_with_hint(&self, card_id: u16, hint: CardIdx) -> Option<CardIdx> {
+        match self.meta.get(usize::from(hint.0)) {
+            Some(meta) if meta.card_id == card_id => Some(hint),
+            _ => self.index(card_id),
+        }
+    }
+
     #[must_use]
     pub fn len(&self) -> usize {
         self.cards.len()
