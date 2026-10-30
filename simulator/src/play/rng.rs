@@ -80,7 +80,7 @@ impl Rng {
     /// to have their rolls pre-computed up front like this.
     ///
     /// Much of this is a vectorized version of the existing `pcg32` from the `rand_pcg` crate.
-    /// See https://github.com/rust-random/rngs/blob/master/rand_pcg/src/pcg64.rs for more details.
+    /// See <https://github.com/rust-random/rngs/blob/master/rand_pcg/src/pcg64.rs> for more details.
     /// Alsoalso yes, the linked file is pcg64, but pcg32 lives in there and the code here is pcg32.
     #[expect(clippy::indexing_slicing, reason = "split into batches so it vectorizes.")]
     pub fn roll_into(&mut self, rate: Rate, slots: &mut [bool]) -> usize {
@@ -129,7 +129,7 @@ fn cut(rate: Rate) -> u32 {
 const BATCH: usize = 16;
 
 /// Copied directly from:
-/// https://github.com/rust-random/rngs/blob/84683fcacf9a5e346a945d1f620c772f91b4b82d/rand_pcg/src/pcg64.rs#L19
+/// <https://github.com/rust-random/rngs/blob/84683fcacf9a5e346a945d1f620c772f91b4b82d/rand_pcg/src/pcg64.rs#L19>
 const MULTIPLIER: u64 = 6_364_136_223_846_793_005;
 
 const fn step((mult, sum): (u64, u64)) -> (u64, u64) {
@@ -153,7 +153,7 @@ const LANES: [(u64, u64); BATCH] = {
 
 const JUMP: (u64, u64) = step(LANES[BATCH - 1]);
 
-/// See https://github.com/rust-random/rngs/blob/84683fcacf9a5e346a945d1f620c772f91b4b82d/rand_pcg/src/pcg64.rs#L149
+/// See <https://github.com/rust-random/rngs/blob/84683fcacf9a5e346a945d1f620c772f91b4b82d/rand_pcg/src/pcg64.rs#L149>
 #[inline(always)]
 #[expect(clippy::cast_possible_truncation, reason = "XSH RR keeps the low 32 bits")]
 const fn output(state: u64) -> u32 {
