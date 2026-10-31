@@ -305,7 +305,7 @@ mod tests {
         }
     }
 
-    /// combo_note is just combo multiplier * note multiplier
+    /// `combo_note` is just combo multiplier * note multiplier
     #[test]
     fn check_combo_note() {
         let stream: Vec<_> = (0_u32..120)

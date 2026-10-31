@@ -164,7 +164,7 @@ const fn output(state: u64) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{Rng, cut};
+    use super::{Pcg32, Rng, cut, mix};
     use crate::scalar::RATE_UNIT;
 
     #[test]
@@ -208,14 +208,21 @@ mod tests {
     /// `u64::MAX` is to test a stream with its top bit set.
     #[test]
     fn check_roll_into() {
+        let make = |seed, stream| {
+            if stream == u64::MAX {
+                Rng(Pcg32::new(mix(seed, 0), stream))
+            } else {
+                Rng::new(seed, stream)
+            }
+        };
         for stream in [Rng::SKILLS, Rng::ACCURACY, Rng::SYNC, Rng::COIN, u64::MAX] {
             for seed in [0, 1, 2, 0x5C00_1D01, u64::MAX] {
                 for len in [0, 1, 2, 15, 16, 17, 31, 32, 33, 100, 1131] {
                     for rate in [0, 1, 3, 4999, 9250, RATE_UNIT - 1, RATE_UNIT, 20_000] {
-                        let mut one = Rng::new(seed, stream);
+                        let mut one = make(seed, stream);
                         let want: Vec<bool> =
                             core::iter::repeat_with(|| one.roll(rate)).take(len).collect();
-                        let mut batch = Rng::new(seed, stream);
+                        let mut batch = make(seed, stream);
                         let mut got = vec![false; len];
                         let hits = batch.roll_into(rate, &mut got);
                         let case = format!("stream {stream} seed {seed} len {len} rate {rate}");
