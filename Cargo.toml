@@ -27,6 +27,10 @@ panic = "abort"
 strip = "symbols"
 debug = false
 
+# Test build was OOMing my WSL because the binary was too big LMAO
+[profile.dev.package.simulator]
+debug = "line-tables-only"
+
 [profile.profiling]
 inherits = "release"
 debug = "line-tables-only"
