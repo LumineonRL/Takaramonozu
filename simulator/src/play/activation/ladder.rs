@@ -4,7 +4,7 @@ use super::chain::Chain;
 use super::fire;
 use crate::play::effect::Lasting;
 use crate::play::rng::Rng;
-use crate::play::{Outcome, Scoring};
+use crate::play::{Outcome, Paid, Scoring};
 use crate::song::{LANES, Time};
 
 /// I wonder how SIF ran on devices that went past 60 FPS. I think it was still hard-capped at 60?
@@ -148,9 +148,11 @@ impl Ladder {
         chain: &mut Chain,
         expiry: &mut impl Lasting<'q>,
     ) {
+        let paid;
         let climbed =
             self.rungs.climb::<YEAR>(first, now, scoring, rng.clone(), *out, chain, expiry);
-        (*rng, *out, self.low, self.pending) = climbed;
+        (*rng, paid, self.low, self.pending) = climbed;
+        out.take(paid);
     }
 
     #[inline(always)]
@@ -174,7 +176,9 @@ impl Ladder {
                 chain,
                 expiry,
             );
-            (*rng, *out, self.low, self.pending) = owed;
+            let paid;
+            (*rng, paid, self.low, self.pending) = owed;
+            out.take(paid);
         }
     }
 }
@@ -222,13 +226,15 @@ impl Rungs {
         mut out: Outcome,
         chain: &mut Chain,
         expiry: &mut impl Lasting<'q>,
-    ) -> (Rng, Outcome, u64, Time) {
+    ) -> (Rng, Paid, u64, Time) {
         let mut low = 0;
         while pending < until {
-            (rng, out, low, pending) =
+            let paid;
+            (rng, paid, low, pending) =
                 self.climb::<YEAR>(0, pending, scoring, rng, out, chain, expiry);
+            out.take(paid);
         }
-        (rng, out, low, pending)
+        (rng, out.paid(), low, pending)
     }
 
     /// increments the score counter for score-based scorers.
@@ -243,7 +249,7 @@ impl Rungs {
         mut out: Outcome,
         chain: &mut Chain,
         expiry: &mut impl Lasting<'q>,
-    ) -> (Rng, Outcome, u64, Time) {
+    ) -> (Rng, Paid, u64, Time) {
         let (mut due, mut low, mut pending) = (first, 0, NO_PASS);
         loop {
             if out.score() >= low {
@@ -251,7 +257,7 @@ impl Rungs {
                 (due, low, pending) = (due | taken, next, owed);
             }
             if due == 0 {
-                return (rng, out, low, pending);
+                return (rng, out.paid(), low, pending);
             }
             let landed = fire_landed(due, now, scoring, &mut rng, &mut out, expiry);
             if self.spend(landed) {

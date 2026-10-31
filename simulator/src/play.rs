@@ -97,6 +97,29 @@ impl Outcome {
     pub const fn score(&self) -> u64 {
         self.tap.saturating_add(self.skill)
     }
+
+    #[inline(always)]
+    const fn paid(&self) -> Paid {
+        Paid {
+            skill: self.skill,
+            activations: self.activations,
+            accessory_activations: self.accessory_activations,
+        }
+    }
+
+    #[inline(always)]
+    const fn take(&mut self, paid: Paid) {
+        self.skill = paid.skill;
+        self.activations = paid.activations;
+        self.accessory_activations = paid.accessory_activations;
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Paid {
+    skill: u64,
+    activations: u32,
+    accessory_activations: u32,
 }
 
 #[must_use]
@@ -199,7 +222,8 @@ where
                 &mut expiry,
             );
             if E::ANY && expiry.next() <= at {
-                (rng, out) = release::<SCORE, YEAR, _>(
+                let paid;
+                (rng, paid) = release::<SCORE, YEAR, _>(
                     at,
                     scoring,
                     rng,
@@ -208,6 +232,7 @@ where
                     &mut chain,
                     &mut expiry,
                 );
+                out.take(paid);
                 continue;
             }
             if SCORE {
@@ -425,14 +450,14 @@ fn release<'q, const SCORE: bool, const YEAR: bool, E>(
     ladder: &mut Ladder,
     chain: &mut Chain,
     expiry: &mut E,
-) -> (Rng, Outcome)
+) -> (Rng, Paid)
 where
     E: Lasting<'q>,
 {
     if E::PSU || E::PARAM {
         expiry.expire(at, out.perfects);
         if expiry.next() > at {
-            return (rng, out);
+            return (rng, out.paid());
         }
     }
     if SCORE {
@@ -444,7 +469,7 @@ where
     } else {
         moment::<YEAR>(due, at, scoring, &mut rng, &mut out, chain, expiry);
     }
-    (rng, out)
+    (rng, out.paid())
 }
 
 struct Spawns<'a> {
@@ -502,7 +527,8 @@ impl Spawns<'_> {
                         stop = stop.min(expiry.next());
                     }
                     while LAST && E::ANY && expiry.next() == bound && self.firing(offset) >= bound {
-                        (*rng, *out) = release::<SCORE, YEAR, _>(
+                        let paid;
+                        (*rng, paid) = release::<SCORE, YEAR, _>(
                             bound,
                             scoring,
                             rng.clone(),
@@ -511,6 +537,7 @@ impl Spawns<'_> {
                             chain,
                             expiry,
                         );
+                        out.take(paid);
                     }
                 }
             }
@@ -518,8 +545,10 @@ impl Spawns<'_> {
                 return;
             }
             core::hint::cold_path();
-            (*rng, *out) =
+            let paid;
+            (*rng, paid) =
                 release::<SCORE, YEAR, _>(stop, scoring, rng.clone(), *out, ladder, chain, expiry);
+            out.take(paid);
             stop = bound.min(expiry.next());
         }
     }

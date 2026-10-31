@@ -52,7 +52,7 @@ impl Chain {
             }
         }
         if due != 0 {
-            (*rng, *out) = self.round(due, now, scoring, rng.clone(), *out, expiry);
+            *rng = self.round(due, now, scoring, rng.clone(), out, expiry);
         }
     }
 
@@ -64,15 +64,15 @@ impl Chain {
         now: Time,
         scoring: &Scoring,
         mut rng: Rng,
-        mut out: Outcome,
+        out: &mut Outcome,
         expiry: &mut impl Lasting<'q>,
-    ) -> (Rng, Outcome) {
+    ) -> Rng {
         expiry.begin();
         let mut bits = due;
         while let Some(lane) = bits.highest_one() {
             let bit = bits.isolate_highest_one();
             bits ^= bit;
-            if fire::<true, false, _>(bit, now, scoring, &mut rng, &mut out, expiry) != 0 {
+            if fire::<true, false, _>(bit, now, scoring, &mut rng, out, expiry) != 0 {
                 let member = scoring.members[lane as usize];
                 let mut others = self.lanes;
                 while let Some(other) = others.lowest_one() {
@@ -82,7 +82,7 @@ impl Chain {
             }
         }
         expiry.end();
-        (rng, out)
+        rng
     }
 }
 
