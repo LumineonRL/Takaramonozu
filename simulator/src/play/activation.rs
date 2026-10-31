@@ -104,7 +104,7 @@ impl Schedule {
     /// Neverrrrr
     #[expect(clippy::arithmetic_side_effects, reason = "`bounded by threshold")]
     #[expect(clippy::expect_used, reason = "9 lanes fit u16 no problemo so we gucci.")]
-    fn build(count: u32, unit: u32, skills: &[Skill; LANES], clock: TriggerType) -> Self {
+    fn rebuild(&mut self, count: u32, unit: u32, skills: &[Skill; LANES], clock: TriggerType) {
         const { assert!(LANES <= u16::BITS as usize, "u16") };
 
         // Most teams don't have most skill trigger types, so don't even check
@@ -116,12 +116,16 @@ impl Schedule {
                 bound = bound.saturating_add(firings as usize);
             }
         }
-        let mut out = Self {
-            at: Vec::with_capacity(bound),
-            lanes: Vec::with_capacity(bound),
-        };
+        if bound == 1 && self.at.capacity() == 0 {
+            *self = Self { at: vec![u32::MAX], lanes: vec![0] };
+            return;
+        }
+        self.at.clear();
+        self.lanes.clear();
         if bound > 1 {
-            let mut dense = vec![0_u16; count as usize + 1];
+            self.at.reserve(bound);
+            let dense = &mut self.lanes;
+            dense.resize(count as usize + 1, 0);
             for (lane, skill) in skills.iter().enumerate() {
                 if skill.trigger != clock || skill.threshold == 0 {
                     continue;
@@ -136,16 +140,18 @@ impl Schedule {
                     at += step;
                 }
             }
-            for (at, &mask) in dense.iter().enumerate() {
+            let firings = &mut self.at;
+            let mut at = 0_u32;
+            dense.retain(|&mask| {
                 if mask != 0 {
-                    out.at.push(u32::try_from(at).unwrap_or(u32::MAX).saturating_mul(unit));
-                    out.lanes.push(mask);
+                    firings.push(at.saturating_mul(unit));
                 }
-            }
+                at += 1;
+                mask != 0
+            });
         }
-        out.at.push(u32::MAX);
-        out.lanes.push(0);
-        out
+        self.at.push(u32::MAX);
+        self.lanes.push(0);
     }
 
     pub(super) fn columns(&self) -> (&[u32], &[u16]) {
@@ -193,32 +199,61 @@ pub struct Triggers {
 impl Triggers {
     #[must_use]
     pub fn build(queue: &Queue, scoring: &Scoring) -> Self {
+        let empty = || Schedule { at: Vec::new(), lanes: Vec::new() };
+        let mut out = Self {
+            icons: empty(),
+            combo: empty(),
+            perfects: empty(),
+            time: empty(),
+            stars: empty(),
+            score: 0,
+            year: 0,
+            lasting: 0,
+            tricks: 0,
+            heals: 0,
+            fever: 0,
+            psu: 0,
+            sru: 0,
+            param: 0,
+            sync: 0,
+            amp: 0,
+            encore: 0,
+            spark: 0,
+        };
+        out.rebuild(queue, scoring);
+        out
+    }
+
+    /// This is for the optimizer when it's searching many many many times. Previously, the team would
+    /// be reconstructed from scratch every time *any* change was made to the team (actually, even if no
+    /// change was made, it would still start fresh).
+    /// Now it keeps one copy in memory and simply writes over that on whatever changes from
+    /// team to team (or song to song).
+    pub fn rebuild(&mut self, queue: &Queue, scoring: &Scoring) {
         let skills = &scoring.skills;
         let seconds = queue.last_judgement().seconds();
-        Self {
-            icons: Schedule::build(queue.icons(), 1, skills, TriggerType::RhythmIcons),
-            combo: Schedule::build(queue.notes(), 1, skills, TriggerType::Combo),
-            perfects: Schedule::build(queue.notes(), 1, skills, TriggerType::Perfects),
-            time: Schedule::build(seconds, Time::SECOND, skills, TriggerType::Time),
-            stars: Schedule::build(queue.stars(), 1, skills, TriggerType::StarNotes),
-            score: lanes_on(skills, TriggerType::Score),
-            year: lanes_on(skills, TriggerType::YearGroup),
-            lasting: lanes_with(scoring, lasts),
-            tricks: lanes_with(scoring, |effect| effect == SkillEffect::TotalTrick),
-            heals: if scoring.max_hearts == 0 {
-                0
-            } else {
-                lanes_with(scoring, |effect| effect == SkillEffect::Healer)
-            },
-            fever: lanes_with(scoring, |effect| effect == SkillEffect::ComboFever),
-            psu: lanes_with(scoring, |effect| effect == SkillEffect::PerfectScoreUp),
-            sru: lanes_with(scoring, |effect| effect == SkillEffect::SkillRateUp),
-            param: lanes_with(scoring, |effect| effect == SkillEffect::AppealBoost),
-            sync: lanes_with(scoring, |effect| effect == SkillEffect::Sync),
-            amp: lanes_with(scoring, |effect| effect == SkillEffect::Amplify),
-            encore: lanes_with(scoring, |effect| effect == SkillEffect::Encore),
-            spark: lanes_with(scoring, |effect| effect == SkillEffect::Spark),
-        }
+        self.icons.rebuild(queue.icons(), 1, skills, TriggerType::RhythmIcons);
+        self.combo.rebuild(queue.notes(), 1, skills, TriggerType::Combo);
+        self.perfects.rebuild(queue.notes(), 1, skills, TriggerType::Perfects);
+        self.time.rebuild(seconds, Time::SECOND, skills, TriggerType::Time);
+        self.stars.rebuild(queue.stars(), 1, skills, TriggerType::StarNotes);
+        self.score = lanes_on(skills, TriggerType::Score);
+        self.year = lanes_on(skills, TriggerType::YearGroup);
+        self.lasting = lanes_with(scoring, lasts);
+        self.tricks = lanes_with(scoring, |effect| effect == SkillEffect::TotalTrick);
+        self.heals = if scoring.max_hearts == 0 {
+            0
+        } else {
+            lanes_with(scoring, |effect| effect == SkillEffect::Healer)
+        };
+        self.fever = lanes_with(scoring, |effect| effect == SkillEffect::ComboFever);
+        self.psu = lanes_with(scoring, |effect| effect == SkillEffect::PerfectScoreUp);
+        self.sru = lanes_with(scoring, |effect| effect == SkillEffect::SkillRateUp);
+        self.param = lanes_with(scoring, |effect| effect == SkillEffect::AppealBoost);
+        self.sync = lanes_with(scoring, |effect| effect == SkillEffect::Sync);
+        self.amp = lanes_with(scoring, |effect| effect == SkillEffect::Amplify);
+        self.encore = lanes_with(scoring, |effect| effect == SkillEffect::Encore);
+        self.spark = lanes_with(scoring, |effect| effect == SkillEffect::Spark);
     }
 
     #[must_use]
@@ -613,6 +648,7 @@ mod tests {
         ];
         let mut rng = Rng::new(7, Rng::SKILLS);
         let mut pick = |n: u16| u16::try_from(rng.below(u32::from(n))).expect("under n");
+        let mut got = Schedule { at: vec![7; 3], lanes: vec![7; 2] };
         for _ in 0..4000 {
             let count = u32::from(pick(1200));
             let skills: [Skill; LANES] = core::array::from_fn(|_| {
@@ -628,13 +664,42 @@ mod tests {
             for clock in KINDS {
                 for unit in [1, Time::SECOND] {
                     let want = schedule_skills(count, unit, &skills, clock);
-                    assert_eq!(
-                        Schedule::build(count, unit, &skills, clock),
-                        want,
-                        "{count} {clock:?}"
-                    );
+                    got.rebuild(count, unit, &skills, clock);
+                    assert_eq!(got, want, "{count} {clock:?}");
                 }
             }
+        }
+    }
+
+    /// Verifies that `rebuild` does exactly what `build` does.
+    #[test]
+    fn check_rebuild() {
+        const KINDS: [TriggerType; 7] = [
+            TriggerType::RhythmIcons,
+            TriggerType::Combo,
+            TriggerType::Perfects,
+            TriggerType::Time,
+            TriggerType::StarNotes,
+            TriggerType::Score,
+            TriggerType::YearGroup,
+        ];
+        let arena = fifty_one();
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        let mut rng = Rng::new(11, Rng::SKILLS);
+        let mut pick = |n: u16| u16::try_from(rng.below(u32::from(n))).expect("under n");
+        let mut reused = Triggers::build(&queue, &Scoring::flat(0));
+        for _ in 0..500 {
+            let mut scoring = Scoring::flat(0);
+            for skill in &mut scoring.skills {
+                if pick(3) != 0 {
+                    *skill = Skill {
+                        trigger: KINDS[usize::from(pick(7))],
+                        ..scorer(pick(30), ALWAYS, 1)
+                    };
+                }
+            }
+            reused.rebuild(&queue, &scoring);
+            assert_eq!(reused, Triggers::build(&queue, &scoring));
         }
     }
 

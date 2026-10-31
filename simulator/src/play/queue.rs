@@ -1,7 +1,7 @@
 //! The queues of events, in charge of determining what event comes next.
 //! other modules handle dispatching the event to its relevant handler.
 
-use super::tap::{combo_bonus, fever_multiplier};
+use super::tap::{combo_bonus, combo_eighths, fever_multiplier, note_multiplier};
 use crate::song::{Chart, ChartRows, Event, EventKind, LANES, Time};
 
 /// Hold notes are two events but one combo. Actually they're 3 events
@@ -54,6 +54,10 @@ pub struct Queue<'a> {
     /// Running total of combo fever multiplier.
     fever: Vec<u32>,
     buckets: Vec<u32>,
+    /// For pre-computing the multiplier at a given note.
+    combo_note: Vec<u32>,
+    /// `combo_note` / 625. For compatibility with healer teams because overheal needs extra precision.
+    combo_eighths: Vec<u16>,
 }
 
 impl<'a> Queue<'a> {
@@ -74,6 +78,8 @@ impl<'a> Queue<'a> {
         let mut stars = 0_u32;
         let mut scored = Vec::with_capacity(events.len());
         let mut fever = Vec::with_capacity(events.len());
+        let mut combo_note = Vec::with_capacity(events.len());
+        let mut eighths = Vec::with_capacity(events.len());
         let mut sum = 0_u32;
         fever.push(sum);
         for (&time, &event) in times.iter().zip(events) {
@@ -90,7 +96,10 @@ impl<'a> Queue<'a> {
             if spawns_icon(event) {
                 icons.push(time);
             }
-            combo.push(combo_bonus(notes));
+            let bonus = combo_bonus(notes);
+            combo.push(bonus);
+            eighths.push(combo_eighths(bonus, event));
+            combo_note.push(u32::from(bonus).wrapping_mul(u32::from(note_multiplier(event))));
         }
         let buckets = buckets(&scored);
         Some(Self {
@@ -104,6 +113,8 @@ impl<'a> Queue<'a> {
             scored,
             fever,
             buckets,
+            combo_note,
+            combo_eighths: eighths,
         })
     }
 
@@ -161,6 +172,14 @@ impl<'a> Queue<'a> {
         &self.combo
     }
 
+    pub(super) fn combo_note(&self) -> &[u32] {
+        &self.combo_note
+    }
+
+    pub(super) fn combo_eighths(&self) -> &[u16] {
+        &self.combo_eighths
+    }
+
     pub(super) fn buckets(&self) -> &[u32] {
         &self.buckets
     }
@@ -214,7 +233,7 @@ fn buckets(scored: &[Time]) -> Vec<u32> {
 mod tests {
     use super::{BUCKET, Queue};
     use crate::play::Scoring;
-    use crate::play::tap::fever_multiplier;
+    use crate::play::tap::{combo_eighths, fever_multiplier, note_multiplier};
     use crate::play::tests::{arena, only, play, tap};
     use crate::song::{Event, EventKind, Time};
 
@@ -284,5 +303,27 @@ mod tests {
             let want = times.iter().position(|&t| t >= start).unwrap_or(times.len());
             assert_eq!(first as usize, want, "bucket {b}");
         }
+    }
+
+    /// combo_note is just combo multiplier * note multiplier
+    #[test]
+    fn check_combo_note() {
+        let stream: Vec<_> = (0_u32..120)
+            .map(|i| {
+                let kind =
+                    [EventKind::Tap, EventKind::HoldStart, EventKind::HoldRelease][i as usize % 3];
+                (Time(2000 + i * 100), Event::new((i % 9) as u8, kind, i % 7 == 0, i % 5 == 0))
+            })
+            .collect();
+        let arena = arena(&stream);
+        let queue = Queue::build(&arena, &only(&arena)).expect("terminated");
+        for ((&event, &combo), &combo_note) in
+            queue.events().iter().zip(queue.combo()).zip(queue.combo_note())
+        {
+            assert_eq!(combo_note, u32::from(combo) * u32::from(note_multiplier(event)));
+            assert_eq!(u32::from(combo_eighths(combo, event)) * 625, combo_note);
+        }
+        assert_eq!(queue.combo_note().len(), queue.events().len());
+        assert_eq!(queue.combo_eighths().len(), queue.events().len());
     }
 }

@@ -118,20 +118,12 @@ where
     }
 
     #[inline(always)]
-    fn total_trick_tap(
-        &self,
-        now: Time,
-        head: bool,
-        tail: bool,
-        combo: u16,
-        lane: u16,
-        note: u16,
-    ) -> u64 {
+    fn total_trick_tap(&self, now: Time, head: bool, tail: bool, scale: u32, lane: u16) -> u64 {
         let worth = self.total_trick_worth(now, head, tail);
         if E::HEARTS {
-            overheal_score_val(worth, combo, lane, note, self.lasting.heart_multiplier())
+            overheal_score_val(worth, scale, lane, self.lasting.heart_multiplier())
         } else {
-            worth_score(worth, combo, lane, note)
+            worth_score(worth, scale, lane)
         }
     }
 

@@ -190,16 +190,8 @@ impl Lasting<'_> for Tricked {
 
     #[inline(always)]
     #[expect(clippy::inline_always, reason = "benchmarked")]
-    fn total_trick_tap(
-        &self,
-        now: Time,
-        head: bool,
-        tail: bool,
-        combo: u16,
-        lane: u16,
-        note: u16,
-    ) -> u64 {
-        worth_score(self.total_trick_worth(now, head, tail), combo, lane, note)
+    fn total_trick_tap(&self, now: Time, head: bool, tail: bool, scale: u32, lane: u16) -> u64 {
+        worth_score(self.total_trick_worth(now, head, tail), scale, lane)
     }
 
     #[inline(always)]

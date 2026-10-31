@@ -21,7 +21,7 @@ use effect::{Instant, Lasting};
 use judgement::Judgements;
 use queue::Queue;
 use rng::Rng;
-use tap::{JUDGEMENT, UNIT, note_eighths, note_multiplier, note_score, overheal_score};
+use tap::{JUDGEMENT, UNIT, note_score, overheal_score};
 
 /// `repr(C)` in the order rustc laid it out before Sync, so the fields every `walk` copy
 /// reads kept their offsets.
@@ -145,7 +145,8 @@ where
     let times = queue.times();
     let n = times.len();
     let events = &queue.events()[..n];
-    let combos = &queue.combo()[..n];
+    let combo_notes = &queue.combo_note()[..n];
+    let combo_eighths = &queue.combo_eighths()[..n];
     let judged = &judgements.perfect()[..n];
     let (icon_at, icon_lanes) = triggers.icons().columns();
     let (timer_at, timer_lanes) = triggers.time().columns();
@@ -266,13 +267,12 @@ where
                         time,
                         head,
                         tail,
-                        combos[tap],
-                        lane_bonus[lane],
                         if E::HEARTS {
-                            note_eighths(event)
+                            u32::from(combo_eighths[tap])
                         } else {
-                            note_multiplier(event)
+                            combo_notes[tap]
                         },
+                        lane_bonus[lane],
                     )
                 } else if E::HEARTS {
                     overheal_score(
@@ -281,9 +281,8 @@ where
                         } else {
                             expiry.heart_strength(locked)
                         },
-                        combos[tap],
+                        combo_eighths[tap],
                         lane_bonus[lane],
-                        note_eighths(event),
                         JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
                     )
                 } else {
@@ -295,9 +294,8 @@ where
                         } else {
                             scoring.team_strength
                         },
-                        combos[tap],
+                        combo_notes[tap],
                         lane_bonus[lane],
-                        note_multiplier(event),
                         JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
                     )
                 });

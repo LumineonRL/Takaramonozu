@@ -102,9 +102,8 @@ impl Worth {
 
 /// `note_score` with the strength and judgement already multiplied.
 #[expect(clippy::integer_division, reason = "Game mechanic.")]
-pub(super) fn worth_score(worth: u64, combo: u16, lane: u16, note: u16) -> u64 {
-    let factor =
-        u64::from(u32::from(combo).saturating_mul(u32::from(lane))).saturating_mul(u64::from(note));
+pub(super) fn worth_score(worth: u64, combo_note: u32, lane: u16) -> u64 {
+    let factor = u64::from(combo_note).saturating_mul(u64::from(lane));
     worth.saturating_mul(factor) / DIVISOR
 }
 
@@ -210,47 +209,41 @@ const MAX_COMBO: u64 = match COMBO_BONUS.last() {
 /// so not massive but actually kind of massive?
 /// I diff'd the assembly and it looks like the saturating version had an extra `mul` and `jo` on every note.
 #[expect(clippy::integer_division, reason = "Game mechanic.")]
-pub(super) fn note_score(
-    team_strength: u32,
-    combo: u16,
-    lane: u16,
-    note: u16,
-    judgement: u16,
-) -> u64 {
-    let factor = u64::from(u32::from(note).wrapping_mul(u32::from(judgement)));
+pub(super) fn note_score(team_strength: u32, combo_note: u32, lane: u16, judgement: u16) -> u64 {
     debug_assert!(team_strength <= MAX_STRENGTH, "team strength {team_strength}");
     debug_assert!(u64::from(lane) <= MAX_LANE, "lane bonus {lane}");
     u64::from(team_strength)
-        .wrapping_mul(u64::from(combo))
-        .wrapping_mul(u64::from(lane).wrapping_mul(factor))
+        .wrapping_mul(u64::from(combo_note))
+        .wrapping_mul(u64::from(u32::from(lane).wrapping_mul(u32::from(judgement))))
         / DIVISOR
+}
+
+/// `combo / 5 * note_eighths`
+/// For `overheal_score`.
+#[expect(clippy::integer_division, reason = "exact")]
+pub(super) const fn combo_eighths(combo: u16, event: Event) -> u16 {
+    debug_assert!(combo.is_multiple_of(COMBO_STEP), "combo multiplier");
+    (combo / COMBO_STEP).wrapping_mul(note_eighths(event))
 }
 
 /// `note_score` * `overheal_multiplier`.
 /// `strength` = `strength` * `HEART_UNIT` multiplier.
-/// `note` = `note_eighths`.
+/// `combo_eighths` = `combo / 5 * note_eighths`.
 /// This is fine so long as the team strength stays below 27 million which should not be a problem. Hopefully.
 #[inline]
 #[expect(clippy::integer_division, reason = "exact`")]
-pub(super) fn overheal_score(
-    strength: u64,
-    combo: u16,
-    lane: u16,
-    note: u16,
-    judgement: u16,
-) -> u64 {
-    debug_assert!(combo.is_multiple_of(COMBO_STEP), "{combo}");
-    let factor = u64::from(u32::from(combo / COMBO_STEP).saturating_mul(u32::from(lane)))
-        .saturating_mul(u64::from(u32::from(note).saturating_mul(u32::from(judgement))));
+pub(super) fn overheal_score(strength: u64, combo_eighths: u16, lane: u16, judgement: u16) -> u64 {
+    let factor = u64::from(u32::from(combo_eighths).saturating_mul(u32::from(lane)))
+        .saturating_mul(u64::from(judgement));
     strength.saturating_mul(factor) / OVERHEAL_DIVISOR
 }
 
 #[inline]
 #[expect(clippy::integer_division, reason = "exact")]
-pub(super) fn overheal_score_val(worth: u64, combo: u16, lane: u16, note: u16, heart: u16) -> u64 {
-    debug_assert!(combo.is_multiple_of(COMBO_STEP), "{combo}");
-    let factor = u64::from(u32::from(combo / COMBO_STEP).saturating_mul(u32::from(lane)))
-        .saturating_mul(u64::from(u32::from(note).saturating_mul(u32::from(heart))));
+pub(super) fn overheal_score_val(worth: u64, combo_eighths: u32, lane: u16, heart: u16) -> u64 {
+    let factor = u64::from(combo_eighths)
+        .saturating_mul(u64::from(lane))
+        .saturating_mul(u64::from(heart));
     worth.saturating_mul(factor) / OVERHEAL_DIVISOR
 }
 
@@ -384,11 +377,11 @@ mod tests {
         assert_eq!(super::DIVISOR, 800_000_000 * u64::from(super::JUDGEMENT_UNIT));
         for team_strength in [1_u32, 999, 26_540, 80_400, 2_700_000, 16_000_000] {
             assert_eq!(
-                super::note_score(team_strength, 135, 121, 1250, super::PERFECT),
+                super::note_score(team_strength, 135 * 1250, 121, super::PERFECT),
                 u64::from(team_strength) * 135 * 121 * 1250 / 800_000_000,
             );
             assert_eq!(
-                super::note_score(team_strength, 135, 121, 1250, super::LOCKED_PERFECT),
+                super::note_score(team_strength, 135 * 1250, 121, super::LOCKED_PERFECT),
                 u64::from(team_strength) * 135 * 121 * 1250 * 108 / 80_000_000_000,
                 "the widest possible product here would not saturate"
             );
@@ -431,14 +424,17 @@ mod tests {
     fn check_ppn_calc() {
         let judgements = [super::GREAT_GREAT, super::PERFECT, super::LOCKED_PERFECT];
         for team_strength in [0, 1, 80_400, 16_000_000, super::MAX_STRENGTH] {
-            for (note, judgement) in [625, 1000, 1250].into_iter().zip(judgements) {
+            for (note, judgement) in [625_u16, 1000, 1250].into_iter().zip(judgements) {
                 let whole = u128::from(team_strength)
                     * 135
                     * 121
                     * u128::from(note)
                     * u128::from(judgement);
                 let want = u64::try_from(whole).expect("exact") / super::DIVISOR;
-                assert_eq!(super::note_score(team_strength, 135, 121, note, judgement), want);
+                assert_eq!(
+                    super::note_score(team_strength, 135 * u32::from(note), 121, judgement),
+                    want
+                );
             }
         }
         let widest = |strength: u32| u128::from(strength) * 135 * 121 * 1250 * 675;
@@ -469,16 +465,21 @@ mod tests {
                 };
                 for (head, tail) in [(false, false), (false, true), (true, false), (true, true)] {
                     let judgement = judgements[usize::from(head)][usize::from(tail)];
-                    for (combo, lane, note) in [(100, 100, 1000), (135, 121, 1250), (110, 110, 500)]
+                    for (combo, lane, note) in
+                        [(100_u16, 100, 1000_u16), (135, 121, 1250), (110, 110, 500)]
                     {
                         assert_eq!(
                             super::worth_score(
                                 worth.row(converted, locked)[usize::from(head)][usize::from(tail)],
-                                combo,
+                                u32::from(combo) * u32::from(note),
                                 lane,
-                                note
                             ),
-                            super::note_score(strength, combo, lane, note, judgement),
+                            super::note_score(
+                                strength,
+                                u32::from(combo) * u32::from(note),
+                                lane,
+                                judgement
+                            ),
                             "{team_strength} {converted} {locked} {head} {tail} {combo} {note}"
                         );
                     }
@@ -500,12 +501,17 @@ mod tests {
         let with_hearts = |strength: u32, heart: u16| u64::from(strength) * u64::from(heart);
         for team_strength in [0, 1, 999, 80_400, 2_700_000, 16_000_000, 27_000_000] {
             for (combo, lane, note) in [(100, 100, 1000), (135, 121, 1250), (110, 110, 500)] {
-                let eighths = note / super::NOTE_STEP;
+                let eighths = combo / super::COMBO_STEP * (note / super::NOTE_STEP);
                 for judgement in judgements {
-                    let plain = super::note_score(team_strength, combo, lane, note, judgement);
+                    let plain = super::note_score(
+                        team_strength,
+                        u32::from(combo) * u32::from(note),
+                        lane,
+                        judgement,
+                    );
                     let unit = with_hearts(team_strength, super::HEART_UNIT);
                     assert_eq!(
-                        super::overheal_score(unit, combo, lane, eighths, judgement),
+                        super::overheal_score(unit, eighths, lane, judgement),
                         plain,
                         "{team_strength} {combo} {note} {judgement}"
                     );
@@ -519,9 +525,7 @@ mod tests {
                         let want = whole / u128::from(super::DIVISOR * 10_000);
                         let strength = with_hearts(team_strength, heart);
                         assert_eq!(
-                            u128::from(super::overheal_score(
-                                strength, combo, lane, eighths, judgement
-                            )),
+                            u128::from(super::overheal_score(strength, eighths, lane, judgement)),
                             want,
                             "{team_strength} {combo} {lane} {note} {judgement} {heart}"
                         );
@@ -529,10 +533,10 @@ mod tests {
                 }
             }
         }
-        let widest = super::overheal_score(with_hearts(u32::MAX, 30_000), 135, 121, 10, 675);
+        let widest = super::overheal_score(with_hearts(u32::MAX, 30_000), 27 * 10, 121, 675);
         assert_eq!(widest, u64::MAX / super::OVERHEAL_DIVISOR, "saturates, never wraps");
         assert!(
-            widest >= super::overheal_score(with_hearts(27_000_000, 30_000), 135, 121, 10, 675)
+            widest >= super::overheal_score(with_hearts(27_000_000, 30_000), 27 * 10, 121, 675)
         );
     }
 
@@ -557,10 +561,10 @@ mod tests {
                     for heart in [super::HEART_UNIT, 13_380, 30_000] {
                         let with_hearts = u64::from(strength) * u64::from(heart);
                         for (combo, lane, note) in [(100, 100, 1000), (135, 121, 1250)] {
-                            let eighths = note / super::NOTE_STEP;
+                            let eighths = combo / super::COMBO_STEP * (note / super::NOTE_STEP);
                             assert_eq!(
-                                super::overheal_score_val(row, combo, lane, eighths, heart),
-                                super::overheal_score(with_hearts, combo, lane, eighths, judgement),
+                                super::overheal_score_val(row, u32::from(eighths), lane, heart),
+                                super::overheal_score(with_hearts, eighths, lane, judgement),
                                 "{team_strength} {converted} {locked} {head} {tail} {heart}"
                             );
                         }
@@ -589,10 +593,10 @@ mod tests {
             }
         );
 
-        assert_eq!(super::note_score(110_000, 110, 100, 1000, super::PERFECT), 1512);
+        assert_eq!(super::note_score(110_000, 110 * 1000, 100, super::PERFECT), 1512);
 
         assert_eq!(points_per_note(26_540), 331);
-        assert_eq!(super::note_score(26_540, 130, 110, 1000, super::PERFECT), 474);
+        assert_eq!(super::note_score(26_540, 130 * 1000, 110, super::PERFECT), 474);
         assert_eq!(331 * 130 * 110 / 10_000, 473, "pre-flooring the base is a no-no apparently.");
     }
 
@@ -645,12 +649,12 @@ mod tests {
         let out = play(&queue, &scoring);
         assert_eq!(out.score(), 3 * (1005 + 1105 + 1216));
 
-        assert_eq!(super::note_score(80_400, 100, 121, 1000, super::PERFECT), 1216);
-        assert_eq!(super::note_score(80_400, 100, 110, 1000, super::PERFECT), 1105);
-        assert_eq!(super::note_score(88_400, 100, 110, 1000, super::PERFECT), 1215);
+        assert_eq!(super::note_score(80_400, 100 * 1000, 121, super::PERFECT), 1216);
+        assert_eq!(super::note_score(80_400, 100 * 1000, 110, super::PERFECT), 1105);
+        assert_eq!(super::note_score(88_400, 100 * 1000, 110, super::PERFECT), 1215);
 
         assert_eq!(
-            super::note_score(80_400, 110, 110, 1000, super::PERFECT),
+            super::note_score(80_400, 110 * 1000, 110, super::PERFECT),
             1216,
             "1005 * 1.21 the long way"
         );

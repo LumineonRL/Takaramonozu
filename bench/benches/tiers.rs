@@ -1,6 +1,7 @@
 #![expect(clippy::expect_used, reason = "it's a benchmark so it's okay")]
 
-/// Higher level orchestrator of trial.rs. For benchmarking on different thread counts.
+/// Higher level orchestrator of trial.rs. For benchmarking on different parts of the simulation process.
+/// Basically splits the sim process into several components and benchmarks each one individually.
 use std::sync::LazyLock;
 
 use bench::{Archives, Prepared, catalog, root};
@@ -46,6 +47,13 @@ fn compile(bencher: Bencher, name: &str) {
 fn triggers(bencher: Bencher, name: &str) {
     let team = team(name);
     bencher.bench_local(|| Triggers::build(&team.queue, &team.scoring));
+}
+
+#[divan::bench(args = names())]
+fn rebuild(bencher: Bencher, name: &str) {
+    let team = team(name);
+    let mut triggers = Triggers::build(&team.queue, &team.scoring);
+    bencher.bench_local(|| triggers.rebuild(&team.queue, &team.scoring));
 }
 
 #[divan::bench(args = names())]

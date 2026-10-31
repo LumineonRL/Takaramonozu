@@ -45,7 +45,7 @@ macro_rules! forward {
     (@ psu_paid) => { forward!(fn psu_paid(&self, perfects: u32) -> u64); };
     (@ total_trick_tap) => {
         forward!(fn total_trick_tap(
-            &self, now: crate::song::Time, head: bool, tail: bool, combo: u16, lane: u16, note: u16
+            &self, now: crate::song::Time, head: bool, tail: bool, scale: u32, lane: u16
         ) -> u64);
     };
     (@ total_trick_worth) => {
@@ -260,7 +260,7 @@ pub(in crate::play) trait Lasting<'q> {
     }
 
     /// PPN with tricks.
-    fn total_trick_tap(&self, _: Time, _: bool, _: bool, _: u16, _: u16, _: u16) -> u64 {
+    fn total_trick_tap(&self, _: Time, _: bool, _: bool, _: u32, _: u16) -> u64 {
         debug_assert!(false, "a tap scored as if a Total Trick could run");
         0
     }

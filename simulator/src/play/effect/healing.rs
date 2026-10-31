@@ -34,17 +34,9 @@ where
     }
 
     #[inline(always)]
-    fn total_trick_tap(
-        &self,
-        now: Time,
-        head: bool,
-        tail: bool,
-        combo: u16,
-        lane: u16,
-        note: u16,
-    ) -> u64 {
+    fn total_trick_tap(&self, now: Time, head: bool, tail: bool, scale: u32, lane: u16) -> u64 {
         let worth = self.lasting.total_trick_worth(now, head, tail);
-        overheal_score_val(worth, combo, lane, note, self.hearts.multiplier)
+        overheal_score_val(worth, scale, lane, self.hearts.multiplier)
     }
 
     #[inline(always)]
