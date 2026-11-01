@@ -26,3 +26,6 @@ archive
 # Scratch pad
 deck/src/main.rs
 data/user_data
+
+bench/reference/node_modules
+bench/reference/dist

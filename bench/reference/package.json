@@ -1,0 +1,12 @@
+{
+  "name": "sif-reference-runner",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test rng.test.ts"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
