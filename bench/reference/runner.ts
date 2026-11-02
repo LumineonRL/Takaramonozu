@@ -115,6 +115,8 @@ function readJson<T>(path: string): T {
 
 const [specPath, trialsArg, seedArg] = process.argv.slice(2)
 if (!specPath || !trialsArg) throw new Error('Should be: runner <spec.json> <trials> [seed]')
+
+const started = process.hrtime.bigint()
 const name = basename(specPath, '.json')
 const bench = readJson<BenchSpec>(specPath)
 const trials = Number(trialsArg)
@@ -270,13 +272,16 @@ const syncs = context.skillInfos.flatMap(({ card, accessory }, slot) =>
     card.effect.type === EffectType.Sync || accessory?.effect.type === EffectType.Sync ? [slot + 1] : []
 )
 if (syncs.length) throw new Error(`${name} can't run on burrito: no Sync, on lanes ${syncs.join(', ')}`)
+const startup = process.hrtime.bigint() - started
 
 const teamStat = calculateTeamStat(team, spec.memoryGalleryBonus, spec.chartId, spec.guestCenter)
 
 const scores: number[] = []
+const began = process.hrtime.bigint()
 for (let i = 0; i < trials; i++) {
     scores.push(new Live(context).simulate().score)
 }
+const elapsed = process.hrtime.bigint() - began
 
 process.stdout.write(
     JSON.stringify({
@@ -325,5 +330,6 @@ process.stdout.write(
         },
         trials: scores.length,
         scores,
+        timing: { startup_ns: Number(startup), trials_ns: Number(elapsed) },
     })
 )
