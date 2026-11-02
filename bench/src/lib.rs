@@ -19,7 +19,7 @@ use deck::level_cap::{self, LevelCaps};
 use deck::manager::{EntryId, Repairs};
 use deck::sis::SisInventory;
 use deck::team::{Context, LANES, Team};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use simulator::accessory::AccessoryDb;
 use simulator::archive::{Kind, Mapped};
 use simulator::card::CardDb;
@@ -65,7 +65,7 @@ pub struct ChartKey {
     pub difficulty: Level,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub enum Level {
     Easy,
     Normal,
@@ -136,16 +136,18 @@ pub fn catalog(dir: &Path) -> Result<Vec<Spec>, Failed> {
         .collect::<Result<_, _>>()?;
     paths.retain(|p| p.extension().is_some_and(|e| e == "json"));
     paths.sort();
-    paths
-        .iter()
-        .map(|p| {
-            let mut spec: Spec = serde_json::from_slice(&fs::read(p)?)
-                .map_err(|e| format!("{}: {e}", p.display()))?;
-            let stem = p.file_stem().and_then(|s| s.to_str());
-            spec.name = stem.ok_or_else(|| format!("{}: not UTF-8", p.display()))?.into();
-            Ok(spec)
-        })
-        .collect()
+    paths.iter().map(|p| load(p)).collect()
+}
+
+/// # Errors
+/// Bad path, invalid spec.
+pub fn load(path: &Path) -> Result<Spec, Failed> {
+    let at = |e: &dyn Error| format!("{}: {e}", path.display());
+    let mut spec: Spec =
+        serde_json::from_slice(&fs::read(path).map_err(|e| at(&e))?).map_err(|e| at(&e))?;
+    let stem = path.file_stem().and_then(|s| s.to_str());
+    spec.name = stem.ok_or_else(|| format!("{}: not UTF-8", path.display()))?.into();
+    Ok(spec)
 }
 
 pub struct Archives {
