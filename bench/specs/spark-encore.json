@@ -1,6 +1,6 @@
 {
   "run_burrito": true,
-  "chart": { "title": "LIVE with a smile! (Nijigasaki High School Idol Club Ver.)", "difficulty": "Expert" },
+  "chart": { "title": "Tele Telepathy", "difficulty": "Expert" },
   "lanes": [
     { "card": 3360, "skill_level": 8 },
     { "card": 3851, "skill_level": 8 },

@@ -1,11 +1,11 @@
 {
   "run_burrito": true,
-  "chart": { "title": "Kimochi mo Yume mo Issyo dane!", "difficulty": "Expert" },
+  "chart": { "title": "Strawberry Trapper", "difficulty": "Expert" },
   "lanes": [
     { "card": 3851, "skill_level": 8 },
     { "card": 3858, "skill_level": 8 },
     { "card": 3673, "skill_level": 8 },
-    { "card": 3358, "skill_level": 8 },
+    { "card": 3820, "skill_level": 8 },
     { "card": 3885, "skill_level": 8 },
     { "card": 3564, "skill_level": 8 },
     { "card": 3892, "skill_level": 8 },

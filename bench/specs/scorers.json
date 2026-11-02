@@ -1,16 +1,16 @@
 {
   "run_burrito": true,
-  "chart": { "title": "Daydream Warrior", "difficulty": "Master" },
+  "chart": { "title": "Yosoku Fukano Driving!", "difficulty": "Master" },
   "lanes": [
-    { "card": 3847, "skill_level": 8, "cap_level": 500 },
-    { "card": 3895, "skill_level": 8, "cap_level": 500 },
-    { "card": 3725, "skill_level": 8, "cap_level": 500 },
+    { "card": 3847, "skill_level": 8 },
+    { "card": 3895, "skill_level": 8 },
+    { "card": 3725, "skill_level": 8 },
     { "card": 3649, "skill_level": 8, "cap_level": 500 },
     { "card": 3067, "skill_level": 8, "cap_level": 500 },
-    { "card": 3661, "skill_level": 8, "cap_level": 500 },
-    { "card": 3873, "skill_level": 8, "cap_level": 500 },
-    { "card": 3796, "skill_level": 8, "cap_level": 500 },
-    { "card": 3896, "skill_level": 8, "cap_level": 500, "sis": [37] }
+    { "card": 3661, "skill_level": 8 },
+    { "card": 3873, "skill_level": 8 },
+    { "card": 3796, "skill_level": 8 },
+    { "card": 3896, "skill_level": 8, "sis": [37] }
   ],
   "guest": 3817,
   "accuracy": 10000,

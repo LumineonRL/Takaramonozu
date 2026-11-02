@@ -1,6 +1,6 @@
 {
   "run_burrito": true,
-  "chart": { "title": "Mirai wa Kaze no you ni", "difficulty": "Master" },
+  "chart": { "title": "Kimi no kuse ni!", "difficulty": "Master" },
   "lanes": [
     { "card": 3851, "skill_level": 8 },
     { "card": 1538, "skill_level": 8 },

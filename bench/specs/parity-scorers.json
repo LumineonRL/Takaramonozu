@@ -1,6 +1,6 @@
 {
   "run_burrito": true,
-  "chart": { "title": "Tokonatsu☆Sunshine", "difficulty": "Master" },
+  "chart": { "title": "New winding road", "difficulty": "Master" },
   "lanes": [
     { "card": 3387, "skill_level": 8 },
     { "card": 3634, "skill_level": 8 },
