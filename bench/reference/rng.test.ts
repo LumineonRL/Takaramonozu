@@ -14,6 +14,9 @@ const VECTORS: [bigint, number[]][] = [
 test('matches rand_xoshiro', () => {
     for (const [seed, expected] of VECTORS) {
         const next = xoshiro128StarStar(seed)
-        deepStrictEqual(Array.from(expected, () => next()), expected)
+        deepStrictEqual(
+            Array.from(expected, () => next()),
+            expected
+        )
     }
 })

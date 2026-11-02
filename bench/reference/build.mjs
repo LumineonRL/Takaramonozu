@@ -3,9 +3,9 @@
 // 1) A vue shim with aliases for its helpers
 // 2) VITE_APP_DIAGNOSTICS set to false.
 
-import { build } from 'esbuild'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { build } from 'esbuild'
 
 const here = dirname(fileURLToPath(import.meta.url))
 

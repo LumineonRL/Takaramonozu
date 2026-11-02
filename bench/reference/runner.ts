@@ -1,6 +1,5 @@
 /// <reference path="./globals.d.ts" />
 
-
 // Headless driver for burrito's sim so teams can be made from the command-line instead of
 // in the frontend.
 // Reads a spec from `bench/specs`, calls the Context/Live parts of the simulator and returns the result.
@@ -13,17 +12,15 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-
-import { accessories, cards, charts, initDatabase, sises } from './sif-team-simulator/src/database'
-import { Difficulty } from './sif-team-simulator/src/database/Chart'
+import { xoshiro128StarStar } from './rng'
 import { Context } from './sif-team-simulator/src/core/simulation/Context'
 import { Live } from './sif-team-simulator/src/core/simulation/Live'
 import { calculateTeamStat } from './sif-team-simulator/src/core/stats'
-import { Team } from './sif-team-simulator/src/core/Team'
-import { CenterSkill } from './sif-team-simulator/src/database/Center'
+import type { Team } from './sif-team-simulator/src/core/Team'
+import { accessories, cards, charts, initDatabase, sises } from './sif-team-simulator/src/database'
+import type { CenterSkill } from './sif-team-simulator/src/database/Center'
+import { Difficulty } from './sif-team-simulator/src/database/Chart'
 import { EffectType } from './sif-team-simulator/src/database/Skill'
-
-import { xoshiro128StarStar } from './rng'
 
 function findSimRoot() {
     let dir = dirname(fileURLToPath(import.meta.url))
@@ -162,6 +159,7 @@ bench.lanes.forEach((lane, slot) => {
 if (guest !== undefined && !cards.has(guest)) missing.push(`guest: burrito has no card ${guest}`)
 if (missing.length) throw new Error(`${name} can't run on burrito:\n  ${missing.join('\n  ')}`)
 
+// biome-ignore lint/style/noNonNullAssertion: `missing` = guest burrito lacks
 const guestCenter = guest === undefined ? null : cards.get(guest)!.center
 
 function member(lane: Lane): SpecMember {
@@ -170,6 +168,7 @@ function member(lane: Lane): SpecMember {
         level: lane.cap_level ?? 100,
         skillLevel: lane.skill_level ?? 1,
         sis: (lane.sis ?? []).map((id) => {
+            // biome-ignore lint/style/noNonNullAssertion: `missing` = SIS rust sim lacks
             const row = ourSis.get(id)!
             const type = SIS_TYPES[row.effect]
             // I don't know why I decided to store charms at 1.5x instead of 2.5x.
@@ -208,7 +207,7 @@ const spec: Spec = {
 // ```
 // slot 0: [{id: 157, name: 'Smile Dolphin Petit', type: 'self', value: 0.13}]
 // ```
-// into 
+// into
 // ```
 // 'spec:0:0:157' -> { type: 'self', value: 0.13 }
 // ```
@@ -303,7 +302,7 @@ process.stdout.write(
             sisScoreMultipliers: context.sisScoreMultipliers,
             sisHealMultipliers: context.sisHealMultipliers,
             priorities: context.priorities,
-            
+
             resolvedSkills: context.skillInfos.map(({ card, accessory }) => ({
                 card: {
                     triggerType: card.trigger.type,

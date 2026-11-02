@@ -4,9 +4,15 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "test": "node --test rng.test.ts"
+    "test": "node --test rng.test.ts",
+    "lint": "biome check --error-on-warnings --indent-style=space --indent-width=4 --javascript-formatter-quote-style=single --semicolons=as-needed --javascript-formatter-line-width=120 --trailing-commas=es5 runner.ts rng.ts rng.test.ts build.mjs vue-shim.ts globals.d.ts",
+    "fix": "biome check --write --indent-style=space --indent-width=4 --javascript-formatter-quote-style=single --semicolons=as-needed --javascript-formatter-line-width=120 --trailing-commas=es5 runner.ts rng.ts rng.test.ts build.mjs vue-shim.ts globals.d.ts",
+    "typecheck": "tsc --noEmit --strict --target esnext --module esnext --moduleResolution bundler --allowImportingTsExtensions --skipLibCheck --types node runner.ts rng.ts rng.test.ts vue-shim.ts globals.d.ts"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "22.20.5",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
   }
 }
