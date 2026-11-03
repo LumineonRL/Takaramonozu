@@ -65,29 +65,52 @@ All results were recorded on an AMD Ryzen 7900X. This cpu has 12 cores, 24 threa
 
 These are the current results using a variety of teams. The goal was to test each mechanic individually so there's *mostly* one mechanic per benchmark instance.
 
-I'll add the reference result comparisons when they're ready.
-I also plan to add a score distribution comparison to ensure that both sims agree where they're supposed to agree and disagree sensibly where they're not expected to agree.
-
 | spec | one thread | all threads | burrito |
 | --- | ---: | ---: | ---: |
-| accessory-skills | 293.7 K/s | 3.814 M/s | |
-| amplify-encore-scorers | 267 K/s | 3.568 M/s | |
-| combo-fevers | 85.99 K/s | 1.244 M/s | |
-| everything | 37.83 K/s | 605 K/s | |
-| healers-heal-sis | 253.8 K/s | 3.528 M/s | |
-| n-cards-only | 400 K/s | 4.72 M/s | |
-| nine-psus | 90.18 K/s | 1.43 M/s | |
-| param-boost-sync | 121.9 K/s | 1.825 M/s | |
-| parity-scorers | 374.8 K/s | 4.888 M/s | |
-| perfect-locks-trick-sis | 111.5 K/s | 1.778 M/s | |
-| score-scorers | 168.1 K/s | 2.212 M/s | |
-| scorer-sru | 182.6 K/s | 2.328 M/s | |
-| scorers | 351.3 K/s | 3.774 M/s | |
-| spark-encore | 264.7 K/s | 3.431 M/s | |
-| star-notes | 197 K/s | 2.514 M/s | |
-| time-triggers | 270.2 K/s | 3.014 M/s | |
-| total-tricks | 144.5 K/s | 2.13 M/s | |
-| year-group-chains | 210.9 K/s | 2.617 M/s | |
+| accessory-skills | 293.7 K/s | 3.814 M/s | 5.882 K/s |
+| amplify-encore-scorers | 267 K/s | 3.568 M/s | 7.485 K/s |
+| combo-fevers | 85.99 K/s | 1.244 M/s | 3.796 K/s |
+| everything | 37.83 K/s | 605 K/s | x |
+| healers-heal-sis | 253.8 K/s | 3.528 M/s | 5.533 K/s |
+| n-cards-only | 400 K/s | 4.72 M/s | x |
+| nine-psus | 90.18 K/s | 1.43 M/s | 3.626 K/s |
+| param-boost-sync | 121.9 K/s | 1.825 M/s | x |
+| parity-scorers | 374.8 K/s | 4.888 M/s | 8.317 K/s |
+| perfect-locks-trick-sis | 111.5 K/s | 1.778 M/s | x |
+| score-scorers | 168.1 K/s | 2.212 M/s | x |
+| scorer-sru | 182.6 K/s | 2.328 M/s | 6.457 K/s |
+| scorers | 351.3 K/s | 3.774 M/s | 4.944 K/s |
+| spark-encore | 264.7 K/s | 3.431 M/s | 6.879 K/s |
+| star-notes | 197 K/s | 2.514 M/s | 4.897 K/s |
+| time-triggers | 270.2 K/s | 3.014 M/s | 6.857 K/s |
+| total-tricks | 144.5 K/s | 2.13 M/s | x |
+| year-group-chains | 210.9 K/s | 2.617 M/s | x |
+
+x means Burrito's sim can't play that team:
+
+# Score Comparison
+
+The below table validates that the scores that both simulators generate matches for any mechanics where they're not expected to diverge. See `bench/compare.R` for more detail on why everything here was chosen but the tldr is that normality should not be assumed for the result's distributions because some mechanics (looking at you, coinflip) can lead to non-normal results.
+
+So the results of this table are focused around both center and shape. mean, gap and z all relate to measuring the centers and KS D, KS p, p1/p5/p99 all measure the shape.
+
+I won't be going into the mechanics of the Kolmogarov Smirnov test here. D measures the difference between both CDFs, p is the how likely that difference is to occur, p1/p50/p99 are the gaps between the respective percentiles to ensure tail behavior matched between simulators.
+
+| spec | Takaramonozu mean | burrito mean | gap | z | KS D | KS p | p1 / p50 / p99 gap |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| accessory-skills | 3,654,344 | 3,651,727 | +0.072% | +1.6 | 0.0145 | 0.031 | +0.06% / +0.16% / +0.13% |
+| amplify-encore-scorers | 1,963,182 | 1,964,489 | -0.067% | -0.3 | 0.0074 | 0.652 | -2.42% / +0.14% / -0.69% |
+| combo-fevers | 3,185,606 | 3,186,155 | -0.017% | -0.5 | 0.0095 | 0.334 | -0.04% / -0.01% / -0.07% |
+| healers-heal-sis | 2,895,379 | 2,895,207 | +0.006% | +0.1 | 0.0063 | 0.830 | -0.47% / -0.01% / +0.42% |
+| nine-psus | 2,488,747 | 2,488,842 | -0.004% | -0.1 | 0.0061 | 0.851 | +0.07% / -0.00% / -0.08% |
+| parity-scorers | 1,131,722 | 1,131,747 | -0.002% | -0.0 | 0.0068 | 0.744 | -0.02% / -0.09% / +0.08% |
+| scorer-sru | 1,805,315 | 1,807,240 | -0.107% | -1.2 | 0.0086 | 0.443 | -0.35% / -0.03% / +0.24% |
+| scorers | 2,786,300 | 2,785,580 | +0.026% | +0.4 | 0.0066 | 0.776 | -0.06% / +0.03% / +0.21% |
+| spark-encore | 882,597 | 884,781 | -0.247% | -1.2 | 0.0093 | 0.359 | +1.07% / -0.25% / -0.03% |
+| star-notes | 1,779,549 | 1,778,969 | +0.033% | +0.4 | 0.0073 | 0.669 | -0.36% / +0.03% / -0.05% |
+| time-triggers | 1,099,715 | 1,101,067 | -0.123% | -1.5 | 0.0113 | 0.155 | +0.06% / -0.13% / -0.23% |
+
+In conclusion, nothing here looks out of place and I feel confident saying the scores agree where they're supposed to agree. For the record, not listed here, but they also disagree where they're supposed to disagree and pretty much anything from DIVERGENCES.md on any of the specs would result in a tangible gap.
 
 # References
 

@@ -29,3 +29,6 @@ data/user_data
 
 bench/reference/node_modules
 bench/reference/dist
+
+# compare.R
+bench/results

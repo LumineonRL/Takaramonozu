@@ -1,4 +1,7 @@
-#![expect(clippy::print_stderr, reason = "it's just a tool for benchmarking it's not that serious bro")]
+#![expect(
+    clippy::print_stderr,
+    reason = "it's just a tool for benchmarking it's not that serious bro"
+)]
 
 //! The Rust simulator's half of the A/B test against Burrito's sim.
 //! Whatever Burrito's sim output is guided what gets output here.
@@ -18,12 +21,16 @@ use bench::{Archives, Failed, load, root};
 use serde::Serialize;
 use simulator::play::Outcome;
 
+const FIRST_SEED: u64 = 315;
+const SEED_STEP: u64 = 1021;
+
 #[derive(Serialize)]
 struct Results<'a> {
     simulator: &'static str,
     spec: &'a str,
     chart: Chart<'a>,
     first_seed: u64,
+    seed_step: u64,
     trials: usize,
     scores: Vec<u64>,
     tap: u64,
@@ -61,7 +68,7 @@ fn play() -> Result<(), Failed> {
     let trials: usize = count.parse().map_err(|e| format!("bad trial count {count}: {e}"))?;
     let first_seed: u64 = match args.next() {
         Some(seed) => seed.parse().map_err(|e| format!("bad seed {seed}: {e}"))?,
-        None => 0,
+        None => FIRST_SEED,
     };
 
     let started = Instant::now();
@@ -74,7 +81,7 @@ fn play() -> Result<(), Failed> {
     let mut seed = first_seed;
     for _ in 0..trials {
         outcomes.push(team.trial(seed));
-        seed = seed.wrapping_add(1);
+        seed = seed.wrapping_add(SEED_STEP);
     }
     let elapsed = began.elapsed();
 
@@ -88,6 +95,7 @@ fn play() -> Result<(), Failed> {
             difficulty: played.chart.difficulty,
         },
         first_seed,
+        seed_step: SEED_STEP,
         trials,
         scores: outcomes.iter().map(Outcome::score).collect(),
         tap: sum(|o| o.tap),
