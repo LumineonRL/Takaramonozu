@@ -57,7 +57,7 @@ cargo bench -p bench [tiers | trial]
 
 ---
 
-This is still a WIP, especially since perfmaxxing is still actively happening little-by-little. I don't know if I'll remember to update the numbers every single time I make a change.
+A custom headless harness was written to run Burrito's code without needing to render any of the frontend. See `bench/ref`.
 
 Benchmarking code that uses all cores/threads is particularly awful on a personal computer because I don't even think it's possible to get the machine *truly* idle. I do my best to reasonably close as much as possible before every run and Divan is configured to take a representative sample.
 
@@ -92,7 +92,7 @@ x means Burrito's sim can't play that team:
 
 The below table validates that the scores that both simulators generate matches for any mechanics where they're not expected to diverge. See `bench/compare.R` for more detail on why everything here was chosen but the tldr is that normality should not be assumed for the result's distributions because some mechanics (looking at you, coinflip) can lead to non-normal results.
 
-So the results of this table are focused around both center and shape. mean, gap and z all relate to measuring the centers and KS D, KS p, p1/p5/p99 all measure the shape.
+So the results of this table are focused around both center and shape. mean, gap and z all relate to measuring the centers and KS D, KS p, p1/p50/p99 all measure the shape.
 
 I won't be going into the mechanics of the Kolmogarov Smirnov test here. D measures the difference between both CDFs, p is the how likely that difference is to occur, p1/p50/p99 are the gaps between the respective percentiles to ensure tail behavior matched between simulators.
 
