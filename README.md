@@ -39,6 +39,8 @@ That was not as brief as I wanted.
 
 # Benchmark Results
 
+While this is being compared to another simulator, I want to make it clear that this repo is a complete rewrite from scratch as an entirely bespoke implementation. This was not "Hey Claude, take this typescript simulator and translate it to Rust. Also implement the things they didn't. Make no mistakes." Rather, Burrito's simulator served as both something for me to check when I was unsure on a specific mechanic, as well as being something to compare against to validate my results, which I attribute to why DIVERGENCES.md has as many entries as it does.
+
 Full suite:
 
 ```
@@ -110,7 +112,7 @@ I won't be going into the mechanics of the Kolmogarov Smirnov test here. D measu
 | star-notes | 1,779,549 | 1,778,969 | +0.033% | +0.4 | 0.0073 | 0.669 | -0.36% / +0.03% / -0.05% |
 | time-triggers | 1,099,715 | 1,101,067 | -0.123% | -1.5 | 0.0113 | 0.155 | +0.06% / -0.13% / -0.23% |
 
-In conclusion, nothing here looks out of place and I feel confident saying the scores agree where they're supposed to agree. For the record, not listed here, but they also disagree where they're supposed to disagree and pretty much anything from DIVERGENCES.md on any of the specs would result in a tangible gap.
+In conclusion, throw in a Bonferroni correction for that one accessory-skills p-value and nothing here looks out of place and I feel confident saying the scores agree where they're supposed to agree. For the record, not listed here, but they also disagree where they're supposed to disagree and pretty much anything from DIVERGENCES.md on any of the specs would result in a tangible gap.
 
 # References
 
