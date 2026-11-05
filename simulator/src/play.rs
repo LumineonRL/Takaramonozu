@@ -173,14 +173,7 @@ where
     let judged = &judgements.perfect()[..n];
     let (icon_at, icon_lanes) = triggers.icons().columns();
     let (timer_at, timer_lanes) = triggers.time().columns();
-    let mut spawns = Spawns {
-        icons: queue.icon_times(),
-        at: icon_at,
-        lanes: icon_lanes,
-        icon: 0,
-        cursor: 0,
-        next: icon_at[0] as usize,
-    };
+    let mut spawns = Spawns::new(queue.icon_times(), icon_at, icon_lanes, offset);
     let mut combo = Tally::new(triggers.combo());
     let mut perfects = Tally::new(triggers.perfects());
     let mut stars = Tally::new(triggers.stars());
@@ -211,16 +204,18 @@ where
             // timer skills really don't roll very often
             core::hint::cold_path();
             let at = next_timer.min(expiry.next());
-            spawns.drain::<SCORE, YEAR, false, E>(
-                at,
-                offset,
-                scoring,
-                &mut rng,
-                &mut out,
-                &mut ladder,
-                &mut chain,
-                &mut expiry,
-            );
+            if spawns.due < at {
+                spawns.drain::<SCORE, YEAR, false, E>(
+                    at,
+                    offset,
+                    scoring,
+                    &mut rng,
+                    &mut out,
+                    &mut ladder,
+                    &mut chain,
+                    &mut expiry,
+                );
+            }
             if E::ANY && expiry.next() <= at {
                 let paid;
                 (rng, paid) = release::<SCORE, YEAR, _>(
@@ -253,129 +248,123 @@ where
                 ladder.settle::<YEAR>(at, scoring, &mut rng, &mut out, &mut chain, &mut expiry);
             }
         }
-        spawns.drain::<SCORE, YEAR, true, E>(
-            time,
-            offset,
-            scoring,
-            &mut rng,
-            &mut out,
-            &mut ladder,
-            &mut chain,
-            &mut expiry,
-        );
+        if spawns.due < time {
+            core::hint::cold_path();
+            spawns.drain::<SCORE, YEAR, true, E>(
+                time,
+                offset,
+                scoring,
+                &mut rng,
+                &mut out,
+                &mut ladder,
+                &mut chain,
+                &mut expiry,
+            );
+        }
 
         let event = events[tap];
         let lane = event.lane() as usize;
-        match event.kind() {
-            EventKind::End => break,
-            EventKind::HoldStart => {
-                heads[lane] = judged[tap];
+        if event.is_unscored() {
+            if event.kind() == EventKind::End {
+                break;
+            }
+            heads[lane] = judged[tap];
+        } else {
+            if SCORE {
+                ladder.catch_up::<YEAR>(time, scoring, &mut rng, &mut out, &mut chain, &mut expiry);
+            }
+            let tail = judged[tap];
+            let head = (event.kind() == EventKind::Tap) | heads[lane];
+            let converted = E::ANY && expiry.converted(time);
+            let locked = E::ANY && expiry.locked(time);
+            out.tap = out.tap.wrapping_add(if E::TRICKS {
+                expiry.total_trick_tap(
+                    time,
+                    head,
+                    tail,
+                    if E::HEARTS {
+                        u32::from(combo_eighths[tap])
+                    } else {
+                        combo_notes[tap]
+                    },
+                    lane_bonus[lane],
+                )
+            } else if E::HEARTS {
+                overheal_score(
+                    if E::PARAM {
+                        expiry.param_hearted_strength(locked)
+                    } else {
+                        expiry.heart_strength(locked)
+                    },
+                    combo_eighths[tap],
+                    lane_bonus[lane],
+                    JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
+                )
+            } else {
+                note_score(
+                    if E::PARAM {
+                        expiry.param_strength(locked)
+                    } else if locked {
+                        tricked
+                    } else {
+                        scoring.team_strength
+                    },
+                    combo_notes[tap],
+                    lane_bonus[lane],
+                    JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
+                )
+            });
+            out.notes = out.notes.wrapping_add(1);
+            if E::FEVER && SCORE {
+                out.skill = out.skill.saturating_add(expiry.fever_tap(time, out.notes));
+            }
+            if E::SPARK && SCORE {
+                out.skill = out.skill.saturating_add(expiry.spark_tap(time));
+            }
+            let perfect = converted || (head & tail);
+            out.perfects = out.perfects.wrapping_add(u32::from(perfect));
+            if E::PSU && SCORE {
+                out.skill = out.skill.saturating_add(expiry.psu_tap(perfect));
             }
 
-            kind @ (EventKind::Tap | EventKind::HoldRelease) => {
-                if SCORE {
-                    ladder.catch_up::<YEAR>(
-                        time,
-                        scoring,
-                        &mut rng,
-                        &mut out,
-                        &mut chain,
-                        &mut expiry,
-                    );
-                }
-                let tail = judged[tap];
-                let head = (kind == EventKind::Tap) | heads[lane];
-                let converted = E::ANY && expiry.converted(time);
-                let locked = E::ANY && expiry.locked(time);
-                out.tap = out.tap.wrapping_add(if E::TRICKS {
-                    expiry.total_trick_tap(
-                        time,
-                        head,
-                        tail,
-                        if E::HEARTS {
-                            u32::from(combo_eighths[tap])
-                        } else {
-                            combo_notes[tap]
-                        },
-                        lane_bonus[lane],
-                    )
-                } else if E::HEARTS {
-                    overheal_score(
-                        if E::PARAM {
-                            expiry.param_hearted_strength(locked)
-                        } else {
-                            expiry.heart_strength(locked)
-                        },
-                        combo_eighths[tap],
-                        lane_bonus[lane],
-                        JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
-                    )
-                } else {
-                    note_score(
-                        if E::PARAM {
-                            expiry.param_strength(locked)
-                        } else if locked {
-                            tricked
-                        } else {
-                            scoring.team_strength
-                        },
-                        combo_notes[tap],
-                        lane_bonus[lane],
-                        JUDGEMENT[usize::from(locked)][usize::from(head)][usize::from(tail)],
-                    )
-                });
-                out.notes = out.notes.wrapping_add(1);
-                if E::FEVER && SCORE {
-                    out.skill = out.skill.saturating_add(expiry.fever_tap(time, out.notes));
-                }
-                if E::SPARK && SCORE {
-                    out.skill = out.skill.saturating_add(expiry.spark_tap(time));
-                }
-                let perfect = converted || (head & tail);
-                out.perfects = out.perfects.wrapping_add(u32::from(perfect));
-                if E::PSU && SCORE {
-                    out.skill = out.skill.saturating_add(expiry.psu_tap(perfect));
-                }
-
-                // Shoutouts to Snow Maiden Umi. I wonder why they gave a skill to one card and then just never again.
-                // I wonder why. Could've been interesting.
-                if STARS & event.is_star() & perfect {
-                    core::hint::cold_path();
-                    star_perfects = star_perfects.saturating_add(1);
-                    let due = stars.due(star_perfects)
-                        | combo.due(out.notes)
-                        | perfects.due(out.perfects);
-                    hit::<SCORE, YEAR>(
-                        due,
-                        time,
-                        scoring,
-                        &mut rng,
-                        &mut out,
-                        &mut ladder,
-                        &mut chain,
-                        &mut expiry,
-                    );
-                } else if out.notes == combo.next()
-                    || out.perfects == perfects.next()
-                    || (SCORE && out.score() >= ladder.low())
-                {
-                    let due = combo.due(out.notes) | perfects.due(out.perfects);
-                    hit::<SCORE, YEAR>(
-                        due,
-                        time,
-                        scoring,
-                        &mut rng,
-                        &mut out,
-                        &mut ladder,
-                        &mut chain,
-                        &mut expiry,
-                    );
-                }
+            // Shoutouts to Snow Maiden Umi. I wonder why they gave a skill to one card and then just never again.
+            // I wonder why. Could've been interesting.
+            if STARS & event.is_star() & perfect {
+                core::hint::cold_path();
+                star_perfects = star_perfects.saturating_add(1);
+                let due =
+                    stars.due(star_perfects) | combo.due(out.notes) | perfects.due(out.perfects);
+                hit::<SCORE, YEAR>(
+                    due,
+                    time,
+                    scoring,
+                    &mut rng,
+                    &mut out,
+                    &mut ladder,
+                    &mut chain,
+                    &mut expiry,
+                );
+            } else if out.notes == combo.next()
+                || out.perfects == perfects.next()
+                || (SCORE && out.score() >= ladder.low())
+            {
+                let due = combo.due(out.notes) | perfects.due(out.perfects);
+                hit::<SCORE, YEAR>(
+                    due,
+                    time,
+                    scoring,
+                    &mut rng,
+                    &mut out,
+                    &mut ladder,
+                    &mut chain,
+                    &mut expiry,
+                );
             }
         }
     }
 
-    out.icons = u32::try_from(spawns.icon).unwrap_or(u32::MAX);
+    let last = times.last().copied().unwrap_or_default();
+    out.icons = u32::try_from(spawns.spawned(last, offset)).unwrap_or(u32::MAX);
     if E::FEVER && !SCORE {
         out.skill = out.skill.saturating_add(expiry.fever_paid());
     }
@@ -472,29 +461,52 @@ where
     (rng, out.paid())
 }
 
+/// For tracking when notes spawn for rhythm icon skill activations so note spawns that
+/// won't trigger anything will be ignored.
 struct Spawns<'a> {
     icons: &'a [Time],
     at: &'a [u32],
     lanes: &'a [u16],
-    icon: usize,
     cursor: usize,
-    next: usize,
+    due: Time,
 }
 
-impl Spawns<'_> {
+impl<'a> Spawns<'a> {
+    fn new(icons: &'a [Time], at: &'a [u32], lanes: &'a [u16], offset: u32) -> Self {
+        let mut spawns = Self { icons, at, lanes, cursor: 0, due: Time(u32::MAX) };
+        spawns.due = spawns.firing(offset);
+        spawns
+    }
+
+    /// Calculates exact timestamp of when the next skill that can be pre-scheduled will
+    /// happen.
     #[inline(always)]
+    #[expect(clippy::indexing_slicing, reason = "`I should disable this lint.")]
     fn firing(&self, offset: u32) -> Time {
+        let count = self.at[self.cursor] as usize;
         self.icons
-            .get(self.next.wrapping_sub(1))
+            .get(count.wrapping_sub(1))
             .map_or(Time(u32::MAX), |t| t.spawn(offset))
     }
 
+    fn spawned(&self, bound: Time, offset: u32) -> usize {
+        self.icons.partition_point(|t| t.spawn(offset) < bound)
+    }
+
     #[inline(always)]
-    #[expect(clippy::indexing_slicing, reason = "`at` is terminated, `icons` is bounded")]
+    #[expect(clippy::indexing_slicing, reason = "`lanes` is as long as the terminated `at`")]
     #[expect(
         clippy::too_many_arguments,
         reason = "Legit trying to fix this lead to a +7% performance regression. `offset` as a field of `Spawns` moved register allocation to all of `walk`."
     )]
+    /// Even though the scheduling->skip logic is only for rhythm icon triggers, the rewrite
+    /// here resulting in a MASSIVE (14-53(!!!)%) speedup. It seems to mostly be in branch
+    /// prediction logic.
+    /// For teams that do have rhythm icon triggers, it doesn't need to check on every spawn
+    /// if the skill should activate now. Before if a skill rolled every 20 icons, it would run a check
+    /// that came back 19/20 times which was A) slow and B) hard to predict. Now that's gone.
+    /// For teams that don't have rhythm icon triggers, `due` will always be greater than `time`, so
+    /// there's no branch predicting to do whatsoever.
     fn drain<'q, const SCORE: bool, const YEAR: bool, const LAST: bool, E>(
         &mut self,
         bound: Time,
@@ -510,35 +522,32 @@ impl Spawns<'_> {
     {
         let mut stop = bound;
         loop {
-            while self.icon < self.icons.len() && self.icons[self.icon].spawn(offset) < stop {
-                self.icon = self.icon.saturating_add(1);
-                if self.icon == self.next {
-                    let now = self.icons[self.icon.saturating_sub(1)].spawn(offset);
-                    if SCORE {
-                        ladder.catch_up::<YEAR>(now, scoring, rng, out, chain, expiry);
-                    }
-                    moment::<YEAR>(self.lanes[self.cursor], now, scoring, rng, out, chain, expiry);
-                    self.cursor = self.cursor.saturating_add(1);
-                    self.next = self.at[self.cursor] as usize;
-                    if SCORE {
-                        ladder.settle::<YEAR>(now, scoring, rng, out, chain, expiry);
-                    }
-                    if E::ANY {
-                        stop = stop.min(expiry.next());
-                    }
-                    while LAST && E::ANY && expiry.next() == bound && self.firing(offset) >= bound {
-                        let paid;
-                        (*rng, paid) = release::<SCORE, YEAR, _>(
-                            bound,
-                            scoring,
-                            rng.clone(),
-                            *out,
-                            ladder,
-                            chain,
-                            expiry,
-                        );
-                        out.take(paid);
-                    }
+            while self.due < stop {
+                let now = self.due;
+                if SCORE {
+                    ladder.catch_up::<YEAR>(now, scoring, rng, out, chain, expiry);
+                }
+                moment::<YEAR>(self.lanes[self.cursor], now, scoring, rng, out, chain, expiry);
+                self.cursor = self.cursor.saturating_add(1);
+                self.due = self.firing(offset);
+                if SCORE {
+                    ladder.settle::<YEAR>(now, scoring, rng, out, chain, expiry);
+                }
+                if E::ANY {
+                    stop = stop.min(expiry.next());
+                }
+                while LAST && E::ANY && expiry.next() == bound && self.due >= bound {
+                    let paid;
+                    (*rng, paid) = release::<SCORE, YEAR, _>(
+                        bound,
+                        scoring,
+                        rng.clone(),
+                        *out,
+                        ladder,
+                        chain,
+                        expiry,
+                    );
+                    out.take(paid);
                 }
             }
             if !E::ANY || stop == bound {

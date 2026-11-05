@@ -69,24 +69,26 @@ These are the current results using a variety of teams. The goal was to test eac
 
 | spec | one thread | all threads | burrito |
 | --- | ---: | ---: | ---: |
-| accessory-skills | 293.7 K/s | 3.814 M/s | 5.882 K/s |
-| amplify-encore-scorers | 267 K/s | 3.568 M/s | 7.485 K/s |
-| combo-fevers | 85.99 K/s | 1.244 M/s | 3.796 K/s |
-| everything | 37.83 K/s | 605 K/s | x |
-| healers-heal-sis | 253.8 K/s | 3.528 M/s | 5.533 K/s |
-| n-cards-only | 400 K/s | 4.72 M/s | x |
-| nine-psus | 90.18 K/s | 1.43 M/s | 3.626 K/s |
-| param-boost-sync | 121.9 K/s | 1.825 M/s | x |
-| parity-scorers | 374.8 K/s | 4.888 M/s | 8.317 K/s |
-| perfect-locks-trick-sis | 111.5 K/s | 1.778 M/s | x |
-| score-scorers | 168.1 K/s | 2.212 M/s | x |
-| scorer-sru | 182.6 K/s | 2.328 M/s | 6.457 K/s |
-| scorers | 351.3 K/s | 3.774 M/s | 4.944 K/s |
-| spark-encore | 264.7 K/s | 3.431 M/s | 6.879 K/s |
-| star-notes | 197 K/s | 2.514 M/s | 4.897 K/s |
-| time-triggers | 270.2 K/s | 3.014 M/s | 6.857 K/s |
-| total-tricks | 144.5 K/s | 2.13 M/s | x |
-| year-group-chains | 210.9 K/s | 2.617 M/s | x |
+| accessory-skills | 343.7 K/s | 5.323 M/s | 5.882 K/s |
+| amplify-encore-scorers | 278.3 K/s | 4.495 M/s | 7.485 K/s |
+| combo-fevers | 147.1 K/s | 2.347 M/s | 3.796 K/s |
+| everything | 46.9 K/s | 728 K/s | x |
+| healers-heal-sis | 299.5 K/s | 4.558 M/s | 5.533 K/s |
+| n-cards-only | 521.7 K/s | 6.452 M/s | x |
+| nine-psus | 141.1 K/s | 2.146 M/s | 3.626 K/s |
+| param-boost-sync | 156.4 K/s | 2.424 M/s | x |
+| parity-scorers | 457.1 K/s | 6.206 M/s | 8.317 K/s |
+| perfect-locks-trick-sis | 161 K/s | 2.6 M/s | x |
+| score-scorers | 211 K/s | 2.949 M/s | x |
+| scorer-sru | 368.1 K/s | 4.918 M/s | 6.457 K/s |
+| scorers | 361.5 K/s | 4.982 M/s | 4.944 K/s |
+| spark-encore | 319.5 K/s | 4.755 M/s | 6.879 K/s |
+| star-notes | 272.9 K/s | 3.817 M/s | 4.897 K/s |
+| swing-scorers | 391.9 K/s | 5.461 M/s | x |
+| time-triggers | 339.2 K/s | 4.295 M/s | 6.857 K/s |
+| total-tricks | 181.6 K/s | 2.813 M/s | x |
+| two-srus | 238.7 K/s | 3.395 M/s | x |
+| year-group-chains | 280.9 K/s | 4.025 M/s | x |
 
 x means Burrito's sim can't play that team:
 

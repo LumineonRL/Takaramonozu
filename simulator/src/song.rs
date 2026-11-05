@@ -70,6 +70,19 @@ impl Event {
     const KIND: u8 = 0b0011_0000;
     const STAR: u8 = 0b0100_0000;
     const SWING: u8 = 0b1000_0000;
+    /// There are two types of events that don't contribute score - a hold note
+    /// start and the end of the song. Both of these share a representation.
+    /// `EventKind::HoldStart` = 0b0001_0000
+    /// `EventKind::End` = 0b0011_0000
+    /// Nothing else has the 5th bit turned on, therefore, the 5th bit being on can
+    /// be used as an indicator that this specific event is not a scoring event.
+    /// Which means that scoring logic can be completely skipped over on those events
+    /// Which lead to a massive speedup in the `drain` code in `play.rs` of 17-53%.
+    /// Or rather, this allowed LLVM to inline code better and that massive speedup was a
+    /// regression until this was introduced and I guess LLVM was able to prove that it didn't need
+    /// to perform scoring checks on these and optimize them away. At least that's my theory as far
+    /// as I can tell. Sometimes performance chasing is throwing things at the wall and seeing what sticks.
+    const UNSCORED: u8 = 0b0001_0000;
 
     const KIND_BITS: [u8; 4] = [0b0000_0000, 0b0001_0000, 0b0010_0000, 0b0011_0000];
 
@@ -108,6 +121,12 @@ impl Event {
             0b0010_0000 => EventKind::HoldRelease,
             _ => EventKind::End,
         }
+    }
+
+    #[inline]
+    #[must_use]
+    pub const fn is_unscored(self) -> bool {
+        (self.0 & Self::UNSCORED) != 0
     }
 
     #[inline]
@@ -398,6 +417,8 @@ mod tests {
                         assert_eq!(e.kind(), kind, "{e:?}");
                         assert_eq!(e.is_star(), star, "{e:?}");
                         assert_eq!(e.is_swing(), swing, "{e:?}");
+                        let unscored = matches!(kind, EventKind::HoldStart | EventKind::End);
+                        assert_eq!(e.is_unscored(), unscored, "{e:?}");
                     }
                 }
             }
