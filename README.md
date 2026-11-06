@@ -98,23 +98,29 @@ The below table validates that the scores that both simulators generate matches 
 
 So the results of this table are focused around both center and shape. mean, gap and z all relate to measuring the centers and KS D, KS p, p1/p50/p99 all measure the shape.
 
-I won't be going into the mechanics of the Kolmogarov Smirnov test here. D measures the difference between both CDFs, p is the how likely that difference is to occur, p1/p50/p99 are the gaps between the respective percentiles to ensure tail behavior matched between simulators.
+I won't be going into the mechanics of the Kolmogarov Smirnov test here. D measures the difference between both CDFs, p is the probability of observing a KS statistic at least as large as the one obtained, p1/p50/p99 are the gaps between the respective percentiles to ensure tail behavior matched between simulators.
+
+I reran this at 2 million trials each and the results are not as even as I thought. First the numbers:
 
 | spec | Takaramonozu mean | burrito mean | gap | z | KS D | KS p | p1 / p50 / p99 gap |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| accessory-skills | 3,654,344 | 3,651,727 | +0.072% | +1.6 | 0.0145 | 0.031 | +0.06% / +0.16% / +0.13% |
-| amplify-encore-scorers | 1,963,182 | 1,964,489 | -0.067% | -0.3 | 0.0074 | 0.652 | -2.42% / +0.14% / -0.69% |
-| combo-fevers | 3,185,606 | 3,186,155 | -0.017% | -0.5 | 0.0095 | 0.334 | -0.04% / -0.01% / -0.07% |
-| healers-heal-sis | 2,895,379 | 2,895,207 | +0.006% | +0.1 | 0.0063 | 0.830 | -0.47% / -0.01% / +0.42% |
-| nine-psus | 2,488,747 | 2,488,842 | -0.004% | -0.1 | 0.0061 | 0.851 | +0.07% / -0.00% / -0.08% |
-| parity-scorers | 1,131,722 | 1,131,747 | -0.002% | -0.0 | 0.0068 | 0.744 | -0.02% / -0.09% / +0.08% |
-| scorer-sru | 1,805,315 | 1,807,240 | -0.107% | -1.2 | 0.0086 | 0.443 | -0.35% / -0.03% / +0.24% |
-| scorers | 2,786,300 | 2,785,580 | +0.026% | +0.4 | 0.0066 | 0.776 | -0.06% / +0.03% / +0.21% |
-| spark-encore | 882,597 | 884,781 | -0.247% | -1.2 | 0.0093 | 0.359 | +1.07% / -0.25% / -0.03% |
-| star-notes | 1,779,549 | 1,778,969 | +0.033% | +0.4 | 0.0073 | 0.669 | -0.36% / +0.03% / -0.05% |
-| time-triggers | 1,099,715 | 1,101,067 | -0.123% | -1.5 | 0.0113 | 0.155 | +0.06% / -0.13% / -0.23% |
+| accessory-skills | 3,652,129 | 3,652,408 | -0.008% | -1.7 | 0.0009 | 0.352 | -0.01% / -0.01% / -0.01% |
+| amplify-encore-scorers | 1,965,422 | 1,966,445 | -0.052% | -2.7 | 0.0017 | 0.008 | +0.16% / -0.07% / +0.01% |
+| combo-fevers | 3,185,938 | 3,186,129 | -0.006% | -1.7 | 0.0010 | 0.294 | +0.01% / -0.01% / -0.02% |
+| healers-heal-sis | 2,894,215 | 2,894,634 | -0.014% | -1.7 | 0.0013 | 0.058 | -0.08% / -0.03% / -0.01% |
+| nine-psus | 2,488,232 | 2,488,599 | -0.015% | -5.2 | 0.0025 | 0.000 | -0.01% / -0.01% / -0.02% |
+| parity-scorers | 1,132,425 | 1,132,661 | -0.021% | -2.4 | 0.0012 | 0.134 | -0.04% / -0.02% / -0.03% |
+| scorer-sru | 1,805,076 | 1,806,927 | -0.102% | -11.4 | 0.0051 | 0.000 | -0.10% / -0.11% / -0.10% |
+| scorers | 2,784,948 | 2,785,117 | -0.006% | -0.9 | 0.0006 | 0.887 | -0.05% / -0.00% / +0.01% |
+| spark-encore | 883,235 | 883,701 | -0.053% | -2.6 | 0.0014 | 0.036 | +0.32% / -0.05% / +0.00% |
+| star-notes | 1,779,230 | 1,779,502 | -0.015% | -2.1 | 0.0015 | 0.029 | -0.04% / -0.01% / +0.01% |
+| time-triggers | 1,100,547 | 1,101,051 | -0.046% | -5.7 | 0.0035 | 0.000 | +0.00% / -0.06% / -0.03% |
 
-In conclusion, throw in a Bonferroni correction for that one accessory-skills p-value and nothing here looks out of place and I feel confident saying the scores agree where they're supposed to agree. For the record, not listed here, but they also disagree where they're supposed to disagree and pretty much anything from DIVERGENCES.md on any of the specs would result in a tangible gap.
+While the means themselves look to be within noise of each other just by inspection of the two relative to each other and one may go "with a large enough sample size you'll always find a statistically significant difference, you ran this for 2 million trials each, after all!", I think there's more going on here. Note the gap and z-score columns. Takaramonozu comes out below Burrito on *every single one of them*. This gap comes entirely from Burrito not flooring the value of each note tap and instead keeping it as a float.
+
+You'll also notice that `scorer-sru` came out as -11.4 stds away. Turns out this unearthed another divergence related to rounding where if a scorer's skill activation value is an odd number and has a Charm SIS for 2.5x, Takaramonozu rounds down and Burrito keeps it as a float and the power is high enough to make that difference stand out with 2 million trials.
+
+I could dive a little deeper into an analysis on these number but I think I've already given the topic more attention than it deserves. The purpose was never to match Burrito in the first place, after all and I think, even at face value, the comparison of how they perform relative to one another, as well as the list of divergences is sufficient for me to have confidence that my project is doing what it's supposed to be doing and I can move onto the next stages of development.
 
 # References
 
