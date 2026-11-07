@@ -1,21 +1,24 @@
 //! Assemble the cards from skills and leader skills
 
 use simulator::card::{Card, CardDb, CardMeta};
-use simulator::scalar::{Roster, Stats};
+use simulator::scalar::{Rarity, Roster, Stats};
 
 use crate::load::convert::{self, At, Culprit, ErrorKind, LoadError};
 use crate::load::raw::{RawCard, RawStats, RawTargetMap, RawUniqueLeader};
 use crate::load::{leader, skill};
 
 // unidolized min, unidolized max, idolized min, idolized max.
-// regular first, promos second.
-const SIS: [[[u8; 4]; 2]; 5] = [
-    [[0, 0, 1, 1], [0, 0, 1, 1]], // N
-    [[1, 1, 1, 2], [1, 1, 1, 1]], // R
-    [[2, 2, 2, 4], [2, 2, 2, 2]], // SR
-    [[3, 3, 3, 6], [2, 2, 2, 2]], // SSR
-    [[4, 4, 4, 8], [2, 2, 2, 2]], // UR
+const SIS: [[u8; 4]; 5] = [
+    [0, 0, 1, 1], // N
+    [1, 1, 1, 2], // R
+    [2, 2, 2, 4], // SR
+    [3, 3, 3, 6], // SSR
+    [4, 4, 4, 8], // UR
 ];
+// At some point in SIF's history they buffed promo cards of all rarities to have normal SIS capacities.
+// They even retroactively adjusted old promos... except for Rs. Old R promos still on have 1 SIS slot, but
+// newer R promos had regular SIS slots.
+const EARLY_R_PROMO: [u8; 4] = [1, 1, 1, 1];
 
 /// # Errors
 /// Any field that does not convert
@@ -83,7 +86,9 @@ fn meta(c: &RawCard) -> Result<CardMeta, LoadError> {
         return Err(ErrorKind::Invariant).at(Culprit::Card(c.card_id), "is_preidolized_non_promo");
     }
     let promo = c.is_promo && !c.is_preidolized_non_promo;
-    if [u.sis_base, u.sis_max, i.sis_base, i.sis_max] != SIS[rarity as usize][usize::from(promo)] {
+    let sis = [u.sis_base, u.sis_max, i.sis_base, i.sis_max];
+    let early_r_promo = promo && rarity == Rarity::R && sis == EARLY_R_PROMO;
+    if sis != SIS[rarity as usize] && !early_r_promo {
         return Err(ErrorKind::Invariant).at(Culprit::Card(c.card_id), "sis_max");
     }
     // promos are pre-idolized.
@@ -203,13 +208,10 @@ mod tests {
         let promos = db.meta.iter().filter(|m| m.is_promo && !m.is_preidolized_non_promo);
         assert_eq!(promos.clone().count(), 540);
         assert_eq!(db.meta.iter().filter(|m| m.is_preidolized_non_promo).count(), 1268);
-        // Every actual promo of SR and above shares one layout, so SIS slots
-        // alone can't tell a promo SR from a promo SSR.
-        assert!(
-            promos
-                .filter(|m| m.rarity >= Rarity::SR)
-                .all(|m| m.sis_base == [2, 2] && m.sis_max == [2, 2])
-        );
+        // The R promos that never expand are exactly the 72 before 2703.
+        let r: Vec<_> = promos.filter(|m| m.rarity == Rarity::R).collect();
+        assert_eq!(r.iter().filter(|m| m.sis_max == [1, 1]).count(), 72);
+        assert!(r.iter().all(|m| (m.sis_max == [1, 1]) == (m.card_id < 2703)));
     }
 
     #[test]
