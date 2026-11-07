@@ -1332,7 +1332,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3850,
+                "smile": 3900,
                 "pure": 1590,
                 "cool": 1720,
                 "hp": 3,
@@ -1341,7 +1341,7 @@
                 "image": "http://i.schoolido.lu/c/28RoundHonoka.png"
             },
             "idolized": {
-                "smile": 4160,
+                "smile": 4260,
                 "pure": 1850,
                 "cool": 1980,
                 "hp": 4,
@@ -1431,7 +1431,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3070,
+                "smile": 3120,
                 "pure": 2200,
                 "cool": 1770,
                 "hp": 3,
@@ -1440,7 +1440,7 @@
                 "image": "http://i.schoolido.lu/c/29RoundEli.png"
             },
             "idolized": {
-                "smile": 3380,
+                "smile": 3480,
                 "pure": 2460,
                 "cool": 2030,
                 "hp": 4,
@@ -1530,7 +1530,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3050,
+                "smile": 3100,
                 "pure": 2180,
                 "cool": 1810,
                 "hp": 3,
@@ -1539,7 +1539,7 @@
                 "image": "http://i.schoolido.lu/c/30RoundKotori.png"
             },
             "idolized": {
-                "smile": 3360,
+                "smile": 3460,
                 "pure": 2440,
                 "cool": 2070,
                 "hp": 4,
@@ -1629,7 +1629,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3140,
+                "smile": 3190,
                 "pure": 1790,
                 "cool": 2110,
                 "hp": 3,
@@ -1638,7 +1638,7 @@
                 "image": "http://i.schoolido.lu/c/31RoundUmi.png"
             },
             "idolized": {
-                "smile": 3450,
+                "smile": 3550,
                 "pure": 2050,
                 "cool": 2370,
                 "hp": 4,
@@ -1728,7 +1728,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3630,
+                "smile": 3680,
                 "pure": 1600,
                 "cool": 1930,
                 "hp": 3,
@@ -1737,7 +1737,7 @@
                 "image": "http://i.schoolido.lu/c/32RoundRin.png"
             },
             "idolized": {
-                "smile": 3940,
+                "smile": 4040,
                 "pure": 1860,
                 "cool": 2190,
                 "hp": 4,
@@ -1827,7 +1827,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3210,
+                "smile": 3260,
                 "pure": 2060,
                 "cool": 1770,
                 "hp": 3,
@@ -1836,7 +1836,7 @@
                 "image": "http://i.schoolido.lu/c/33RoundMaki.png"
             },
             "idolized": {
-                "smile": 3520,
+                "smile": 3620,
                 "pure": 2320,
                 "cool": 2030,
                 "hp": 4,
@@ -1926,7 +1926,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3260,
+                "smile": 3310,
                 "pure": 2080,
                 "cool": 1700,
                 "hp": 3,
@@ -1935,7 +1935,7 @@
                 "image": "http://i.schoolido.lu/c/34RoundNozomi.png"
             },
             "idolized": {
-                "smile": 3570,
+                "smile": 3670,
                 "pure": 2340,
                 "cool": 1960,
                 "hp": 4,
@@ -2025,7 +2025,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3130,
+                "smile": 3180,
                 "pure": 1750,
                 "cool": 2160,
                 "hp": 3,
@@ -2034,7 +2034,7 @@
                 "image": "http://i.schoolido.lu/c/35RoundHanayo.png"
             },
             "idolized": {
-                "smile": 3440,
+                "smile": 3540,
                 "pure": 2010,
                 "cool": 2420,
                 "hp": 4,
@@ -2124,7 +2124,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3690,
+                "smile": 3740,
                 "pure": 1810,
                 "cool": 1540,
                 "hp": 3,
@@ -2133,7 +2133,7 @@
                 "image": "http://i.schoolido.lu/c/36RoundNico.png"
             },
             "idolized": {
-                "smile": 4000,
+                "smile": 4100,
                 "pure": 2070,
                 "cool": 1800,
                 "hp": 4,
@@ -2224,7 +2224,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1690,
-                "pure": 3060,
+                "pure": 3110,
                 "cool": 2140,
                 "hp": 3,
                 "sis_base": 1,
@@ -2233,7 +2233,7 @@
             },
             "idolized": {
                 "smile": 1950,
-                "pure": 3370,
+                "pure": 3470,
                 "cool": 2400,
                 "hp": 4,
                 "sis_base": 1,
@@ -2323,7 +2323,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1770,
-                "pure": 3040,
+                "pure": 3090,
                 "cool": 2080,
                 "hp": 3,
                 "sis_base": 1,
@@ -2332,7 +2332,7 @@
             },
             "idolized": {
                 "smile": 2030,
-                "pure": 3350,
+                "pure": 3450,
                 "cool": 2340,
                 "hp": 4,
                 "sis_base": 1,
@@ -2422,7 +2422,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1870,
-                "pure": 3600,
+                "pure": 3650,
                 "cool": 1510,
                 "hp": 3,
                 "sis_base": 1,
@@ -2431,7 +2431,7 @@
             },
             "idolized": {
                 "smile": 2130,
-                "pure": 3910,
+                "pure": 4010,
                 "cool": 1770,
                 "hp": 4,
                 "sis_base": 1,
@@ -2521,7 +2521,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1620,
-                "pure": 3200,
+                "pure": 3250,
                 "cool": 2070,
                 "hp": 3,
                 "sis_base": 1,
@@ -2530,7 +2530,7 @@
             },
             "idolized": {
                 "smile": 1880,
-                "pure": 3510,
+                "pure": 3610,
                 "cool": 2330,
                 "hp": 4,
                 "sis_base": 1,
@@ -2620,7 +2620,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1980,
-                "pure": 3250,
+                "pure": 3300,
                 "cool": 1660,
                 "hp": 3,
                 "sis_base": 1,
@@ -2629,7 +2629,7 @@
             },
             "idolized": {
                 "smile": 2240,
-                "pure": 3560,
+                "pure": 3660,
                 "cool": 1920,
                 "hp": 4,
                 "sis_base": 1,
@@ -2719,7 +2719,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1800,
-                "pure": 2900,
+                "pure": 2950,
                 "cool": 2180,
                 "hp": 3,
                 "sis_base": 1,
@@ -2728,7 +2728,7 @@
             },
             "idolized": {
                 "smile": 2060,
-                "pure": 3210,
+                "pure": 3310,
                 "cool": 2440,
                 "hp": 4,
                 "sis_base": 1,
@@ -2818,7 +2818,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1530,
-                "pure": 3660,
+                "pure": 3710,
                 "cool": 1790,
                 "hp": 3,
                 "sis_base": 1,
@@ -2827,7 +2827,7 @@
             },
             "idolized": {
                 "smile": 1790,
-                "pure": 3970,
+                "pure": 4070,
                 "cool": 2050,
                 "hp": 4,
                 "sis_base": 1,
@@ -2917,7 +2917,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1740,
-                "pure": 3720,
+                "pure": 3770,
                 "cool": 1520,
                 "hp": 3,
                 "sis_base": 1,
@@ -2926,7 +2926,7 @@
             },
             "idolized": {
                 "smile": 2000,
-                "pure": 4030,
+                "pure": 4130,
                 "cool": 1780,
                 "hp": 4,
                 "sis_base": 1,
@@ -3016,7 +3016,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1710,
-                "pure": 3000,
+                "pure": 3050,
                 "cool": 2170,
                 "hp": 3,
                 "sis_base": 1,
@@ -3025,7 +3025,7 @@
             },
             "idolized": {
                 "smile": 1970,
-                "pure": 3310,
+                "pure": 3410,
                 "cool": 2430,
                 "hp": 4,
                 "sis_base": 1,
@@ -3116,7 +3116,7 @@
             "unidolized": {
                 "smile": 2250,
                 "pure": 1600,
-                "cool": 2840,
+                "cool": 2890,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -3125,7 +3125,7 @@
             "idolized": {
                 "smile": 2510,
                 "pure": 1860,
-                "cool": 3150,
+                "cool": 3250,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -3215,7 +3215,7 @@
             "unidolized": {
                 "smile": 1760,
                 "pure": 1510,
-                "cool": 3620,
+                "cool": 3670,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -3224,7 +3224,7 @@
             "idolized": {
                 "smile": 2020,
                 "pure": 1770,
-                "cool": 3930,
+                "cool": 4030,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -3314,7 +3314,7 @@
             "unidolized": {
                 "smile": 1530,
                 "pure": 2100,
-                "cool": 3060,
+                "cool": 3110,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -3323,7 +3323,7 @@
             "idolized": {
                 "smile": 1790,
                 "pure": 2360,
-                "cool": 3370,
+                "cool": 3470,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -3413,7 +3413,7 @@
             "unidolized": {
                 "smile": 1900,
                 "pure": 1530,
-                "cool": 3460,
+                "cool": 3510,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -3422,7 +3422,7 @@
             "idolized": {
                 "smile": 2160,
                 "pure": 1790,
-                "cool": 3770,
+                "cool": 3870,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -3512,7 +3512,7 @@
             "unidolized": {
                 "smile": 2130,
                 "pure": 1700,
-                "cool": 2900,
+                "cool": 2950,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -3521,7 +3521,7 @@
             "idolized": {
                 "smile": 2390,
                 "pure": 1960,
-                "cool": 3210,
+                "cool": 3310,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -3611,7 +3611,7 @@
             "unidolized": {
                 "smile": 1580,
                 "pure": 1800,
-                "cool": 3510,
+                "cool": 3560,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -3620,7 +3620,7 @@
             "idolized": {
                 "smile": 1840,
                 "pure": 2060,
-                "cool": 3820,
+                "cool": 3920,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -3710,7 +3710,7 @@
             "unidolized": {
                 "smile": 1590,
                 "pure": 2090,
-                "cool": 3020,
+                "cool": 3070,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -3719,7 +3719,7 @@
             "idolized": {
                 "smile": 1850,
                 "pure": 2350,
-                "cool": 3330,
+                "cool": 3430,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -3809,7 +3809,7 @@
             "unidolized": {
                 "smile": 1700,
                 "pure": 2120,
-                "cool": 2870,
+                "cool": 2920,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -3818,7 +3818,7 @@
             "idolized": {
                 "smile": 1960,
                 "pure": 2380,
-                "cool": 3180,
+                "cool": 3280,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -3908,7 +3908,7 @@
             "unidolized": {
                 "smile": 1990,
                 "pure": 1650,
-                "cool": 3050,
+                "cool": 3100,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -3917,7 +3917,7 @@
             "idolized": {
                 "smile": 2250,
                 "pure": 1910,
-                "cool": 3360,
+                "cool": 3460,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -20064,7 +20064,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3700,
+                "smile": 3800,
                 "pure": 2120,
                 "cool": 1770,
                 "hp": 4,
@@ -20073,7 +20073,7 @@
                 "image": "http://i.schoolido.lu/c/225RoundRin.png"
             },
             "idolized": {
-                "smile": 3700,
+                "smile": 3800,
                 "pure": 2120,
                 "cool": 1770,
                 "hp": 4,
@@ -25760,7 +25760,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3800,
+                "smile": 3850,
                 "pure": 1800,
                 "cool": 1530,
                 "hp": 3,
@@ -25769,7 +25769,7 @@
                 "image": "http://i.schoolido.lu/c/284RoundHonoka.png"
             },
             "idolized": {
-                "smile": 4110,
+                "smile": 4210,
                 "pure": 2060,
                 "cool": 1790,
                 "hp": 4,
@@ -25861,7 +25861,7 @@
             "unidolized": {
                 "smile": 1620,
                 "pure": 1730,
-                "cool": 3780,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -25870,7 +25870,7 @@
             "idolized": {
                 "smile": 1880,
                 "pure": 1990,
-                "cool": 4090,
+                "cool": 4190,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -25959,7 +25959,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1550,
-                "pure": 3810,
+                "pure": 3860,
                 "cool": 1770,
                 "hp": 3,
                 "sis_base": 1,
@@ -25968,7 +25968,7 @@
             },
             "idolized": {
                 "smile": 1810,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 2030,
                 "hp": 4,
                 "sis_base": 1,
@@ -26059,7 +26059,7 @@
             "unidolized": {
                 "smile": 1510,
                 "pure": 1780,
-                "cool": 3840,
+                "cool": 3890,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -26068,7 +26068,7 @@
             "idolized": {
                 "smile": 1770,
                 "pure": 2040,
-                "cool": 4150,
+                "cool": 4250,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -26156,7 +26156,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3760,
+                "smile": 3810,
                 "pure": 1810,
                 "cool": 1560,
                 "hp": 3,
@@ -26165,7 +26165,7 @@
                 "image": "http://i.schoolido.lu/c/288RoundRin.png"
             },
             "idolized": {
-                "smile": 4070,
+                "smile": 4170,
                 "pure": 2070,
                 "cool": 1820,
                 "hp": 4,
@@ -26257,7 +26257,7 @@
             "unidolized": {
                 "smile": 1720,
                 "pure": 1590,
-                "cool": 3820,
+                "cool": 3870,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -26266,7 +26266,7 @@
             "idolized": {
                 "smile": 1980,
                 "pure": 1850,
-                "cool": 4130,
+                "cool": 4230,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -26355,7 +26355,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1710,
-                "pure": 3830,
+                "pure": 3880,
                 "cool": 1580,
                 "hp": 3,
                 "sis_base": 1,
@@ -26364,7 +26364,7 @@
             },
             "idolized": {
                 "smile": 1970,
-                "pure": 4140,
+                "pure": 4240,
                 "cool": 1840,
                 "hp": 4,
                 "sis_base": 1,
@@ -26454,7 +26454,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1610,
-                "pure": 3770,
+                "pure": 3820,
                 "cool": 1750,
                 "hp": 3,
                 "sis_base": 1,
@@ -26463,7 +26463,7 @@
             },
             "idolized": {
                 "smile": 1870,
-                "pure": 4080,
+                "pure": 4180,
                 "cool": 2010,
                 "hp": 4,
                 "sis_base": 1,
@@ -26552,7 +26552,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3810,
+                "smile": 3860,
                 "pure": 1580,
                 "cool": 1740,
                 "hp": 3,
@@ -26561,7 +26561,7 @@
                 "image": "http://i.schoolido.lu/c/292RoundNico.png"
             },
             "idolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 1840,
                 "cool": 2000,
                 "hp": 4,
@@ -27161,7 +27161,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3710,
+                "smile": 3810,
                 "pure": 1820,
                 "cool": 2030,
                 "hp": 3,
@@ -27170,7 +27170,7 @@
                 "image": "http://i.schoolido.lu/c/298RoundHonoka.png"
             },
             "idolized": {
-                "smile": 3710,
+                "smile": 3810,
                 "pure": 1820,
                 "cool": 2030,
                 "hp": 3,
@@ -27262,7 +27262,7 @@
             "unidolized": {
                 "smile": 1970,
                 "pure": 1860,
-                "cool": 3730,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -27271,7 +27271,7 @@
             "idolized": {
                 "smile": 1970,
                 "pure": 1860,
-                "cool": 3730,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -27360,7 +27360,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2010,
-                "pure": 3700,
+                "pure": 3800,
                 "cool": 1850,
                 "hp": 3,
                 "sis_base": 1,
@@ -27369,7 +27369,7 @@
             },
             "idolized": {
                 "smile": 2010,
-                "pure": 3700,
+                "pure": 3800,
                 "cool": 1850,
                 "hp": 3,
                 "sis_base": 1,
@@ -27460,7 +27460,7 @@
             "unidolized": {
                 "smile": 1990,
                 "pure": 1910,
-                "cool": 3660,
+                "cool": 3760,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -27469,7 +27469,7 @@
             "idolized": {
                 "smile": 1990,
                 "pure": 1910,
-                "cool": 3660,
+                "cool": 3760,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -27557,7 +27557,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3670,
+                "smile": 3770,
                 "pure": 1840,
                 "cool": 2050,
                 "hp": 3,
@@ -27566,7 +27566,7 @@
                 "image": "http://i.schoolido.lu/c/302RoundRin.png"
             },
             "idolized": {
-                "smile": 3670,
+                "smile": 3770,
                 "pure": 1840,
                 "cool": 2050,
                 "hp": 3,
@@ -27658,7 +27658,7 @@
             "unidolized": {
                 "smile": 1850,
                 "pure": 2020,
-                "cool": 3690,
+                "cool": 3790,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -27667,7 +27667,7 @@
             "idolized": {
                 "smile": 1850,
                 "pure": 2020,
-                "cool": 3690,
+                "cool": 3790,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -27756,7 +27756,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1850,
-                "pure": 3750,
+                "pure": 3850,
                 "cool": 1960,
                 "hp": 3,
                 "sis_base": 1,
@@ -27765,7 +27765,7 @@
             },
             "idolized": {
                 "smile": 1850,
-                "pure": 3750,
+                "pure": 3850,
                 "cool": 1960,
                 "hp": 3,
                 "sis_base": 1,
@@ -27855,7 +27855,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1960,
-                "pure": 3740,
+                "pure": 3840,
                 "cool": 1860,
                 "hp": 3,
                 "sis_base": 1,
@@ -27864,7 +27864,7 @@
             },
             "idolized": {
                 "smile": 1960,
-                "pure": 3740,
+                "pure": 3840,
                 "cool": 1860,
                 "hp": 3,
                 "sis_base": 1,
@@ -27953,7 +27953,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3680,
+                "smile": 3780,
                 "pure": 2010,
                 "cool": 1870,
                 "hp": 3,
@@ -27962,7 +27962,7 @@
                 "image": "http://i.schoolido.lu/c/306RoundNico.png"
             },
             "idolized": {
-                "smile": 3680,
+                "smile": 3780,
                 "pure": 2010,
                 "cool": 1870,
                 "hp": 3,
@@ -30632,7 +30632,7 @@
             "unidolized": {
                 "smile": 1910,
                 "pure": 1630,
-                "cool": 3690,
+                "cool": 3740,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -30641,7 +30641,7 @@
             "idolized": {
                 "smile": 2170,
                 "pure": 1890,
-                "cool": 4000,
+                "cool": 4100,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -30731,7 +30731,7 @@
             "unidolized": {
                 "smile": 1780,
                 "pure": 1610,
-                "cool": 3830,
+                "cool": 3880,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -30740,7 +30740,7 @@
             "idolized": {
                 "smile": 2040,
                 "pure": 1870,
-                "cool": 4140,
+                "cool": 4240,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -30830,7 +30830,7 @@
             "unidolized": {
                 "smile": 1630,
                 "pure": 1840,
-                "cool": 3760,
+                "cool": 3810,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -30839,7 +30839,7 @@
             "idolized": {
                 "smile": 1890,
                 "pure": 2100,
-                "cool": 4070,
+                "cool": 4170,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -30929,7 +30929,7 @@
             "unidolized": {
                 "smile": 1840,
                 "pure": 1570,
-                "cool": 3820,
+                "cool": 3870,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -30938,7 +30938,7 @@
             "idolized": {
                 "smile": 2100,
                 "pure": 1830,
-                "cool": 4130,
+                "cool": 4230,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -31028,7 +31028,7 @@
             "unidolized": {
                 "smile": 1870,
                 "pure": 1660,
-                "cool": 3700,
+                "cool": 3750,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -31037,7 +31037,7 @@
             "idolized": {
                 "smile": 2130,
                 "pure": 1920,
-                "cool": 4010,
+                "cool": 4110,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -31127,7 +31127,7 @@
             "unidolized": {
                 "smile": 1580,
                 "pure": 1790,
-                "cool": 3880,
+                "cool": 3930,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -31136,7 +31136,7 @@
             "idolized": {
                 "smile": 1840,
                 "pure": 2050,
-                "cool": 4190,
+                "cool": 4290,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -31226,7 +31226,7 @@
             "unidolized": {
                 "smile": 1560,
                 "pure": 1930,
-                "cool": 3740,
+                "cool": 3790,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -31235,7 +31235,7 @@
             "idolized": {
                 "smile": 1820,
                 "pure": 2190,
-                "cool": 4050,
+                "cool": 4150,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -31325,7 +31325,7 @@
             "unidolized": {
                 "smile": 1640,
                 "pure": 1810,
-                "cool": 3780,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -31334,7 +31334,7 @@
             "idolized": {
                 "smile": 1900,
                 "pure": 2070,
-                "cool": 4090,
+                "cool": 4190,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -31424,7 +31424,7 @@
             "unidolized": {
                 "smile": 1860,
                 "pure": 1690,
-                "cool": 3680,
+                "cool": 3730,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -31433,7 +31433,7 @@
             "idolized": {
                 "smile": 2120,
                 "pure": 1950,
-                "cool": 3990,
+                "cool": 4090,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -37911,7 +37911,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2010,
-                "pure": 3820,
+                "pure": 3920,
                 "cool": 1770,
                 "hp": 3,
                 "sis_base": 1,
@@ -37920,7 +37920,7 @@
             },
             "idolized": {
                 "smile": 2010,
-                "pure": 3820,
+                "pure": 3920,
                 "cool": 1770,
                 "hp": 3,
                 "sis_base": 1,
@@ -38786,7 +38786,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3830,
+                "smile": 3880,
                 "pure": 1550,
                 "cool": 1910,
                 "hp": 3,
@@ -38795,7 +38795,7 @@
                 "image": "http://i.schoolido.lu/c/430RoundHonoka.png"
             },
             "idolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 1810,
                 "cool": 2170,
                 "hp": 4,
@@ -38885,7 +38885,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3700,
+                "smile": 3750,
                 "pure": 1560,
                 "cool": 2000,
                 "hp": 3,
@@ -38894,7 +38894,7 @@
                 "image": "http://i.schoolido.lu/c/431RoundEli.png"
             },
             "idolized": {
-                "smile": 4010,
+                "smile": 4110,
                 "pure": 1820,
                 "cool": 2260,
                 "hp": 4,
@@ -38984,7 +38984,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3740,
+                "smile": 3790,
                 "pure": 1960,
                 "cool": 1570,
                 "hp": 3,
@@ -38993,7 +38993,7 @@
                 "image": "http://i.schoolido.lu/c/432RoundKotori.png"
             },
             "idolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 2220,
                 "cool": 1830,
                 "hp": 4,
@@ -39083,7 +39083,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3780,
+                "smile": 3830,
                 "pure": 1540,
                 "cool": 1940,
                 "hp": 3,
@@ -39092,7 +39092,7 @@
                 "image": "http://i.schoolido.lu/c/433RoundUmi.png"
             },
             "idolized": {
-                "smile": 4090,
+                "smile": 4190,
                 "pure": 1800,
                 "cool": 2200,
                 "hp": 4,
@@ -39182,7 +39182,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3880,
+                "smile": 3930,
                 "pure": 1780,
                 "cool": 1630,
                 "hp": 3,
@@ -39191,7 +39191,7 @@
                 "image": "http://i.schoolido.lu/c/434RoundRin.png"
             },
             "idolized": {
-                "smile": 4190,
+                "smile": 4290,
                 "pure": 2040,
                 "cool": 1890,
                 "hp": 4,
@@ -39281,7 +39281,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3680,
+                "smile": 3730,
                 "pure": 1590,
                 "cool": 1990,
                 "hp": 3,
@@ -39290,7 +39290,7 @@
                 "image": "http://i.schoolido.lu/c/435RoundMaki.png"
             },
             "idolized": {
-                "smile": 3990,
+                "smile": 4090,
                 "pure": 1850,
                 "cool": 2250,
                 "hp": 4,
@@ -39380,7 +39380,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3690,
+                "smile": 3740,
                 "pure": 2040,
                 "cool": 1540,
                 "hp": 3,
@@ -39389,7 +39389,7 @@
                 "image": "http://i.schoolido.lu/c/436RoundNozomi.png"
             },
             "idolized": {
-                "smile": 4000,
+                "smile": 4100,
                 "pure": 2300,
                 "cool": 1800,
                 "hp": 4,
@@ -39479,7 +39479,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3760,
+                "smile": 3810,
                 "pure": 1970,
                 "cool": 1540,
                 "hp": 3,
@@ -39488,7 +39488,7 @@
                 "image": "http://i.schoolido.lu/c/437RoundHanayo.png"
             },
             "idolized": {
-                "smile": 4070,
+                "smile": 4170,
                 "pure": 2230,
                 "cool": 1800,
                 "hp": 4,
@@ -39578,7 +39578,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3820,
+                "smile": 3870,
                 "pure": 1870,
                 "cool": 1600,
                 "hp": 3,
@@ -39587,7 +39587,7 @@
                 "image": "http://i.schoolido.lu/c/438RoundNico.png"
             },
             "idolized": {
-                "smile": 4130,
+                "smile": 4230,
                 "pure": 2130,
                 "cool": 1860,
                 "hp": 4,
@@ -45018,7 +45018,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1940,
-                "pure": 3700,
+                "pure": 3750,
                 "cool": 1640,
                 "hp": 3,
                 "sis_base": 1,
@@ -45027,7 +45027,7 @@
             },
             "idolized": {
                 "smile": 2200,
-                "pure": 4010,
+                "pure": 4110,
                 "cool": 1900,
                 "hp": 4,
                 "sis_base": 1,
@@ -45117,7 +45117,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1580,
-                "pure": 3710,
+                "pure": 3760,
                 "cool": 2020,
                 "hp": 3,
                 "sis_base": 1,
@@ -45126,7 +45126,7 @@
             },
             "idolized": {
                 "smile": 1840,
-                "pure": 4020,
+                "pure": 4120,
                 "cool": 2280,
                 "hp": 4,
                 "sis_base": 1,
@@ -45216,7 +45216,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1850,
-                "pure": 3840,
+                "pure": 3890,
                 "cool": 1600,
                 "hp": 3,
                 "sis_base": 1,
@@ -45225,7 +45225,7 @@
             },
             "idolized": {
                 "smile": 2110,
-                "pure": 4150,
+                "pure": 4250,
                 "cool": 1860,
                 "hp": 4,
                 "sis_base": 1,
@@ -45315,7 +45315,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1610,
-                "pure": 3720,
+                "pure": 3770,
                 "cool": 1980,
                 "hp": 3,
                 "sis_base": 1,
@@ -45324,7 +45324,7 @@
             },
             "idolized": {
                 "smile": 1870,
-                "pure": 4030,
+                "pure": 4130,
                 "cool": 2240,
                 "hp": 4,
                 "sis_base": 1,
@@ -45414,7 +45414,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1950,
-                "pure": 3780,
+                "pure": 3830,
                 "cool": 1550,
                 "hp": 3,
                 "sis_base": 1,
@@ -45423,7 +45423,7 @@
             },
             "idolized": {
                 "smile": 2210,
-                "pure": 4090,
+                "pure": 4190,
                 "cool": 1810,
                 "hp": 4,
                 "sis_base": 1,
@@ -45513,7 +45513,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1610,
-                "pure": 3760,
+                "pure": 3810,
                 "cool": 1940,
                 "hp": 3,
                 "sis_base": 1,
@@ -45522,7 +45522,7 @@
             },
             "idolized": {
                 "smile": 1870,
-                "pure": 4070,
+                "pure": 4170,
                 "cool": 2200,
                 "hp": 4,
                 "sis_base": 1,
@@ -45612,7 +45612,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1630,
-                "pure": 3900,
+                "pure": 3950,
                 "cool": 1760,
                 "hp": 3,
                 "sis_base": 1,
@@ -45621,7 +45621,7 @@
             },
             "idolized": {
                 "smile": 1890,
-                "pure": 4210,
+                "pure": 4310,
                 "cool": 2020,
                 "hp": 4,
                 "sis_base": 1,
@@ -45711,7 +45711,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1870,
-                "pure": 3850,
+                "pure": 3900,
                 "cool": 1570,
                 "hp": 3,
                 "sis_base": 1,
@@ -45720,7 +45720,7 @@
             },
             "idolized": {
                 "smile": 2130,
-                "pure": 4160,
+                "pure": 4260,
                 "cool": 1830,
                 "hp": 4,
                 "sis_base": 1,
@@ -45810,7 +45810,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1890,
-                "pure": 3800,
+                "pure": 3850,
                 "cool": 1590,
                 "hp": 3,
                 "sis_base": 1,
@@ -45819,7 +45819,7 @@
             },
             "idolized": {
                 "smile": 2150,
-                "pure": 4110,
+                "pure": 4210,
                 "cool": 1850,
                 "hp": 4,
                 "sis_base": 1,
@@ -49531,7 +49531,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3760,
+                "smile": 3860,
                 "pure": 1770,
                 "cool": 2070,
                 "hp": 3,
@@ -49540,7 +49540,7 @@
                 "image": "http://i.schoolido.lu/c/540RoundNico.png"
             },
             "idolized": {
-                "smile": 3760,
+                "smile": 3860,
                 "pure": 1770,
                 "cool": 2070,
                 "hp": 3,
@@ -52307,7 +52307,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3850,
+                "smile": 3900,
                 "pure": 1890,
                 "cool": 1550,
                 "hp": 3,
@@ -52316,7 +52316,7 @@
                 "image": "http://i.schoolido.lu/c/569RoundHonoka.png"
             },
             "idolized": {
-                "smile": 4160,
+                "smile": 4260,
                 "pure": 2150,
                 "cool": 1810,
                 "hp": 4,
@@ -52406,7 +52406,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3720,
+                "smile": 3770,
                 "pure": 1610,
                 "cool": 1980,
                 "hp": 3,
@@ -52415,7 +52415,7 @@
                 "image": "http://i.schoolido.lu/c/570RoundEli.png"
             },
             "idolized": {
-                "smile": 4030,
+                "smile": 4130,
                 "pure": 1870,
                 "cool": 2240,
                 "hp": 4,
@@ -52505,7 +52505,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3760,
+                "smile": 3810,
                 "pure": 1940,
                 "cool": 1580,
                 "hp": 3,
@@ -52514,7 +52514,7 @@
                 "image": "http://i.schoolido.lu/c/571RoundKotori.png"
             },
             "idolized": {
-                "smile": 4070,
+                "smile": 4170,
                 "pure": 2200,
                 "cool": 1840,
                 "hp": 4,
@@ -52604,7 +52604,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3800,
+                "smile": 3850,
                 "pure": 1590,
                 "cool": 1920,
                 "hp": 3,
@@ -52613,7 +52613,7 @@
                 "image": "http://i.schoolido.lu/c/572RoundUmi.png"
             },
             "idolized": {
-                "smile": 4110,
+                "smile": 4210,
                 "pure": 1850,
                 "cool": 2180,
                 "hp": 4,
@@ -52703,7 +52703,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3900,
+                "smile": 3950,
                 "pure": 1630,
                 "cool": 1760,
                 "hp": 3,
@@ -52712,7 +52712,7 @@
                 "image": "http://i.schoolido.lu/c/573RoundRin.png"
             },
             "idolized": {
-                "smile": 4210,
+                "smile": 4310,
                 "pure": 1890,
                 "cool": 2020,
                 "hp": 4,
@@ -52802,7 +52802,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3700,
+                "smile": 3750,
                 "pure": 1640,
                 "cool": 1970,
                 "hp": 3,
@@ -52811,7 +52811,7 @@
                 "image": "http://i.schoolido.lu/c/574RoundMaki.png"
             },
             "idolized": {
-                "smile": 4010,
+                "smile": 4110,
                 "pure": 1900,
                 "cool": 2230,
                 "hp": 4,
@@ -52901,7 +52901,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3710,
+                "smile": 3760,
                 "pure": 2020,
                 "cool": 1550,
                 "hp": 3,
@@ -52910,7 +52910,7 @@
                 "image": "http://i.schoolido.lu/c/575RoundNozomi.png"
             },
             "idolized": {
-                "smile": 4020,
+                "smile": 4120,
                 "pure": 2280,
                 "cool": 1810,
                 "hp": 4,
@@ -53000,7 +53000,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3780,
+                "smile": 3830,
                 "pure": 1950,
                 "cool": 1550,
                 "hp": 3,
@@ -53009,7 +53009,7 @@
                 "image": "http://i.schoolido.lu/c/576RoundHanayo.png"
             },
             "idolized": {
-                "smile": 4090,
+                "smile": 4190,
                 "pure": 2210,
                 "cool": 1810,
                 "hp": 4,
@@ -53099,7 +53099,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3840,
+                "smile": 3890,
                 "pure": 1600,
                 "cool": 1850,
                 "hp": 3,
@@ -53108,7 +53108,7 @@
                 "image": "http://i.schoolido.lu/c/577RoundNico.png"
             },
             "idolized": {
-                "smile": 4150,
+                "smile": 4250,
                 "pure": 1860,
                 "cool": 2110,
                 "hp": 4,
@@ -54584,7 +54584,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3800,
+                "smile": 3900,
                 "pure": 1680,
                 "cool": 2120,
                 "hp": 3,
@@ -54593,7 +54593,7 @@
                 "image": "http://i.schoolido.lu/c/592RoundHonoka.png"
             },
             "idolized": {
-                "smile": 3800,
+                "smile": 3900,
                 "pure": 1680,
                 "cool": 2120,
                 "hp": 3,
@@ -54684,7 +54684,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2120,
-                "pure": 3800,
+                "pure": 3900,
                 "cool": 1680,
                 "hp": 3,
                 "sis_base": 1,
@@ -54693,7 +54693,7 @@
             },
             "idolized": {
                 "smile": 2120,
-                "pure": 3800,
+                "pure": 3900,
                 "cool": 1680,
                 "hp": 3,
                 "sis_base": 1,
@@ -54784,7 +54784,7 @@
             "unidolized": {
                 "smile": 1680,
                 "pure": 2120,
-                "cool": 3800,
+                "cool": 3900,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -54793,7 +54793,7 @@
             "idolized": {
                 "smile": 1680,
                 "pure": 2120,
-                "cool": 3800,
+                "cool": 3900,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -56326,7 +56326,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3750,
+                "smile": 3850,
                 "pure": 2010,
                 "cool": 1840,
                 "hp": 3,
@@ -56335,7 +56335,7 @@
                 "image": "http://i.schoolido.lu/c/610RoundHonoka.png"
             },
             "idolized": {
-                "smile": 3750,
+                "smile": 3850,
                 "pure": 2010,
                 "cool": 1840,
                 "hp": 3,
@@ -56427,7 +56427,7 @@
             "unidolized": {
                 "smile": 1880,
                 "pure": 1950,
-                "cool": 3770,
+                "cool": 3870,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -56436,7 +56436,7 @@
             "idolized": {
                 "smile": 1880,
                 "pure": 1950,
-                "cool": 3770,
+                "cool": 3870,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -56525,7 +56525,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1870,
-                "pure": 3740,
+                "pure": 3840,
                 "cool": 1990,
                 "hp": 3,
                 "sis_base": 1,
@@ -56534,7 +56534,7 @@
             },
             "idolized": {
                 "smile": 1870,
-                "pure": 3740,
+                "pure": 3840,
                 "cool": 1990,
                 "hp": 3,
                 "sis_base": 1,
@@ -56625,7 +56625,7 @@
             "unidolized": {
                 "smile": 1970,
                 "pure": 1930,
-                "cool": 3700,
+                "cool": 3800,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -56634,7 +56634,7 @@
             "idolized": {
                 "smile": 1970,
                 "pure": 1930,
-                "cool": 3700,
+                "cool": 3800,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -56722,7 +56722,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3710,
+                "smile": 3810,
                 "pure": 2030,
                 "cool": 1860,
                 "hp": 3,
@@ -56731,7 +56731,7 @@
                 "image": "http://i.schoolido.lu/c/614RoundRin.png"
             },
             "idolized": {
-                "smile": 3710,
+                "smile": 3810,
                 "pure": 2030,
                 "cool": 1860,
                 "hp": 3,
@@ -56823,7 +56823,7 @@
             "unidolized": {
                 "smile": 2000,
                 "pure": 1870,
-                "cool": 3730,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -56832,7 +56832,7 @@
             "idolized": {
                 "smile": 2000,
                 "pure": 1870,
-                "cool": 3730,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -56921,7 +56921,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1940,
-                "pure": 3790,
+                "pure": 3890,
                 "cool": 1870,
                 "hp": 3,
                 "sis_base": 1,
@@ -56930,7 +56930,7 @@
             },
             "idolized": {
                 "smile": 1940,
-                "pure": 3790,
+                "pure": 3890,
                 "cool": 1870,
                 "hp": 3,
                 "sis_base": 1,
@@ -57020,7 +57020,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1880,
-                "pure": 3780,
+                "pure": 3880,
                 "cool": 1940,
                 "hp": 3,
                 "sis_base": 1,
@@ -57029,7 +57029,7 @@
             },
             "idolized": {
                 "smile": 1880,
-                "pure": 3780,
+                "pure": 3880,
                 "cool": 1940,
                 "hp": 3,
                 "sis_base": 1,
@@ -57118,7 +57118,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3720,
+                "smile": 3820,
                 "pure": 1990,
                 "cool": 1890,
                 "hp": 3,
@@ -57127,7 +57127,7 @@
                 "image": "http://i.schoolido.lu/c/618RoundNico.png"
             },
             "idolized": {
-                "smile": 3720,
+                "smile": 3820,
                 "pure": 1990,
                 "cool": 1890,
                 "hp": 3,
@@ -61864,7 +61864,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3770,
+                "smile": 3870,
                 "pure": 1700,
                 "cool": 2140,
                 "hp": 3,
@@ -61873,7 +61873,7 @@
                 "image": "http://i.schoolido.lu/c/668RoundRin.png"
             },
             "idolized": {
-                "smile": 3770,
+                "smile": 3870,
                 "pure": 1700,
                 "cool": 2140,
                 "hp": 3,
@@ -62900,7 +62900,7 @@
             "unidolized": {
                 "smile": 1920,
                 "pure": 1650,
-                "cool": 3710,
+                "cool": 3760,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -62909,7 +62909,7 @@
             "idolized": {
                 "smile": 2180,
                 "pure": 1910,
-                "cool": 4020,
+                "cool": 4120,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -62999,7 +62999,7 @@
             "unidolized": {
                 "smile": 1620,
                 "pure": 1810,
-                "cool": 3880,
+                "cool": 3930,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -63008,7 +63008,7 @@
             "idolized": {
                 "smile": 1880,
                 "pure": 2070,
-                "cool": 4190,
+                "cool": 4290,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -63098,7 +63098,7 @@
             "unidolized": {
                 "smile": 1650,
                 "pure": 1850,
-                "cool": 3790,
+                "cool": 3840,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -63107,7 +63107,7 @@
             "idolized": {
                 "smile": 1910,
                 "pure": 2110,
-                "cool": 4100,
+                "cool": 4200,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -63197,7 +63197,7 @@
             "unidolized": {
                 "smile": 1580,
                 "pure": 1860,
-                "cool": 3870,
+                "cool": 3920,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -63206,7 +63206,7 @@
             "idolized": {
                 "smile": 1840,
                 "pure": 2120,
-                "cool": 4180,
+                "cool": 4280,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -63296,7 +63296,7 @@
             "unidolized": {
                 "smile": 1880,
                 "pure": 1680,
-                "cool": 3720,
+                "cool": 3770,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -63305,7 +63305,7 @@
             "idolized": {
                 "smile": 2140,
                 "pure": 1940,
-                "cool": 4030,
+                "cool": 4130,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -63395,7 +63395,7 @@
             "unidolized": {
                 "smile": 1820,
                 "pure": 1590,
-                "cool": 3900,
+                "cool": 3950,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -63404,7 +63404,7 @@
             "idolized": {
                 "smile": 2080,
                 "pure": 1850,
-                "cool": 4210,
+                "cool": 4310,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -63494,7 +63494,7 @@
             "unidolized": {
                 "smile": 1570,
                 "pure": 1940,
-                "cool": 3780,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -63503,7 +63503,7 @@
             "idolized": {
                 "smile": 1830,
                 "pure": 2200,
-                "cool": 4090,
+                "cool": 4190,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -63593,7 +63593,7 @@
             "unidolized": {
                 "smile": 1660,
                 "pure": 1830,
-                "cool": 3800,
+                "cool": 3850,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -63602,7 +63602,7 @@
             "idolized": {
                 "smile": 1920,
                 "pure": 2090,
-                "cool": 4110,
+                "cool": 4210,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -63692,7 +63692,7 @@
             "unidolized": {
                 "smile": 1870,
                 "pure": 1710,
-                "cool": 3700,
+                "cool": 3750,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -63701,7 +63701,7 @@
             "idolized": {
                 "smile": 2130,
                 "pure": 1970,
-                "cool": 4010,
+                "cool": 4110,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -69709,7 +69709,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1870,
-                "pure": 3850,
+                "pure": 3900,
                 "cool": 1580,
                 "hp": 3,
                 "sis_base": 1,
@@ -69718,7 +69718,7 @@
             },
             "idolized": {
                 "smile": 2130,
-                "pure": 4160,
+                "pure": 4260,
                 "cool": 1840,
                 "hp": 4,
                 "sis_base": 1,
@@ -69808,7 +69808,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1550,
-                "pure": 3790,
+                "pure": 3840,
                 "cool": 1950,
                 "hp": 3,
                 "sis_base": 1,
@@ -69817,7 +69817,7 @@
             },
             "idolized": {
                 "smile": 1810,
-                "pure": 4100,
+                "pure": 4200,
                 "cool": 2210,
                 "hp": 4,
                 "sis_base": 1,
@@ -69907,7 +69907,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1570,
-                "pure": 3690,
+                "pure": 3740,
                 "cool": 2010,
                 "hp": 3,
                 "sis_base": 1,
@@ -69916,7 +69916,7 @@
             },
             "idolized": {
                 "smile": 1830,
-                "pure": 4000,
+                "pure": 4100,
                 "cool": 2270,
                 "hp": 4,
                 "sis_base": 1,
@@ -70006,7 +70006,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1560,
-                "pure": 3800,
+                "pure": 3850,
                 "cool": 1930,
                 "hp": 3,
                 "sis_base": 1,
@@ -70015,7 +70015,7 @@
             },
             "idolized": {
                 "smile": 1820,
-                "pure": 4110,
+                "pure": 4210,
                 "cool": 2190,
                 "hp": 4,
                 "sis_base": 1,
@@ -70105,7 +70105,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1850,
-                "pure": 3860,
+                "pure": 3910,
                 "cool": 1590,
                 "hp": 3,
                 "sis_base": 1,
@@ -70114,7 +70114,7 @@
             },
             "idolized": {
                 "smile": 2110,
-                "pure": 4170,
+                "pure": 4270,
                 "cool": 1850,
                 "hp": 4,
                 "sis_base": 1,
@@ -70204,7 +70204,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1570,
-                "pure": 3810,
+                "pure": 3860,
                 "cool": 1910,
                 "hp": 3,
                 "sis_base": 1,
@@ -70213,7 +70213,7 @@
             },
             "idolized": {
                 "smile": 1830,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 2170,
                 "hp": 4,
                 "sis_base": 1,
@@ -70303,7 +70303,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2030,
-                "pure": 3680,
+                "pure": 3730,
                 "cool": 1560,
                 "hp": 3,
                 "sis_base": 1,
@@ -70312,7 +70312,7 @@
             },
             "idolized": {
                 "smile": 2290,
-                "pure": 3990,
+                "pure": 4090,
                 "cool": 1820,
                 "hp": 4,
                 "sis_base": 1,
@@ -70402,7 +70402,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1550,
-                "pure": 3670,
+                "pure": 3720,
                 "cool": 2050,
                 "hp": 3,
                 "sis_base": 1,
@@ -70411,7 +70411,7 @@
             },
             "idolized": {
                 "smile": 1810,
-                "pure": 3980,
+                "pure": 4080,
                 "cool": 2310,
                 "hp": 4,
                 "sis_base": 1,
@@ -70501,7 +70501,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1890,
-                "pure": 3840,
+                "pure": 3890,
                 "cool": 1570,
                 "hp": 3,
                 "sis_base": 1,
@@ -70510,7 +70510,7 @@
             },
             "idolized": {
                 "smile": 2150,
-                "pure": 4150,
+                "pure": 4250,
                 "cool": 1830,
                 "hp": 4,
                 "sis_base": 1,
@@ -73307,7 +73307,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1900,
-                "pure": 3820,
+                "pure": 3870,
                 "cool": 1550,
                 "hp": 3,
                 "sis_base": 1,
@@ -73316,7 +73316,7 @@
             },
             "idolized": {
                 "smile": 2160,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 1810,
                 "hp": 4,
                 "sis_base": 1,
@@ -73406,7 +73406,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1620,
-                "pure": 3750,
+                "pure": 3800,
                 "cool": 1890,
                 "hp": 3,
                 "sis_base": 1,
@@ -73415,7 +73415,7 @@
             },
             "idolized": {
                 "smile": 1880,
-                "pure": 4060,
+                "pure": 4160,
                 "cool": 2150,
                 "hp": 4,
                 "sis_base": 1,
@@ -73505,7 +73505,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2070,
-                "pure": 3670,
+                "pure": 3720,
                 "cool": 1510,
                 "hp": 3,
                 "sis_base": 1,
@@ -73514,7 +73514,7 @@
             },
             "idolized": {
                 "smile": 2330,
-                "pure": 3980,
+                "pure": 4080,
                 "cool": 1770,
                 "hp": 4,
                 "sis_base": 1,
@@ -73604,7 +73604,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1590,
-                "pure": 3730,
+                "pure": 3780,
                 "cool": 1940,
                 "hp": 3,
                 "sis_base": 1,
@@ -73613,7 +73613,7 @@
             },
             "idolized": {
                 "smile": 1850,
-                "pure": 4040,
+                "pure": 4140,
                 "cool": 2200,
                 "hp": 4,
                 "sis_base": 1,
@@ -73703,7 +73703,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2030,
-                "pure": 3690,
+                "pure": 3740,
                 "cool": 1530,
                 "hp": 3,
                 "sis_base": 1,
@@ -73712,7 +73712,7 @@
             },
             "idolized": {
                 "smile": 2290,
-                "pure": 4000,
+                "pure": 4100,
                 "cool": 1790,
                 "hp": 4,
                 "sis_base": 1,
@@ -73802,7 +73802,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1600,
-                "pure": 3740,
+                "pure": 3790,
                 "cool": 1920,
                 "hp": 3,
                 "sis_base": 1,
@@ -73811,7 +73811,7 @@
             },
             "idolized": {
                 "smile": 1860,
-                "pure": 4050,
+                "pure": 4150,
                 "cool": 2180,
                 "hp": 4,
                 "sis_base": 1,
@@ -73901,7 +73901,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1880,
-                "pure": 3830,
+                "pure": 3880,
                 "cool": 1560,
                 "hp": 3,
                 "sis_base": 1,
@@ -73910,7 +73910,7 @@
             },
             "idolized": {
                 "smile": 2140,
-                "pure": 4140,
+                "pure": 4240,
                 "cool": 1820,
                 "hp": 4,
                 "sis_base": 1,
@@ -74000,7 +74000,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1920,
-                "pure": 3810,
+                "pure": 3860,
                 "cool": 1540,
                 "hp": 3,
                 "sis_base": 1,
@@ -74009,7 +74009,7 @@
             },
             "idolized": {
                 "smile": 2180,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 1800,
                 "hp": 4,
                 "sis_base": 1,
@@ -74099,7 +74099,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1520,
-                "pure": 3680,
+                "pure": 3730,
                 "cool": 2050,
                 "hp": 3,
                 "sis_base": 1,
@@ -74108,7 +74108,7 @@
             },
             "idolized": {
                 "smile": 1780,
-                "pure": 3990,
+                "pure": 4090,
                 "cool": 2310,
                 "hp": 4,
                 "sis_base": 1,
@@ -74818,7 +74818,7 @@
             "unidolized": {
                 "smile": 2010,
                 "pure": 1820,
-                "cool": 3770,
+                "cool": 3870,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -74827,7 +74827,7 @@
             "idolized": {
                 "smile": 2010,
                 "pure": 1820,
-                "cool": 3770,
+                "cool": 3870,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -74917,7 +74917,7 @@
             "unidolized": {
                 "smile": 2000,
                 "pure": 1900,
-                "cool": 3700,
+                "cool": 3800,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -74926,7 +74926,7 @@
             "idolized": {
                 "smile": 2000,
                 "pure": 1900,
-                "cool": 3700,
+                "cool": 3800,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75016,7 +75016,7 @@
             "unidolized": {
                 "smile": 1850,
                 "pure": 2000,
-                "cool": 3750,
+                "cool": 3850,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75025,7 +75025,7 @@
             "idolized": {
                 "smile": 1850,
                 "pure": 2000,
-                "cool": 3750,
+                "cool": 3850,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75115,7 +75115,7 @@
             "unidolized": {
                 "smile": 1860,
                 "pure": 2030,
-                "cool": 3710,
+                "cool": 3810,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75124,7 +75124,7 @@
             "idolized": {
                 "smile": 1860,
                 "pure": 2030,
-                "cool": 3710,
+                "cool": 3810,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75214,7 +75214,7 @@
             "unidolized": {
                 "smile": 1940,
                 "pure": 1870,
-                "cool": 3790,
+                "cool": 3890,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75223,7 +75223,7 @@
             "idolized": {
                 "smile": 1940,
                 "pure": 1870,
-                "cool": 3790,
+                "cool": 3890,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75313,7 +75313,7 @@
             "unidolized": {
                 "smile": 1880,
                 "pure": 2030,
-                "cool": 3690,
+                "cool": 3790,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75322,7 +75322,7 @@
             "idolized": {
                 "smile": 1880,
                 "pure": 2030,
-                "cool": 3690,
+                "cool": 3790,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75412,7 +75412,7 @@
             "unidolized": {
                 "smile": 1830,
                 "pure": 2040,
-                "cool": 3730,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75421,7 +75421,7 @@
             "idolized": {
                 "smile": 1830,
                 "pure": 2040,
-                "cool": 3730,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75511,7 +75511,7 @@
             "unidolized": {
                 "smile": 1890,
                 "pure": 1970,
-                "cool": 3740,
+                "cool": 3840,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75520,7 +75520,7 @@
             "idolized": {
                 "smile": 1890,
                 "pure": 1970,
-                "cool": 3740,
+                "cool": 3840,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75610,7 +75610,7 @@
             "unidolized": {
                 "smile": 1940,
                 "pure": 1880,
-                "cool": 3780,
+                "cool": 3880,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -75619,7 +75619,7 @@
             "idolized": {
                 "smile": 1940,
                 "pure": 1880,
-                "cool": 3780,
+                "cool": 3880,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -78302,7 +78302,7 @@
             "unidolized": {
                 "smile": 1730,
                 "pure": 1630,
-                "cool": 3410,
+                "cool": 3460,
                 "hp": 2,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -78311,7 +78311,7 @@
             "idolized": {
                 "smile": 1990,
                 "pure": 1890,
-                "cool": 3720,
+                "cool": 3820,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -78401,7 +78401,7 @@
             "unidolized": {
                 "smile": 1640,
                 "pure": 1700,
-                "cool": 3430,
+                "cool": 3480,
                 "hp": 2,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -78410,7 +78410,7 @@
             "idolized": {
                 "smile": 1900,
                 "pure": 1960,
-                "cool": 3740,
+                "cool": 3840,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -78500,7 +78500,7 @@
             "unidolized": {
                 "smile": 1630,
                 "pure": 1720,
-                "cool": 3420,
+                "cool": 3470,
                 "hp": 2,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -78509,7 +78509,7 @@
             "idolized": {
                 "smile": 1890,
                 "pure": 1980,
-                "cool": 3730,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -80949,7 +80949,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2020,
-                "pure": 3830,
+                "pure": 3930,
                 "cool": 1750,
                 "hp": 4,
                 "sis_base": 1,
@@ -80958,7 +80958,7 @@
             },
             "idolized": {
                 "smile": 2020,
-                "pure": 3830,
+                "pure": 3930,
                 "cool": 1750,
                 "hp": 4,
                 "sis_base": 1,
@@ -85477,7 +85477,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3660,
+                "smile": 3710,
                 "pure": 1540,
                 "cool": 2060,
                 "hp": 3,
@@ -85486,7 +85486,7 @@
                 "image": "http://i.schoolido.lu/c/910RoundChika.png"
             },
             "idolized": {
-                "smile": 3970,
+                "smile": 4070,
                 "pure": 1800,
                 "cool": 2320,
                 "hp": 4,
@@ -85576,7 +85576,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3810,
+                "smile": 3860,
                 "pure": 1540,
                 "cool": 1920,
                 "hp": 3,
@@ -85585,7 +85585,7 @@
                 "image": "http://i.schoolido.lu/c/911RoundRiko.png"
             },
             "idolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 1800,
                 "cool": 2180,
                 "hp": 4,
@@ -85675,7 +85675,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3750,
+                "smile": 3800,
                 "pure": 1890,
                 "cool": 1620,
                 "hp": 3,
@@ -85684,7 +85684,7 @@
                 "image": "http://i.schoolido.lu/c/912RoundKanan.png"
             },
             "idolized": {
-                "smile": 4060,
+                "smile": 4160,
                 "pure": 2150,
                 "cool": 1880,
                 "hp": 4,
@@ -85774,7 +85774,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3820,
+                "smile": 3870,
                 "pure": 1550,
                 "cool": 1900,
                 "hp": 3,
@@ -85783,7 +85783,7 @@
                 "image": "http://i.schoolido.lu/c/913RoundDia.png"
             },
             "idolized": {
-                "smile": 4130,
+                "smile": 4230,
                 "pure": 1810,
                 "cool": 2160,
                 "hp": 4,
@@ -85873,7 +85873,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3740,
+                "smile": 3790,
                 "pure": 1920,
                 "cool": 1600,
                 "hp": 3,
@@ -85882,7 +85882,7 @@
                 "image": "http://i.schoolido.lu/c/914RoundYou.png"
             },
             "idolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 2180,
                 "cool": 1860,
                 "hp": 4,
@@ -85972,7 +85972,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3830,
+                "smile": 3880,
                 "pure": 1560,
                 "cool": 1880,
                 "hp": 3,
@@ -85981,7 +85981,7 @@
                 "image": "http://i.schoolido.lu/c/915RoundYoshiko.png"
             },
             "idolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 1820,
                 "cool": 2140,
                 "hp": 4,
@@ -86071,7 +86071,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3640,
+                "smile": 3690,
                 "pure": 1550,
                 "cool": 2070,
                 "hp": 3,
@@ -86080,7 +86080,7 @@
                 "image": "http://i.schoolido.lu/c/916RoundHanamaru.png"
             },
             "idolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 1810,
                 "cool": 2330,
                 "hp": 4,
@@ -86170,7 +86170,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3650,
+                "smile": 3700,
                 "pure": 2080,
                 "cool": 1530,
                 "hp": 3,
@@ -86179,7 +86179,7 @@
                 "image": "http://i.schoolido.lu/c/917RoundMari.png"
             },
             "idolized": {
-                "smile": 3960,
+                "smile": 4060,
                 "pure": 2340,
                 "cool": 1790,
                 "hp": 4,
@@ -86269,7 +86269,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3730,
+                "smile": 3780,
                 "pure": 1940,
                 "cool": 1590,
                 "hp": 3,
@@ -86278,7 +86278,7 @@
                 "image": "http://i.schoolido.lu/c/918RoundRuby.png"
             },
             "idolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 2200,
                 "cool": 1850,
                 "hp": 4,
@@ -86370,7 +86370,7 @@
             "unidolized": {
                 "smile": 1940,
                 "pure": 1590,
-                "cool": 3730,
+                "cool": 3780,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -86379,7 +86379,7 @@
             "idolized": {
                 "smile": 2200,
                 "pure": 1850,
-                "cool": 4040,
+                "cool": 4140,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -86469,7 +86469,7 @@
             "unidolized": {
                 "smile": 2040,
                 "pure": 1500,
-                "cool": 3710,
+                "cool": 3760,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -86478,7 +86478,7 @@
             "idolized": {
                 "smile": 2300,
                 "pure": 1760,
-                "cool": 4020,
+                "cool": 4120,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -86568,7 +86568,7 @@
             "unidolized": {
                 "smile": 1550,
                 "pure": 1900,
-                "cool": 3820,
+                "cool": 3870,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -86577,7 +86577,7 @@
             "idolized": {
                 "smile": 1810,
                 "pure": 2160,
-                "cool": 4130,
+                "cool": 4230,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -86667,7 +86667,7 @@
             "unidolized": {
                 "smile": 1510,
                 "pure": 2020,
-                "cool": 3720,
+                "cool": 3770,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -86676,7 +86676,7 @@
             "idolized": {
                 "smile": 1770,
                 "pure": 2280,
-                "cool": 4030,
+                "cool": 4130,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -86766,7 +86766,7 @@
             "unidolized": {
                 "smile": 1540,
                 "pure": 1920,
-                "cool": 3810,
+                "cool": 3860,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -86775,7 +86775,7 @@
             "idolized": {
                 "smile": 1800,
                 "pure": 2180,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -86865,7 +86865,7 @@
             "unidolized": {
                 "smile": 1490,
                 "pure": 2060,
-                "cool": 3700,
+                "cool": 3750,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -86874,7 +86874,7 @@
             "idolized": {
                 "smile": 1750,
                 "pure": 2320,
-                "cool": 4010,
+                "cool": 4110,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -86964,7 +86964,7 @@
             "unidolized": {
                 "smile": 1920,
                 "pure": 1600,
-                "cool": 3740,
+                "cool": 3790,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -86973,7 +86973,7 @@
             "idolized": {
                 "smile": 2180,
                 "pure": 1860,
-                "cool": 4050,
+                "cool": 4150,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -87063,7 +87063,7 @@
             "unidolized": {
                 "smile": 1890,
                 "pure": 1620,
-                "cool": 3750,
+                "cool": 3800,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -87072,7 +87072,7 @@
             "idolized": {
                 "smile": 2150,
                 "pure": 1880,
-                "cool": 4060,
+                "cool": 4160,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -87162,7 +87162,7 @@
             "unidolized": {
                 "smile": 1560,
                 "pure": 1880,
-                "cool": 3830,
+                "cool": 3880,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -87171,7 +87171,7 @@
             "idolized": {
                 "smile": 1820,
                 "pure": 2140,
-                "cool": 4140,
+                "cool": 4240,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -93745,7 +93745,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3780,
+                "smile": 3880,
                 "pure": 2070,
                 "cool": 1750,
                 "hp": 3,
@@ -93754,7 +93754,7 @@
                 "image": "http://i.schoolido.lu/c/987RoundNico.png"
             },
             "idolized": {
-                "smile": 3780,
+                "smile": 3880,
                 "pure": 2070,
                 "cool": 1750,
                 "hp": 3,
@@ -99888,7 +99888,7 @@
             "unidolized": {
                 "smile": 1730,
                 "pure": 1620,
-                "cool": 3420,
+                "cool": 3470,
                 "hp": 2,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -99897,7 +99897,7 @@
             "idolized": {
                 "smile": 1990,
                 "pure": 1880,
-                "cool": 3730,
+                "cool": 3830,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -100512,7 +100512,7 @@
             "unidolized": {
                 "smile": 1600,
                 "pure": 1730,
-                "cool": 3440,
+                "cool": 3490,
                 "hp": 2,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -100521,7 +100521,7 @@
             "idolized": {
                 "smile": 1860,
                 "pure": 1990,
-                "cool": 3750,
+                "cool": 3850,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -103635,7 +103635,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1880,
-                "pure": 3830,
+                "pure": 3880,
                 "cool": 1560,
                 "hp": 3,
                 "sis_base": 1,
@@ -103644,7 +103644,7 @@
             },
             "idolized": {
                 "smile": 2140,
-                "pure": 4140,
+                "pure": 4240,
                 "cool": 1820,
                 "hp": 4,
                 "sis_base": 1,
@@ -103734,7 +103734,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1590,
-                "pure": 3730,
+                "pure": 3780,
                 "cool": 1940,
                 "hp": 3,
                 "sis_base": 1,
@@ -103743,7 +103743,7 @@
             },
             "idolized": {
                 "smile": 1850,
-                "pure": 4040,
+                "pure": 4140,
                 "cool": 2200,
                 "hp": 4,
                 "sis_base": 1,
@@ -103833,7 +103833,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1520,
-                "pure": 3680,
+                "pure": 3730,
                 "cool": 2050,
                 "hp": 3,
                 "sis_base": 1,
@@ -103842,7 +103842,7 @@
             },
             "idolized": {
                 "smile": 1780,
-                "pure": 3990,
+                "pure": 4090,
                 "cool": 2310,
                 "hp": 4,
                 "sis_base": 1,
@@ -103932,7 +103932,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1600,
-                "pure": 3740,
+                "pure": 3790,
                 "cool": 1920,
                 "hp": 3,
                 "sis_base": 1,
@@ -103941,7 +103941,7 @@
             },
             "idolized": {
                 "smile": 1860,
-                "pure": 4050,
+                "pure": 4150,
                 "cool": 2180,
                 "hp": 4,
                 "sis_base": 1,
@@ -104031,7 +104031,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1510,
-                "pure": 3670,
+                "pure": 3720,
                 "cool": 2070,
                 "hp": 3,
                 "sis_base": 1,
@@ -104040,7 +104040,7 @@
             },
             "idolized": {
                 "smile": 1770,
-                "pure": 3980,
+                "pure": 4080,
                 "cool": 2330,
                 "hp": 4,
                 "sis_base": 1,
@@ -104130,7 +104130,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1620,
-                "pure": 3750,
+                "pure": 3800,
                 "cool": 1890,
                 "hp": 3,
                 "sis_base": 1,
@@ -104139,7 +104139,7 @@
             },
             "idolized": {
                 "smile": 1880,
-                "pure": 4060,
+                "pure": 4160,
                 "cool": 2150,
                 "hp": 4,
                 "sis_base": 1,
@@ -104229,7 +104229,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1920,
-                "pure": 3810,
+                "pure": 3860,
                 "cool": 1540,
                 "hp": 3,
                 "sis_base": 1,
@@ -104238,7 +104238,7 @@
             },
             "idolized": {
                 "smile": 2180,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 1800,
                 "hp": 4,
                 "sis_base": 1,
@@ -104328,7 +104328,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1900,
-                "pure": 3820,
+                "pure": 3870,
                 "cool": 1550,
                 "hp": 3,
                 "sis_base": 1,
@@ -104337,7 +104337,7 @@
             },
             "idolized": {
                 "smile": 2160,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 1810,
                 "hp": 4,
                 "sis_base": 1,
@@ -104427,7 +104427,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1530,
-                "pure": 3690,
+                "pure": 3740,
                 "cool": 2030,
                 "hp": 3,
                 "sis_base": 1,
@@ -104436,7 +104436,7 @@
             },
             "idolized": {
                 "smile": 1790,
-                "pure": 4000,
+                "pure": 4100,
                 "cool": 2290,
                 "hp": 4,
                 "sis_base": 1,
@@ -119109,7 +119109,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3810,
+                "smile": 3860,
                 "pure": 1900,
                 "cool": 1560,
                 "hp": 3,
@@ -119118,7 +119118,7 @@
                 "image": "http://i.schoolido.lu/c/1239RoundChika.png"
             },
             "idolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 2160,
                 "cool": 1820,
                 "hp": 4,
@@ -119208,7 +119208,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3730,
+                "smile": 3780,
                 "pure": 1590,
                 "cool": 1940,
                 "hp": 3,
@@ -119217,7 +119217,7 @@
                 "image": "http://i.schoolido.lu/c/1240RoundRiko.png"
             },
             "idolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 1850,
                 "cool": 2200,
                 "hp": 4,
@@ -119307,7 +119307,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3650,
+                "smile": 3700,
                 "pure": 2080,
                 "cool": 1520,
                 "hp": 3,
@@ -119316,7 +119316,7 @@
                 "image": "http://i.schoolido.lu/c/1241RoundKanan.png"
             },
             "idolized": {
-                "smile": 3960,
+                "smile": 4060,
                 "pure": 2340,
                 "cool": 1780,
                 "hp": 4,
@@ -119406,7 +119406,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3740,
+                "smile": 3790,
                 "pure": 1550,
                 "cool": 1970,
                 "hp": 3,
@@ -119415,7 +119415,7 @@
                 "image": "http://i.schoolido.lu/c/1242RoundDia.png"
             },
             "idolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 1810,
                 "cool": 2230,
                 "hp": 4,
@@ -119505,7 +119505,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3640,
+                "smile": 3690,
                 "pure": 2060,
                 "cool": 1550,
                 "hp": 3,
@@ -119514,7 +119514,7 @@
                 "image": "http://i.schoolido.lu/c/1243RoundYou.png"
             },
             "idolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 2320,
                 "cool": 1810,
                 "hp": 4,
@@ -119604,7 +119604,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3750,
+                "smile": 3800,
                 "pure": 1620,
                 "cool": 1890,
                 "hp": 3,
@@ -119613,7 +119613,7 @@
                 "image": "http://i.schoolido.lu/c/1244RoundYoshiko.png"
             },
             "idolized": {
-                "smile": 4060,
+                "smile": 4160,
                 "pure": 1880,
                 "cool": 2150,
                 "hp": 4,
@@ -119703,7 +119703,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3820,
+                "smile": 3870,
                 "pure": 1900,
                 "cool": 1550,
                 "hp": 3,
@@ -119712,7 +119712,7 @@
                 "image": "http://i.schoolido.lu/c/1245RoundHanamaru.png"
             },
             "idolized": {
-                "smile": 4130,
+                "smile": 4230,
                 "pure": 2160,
                 "cool": 1810,
                 "hp": 4,
@@ -119802,7 +119802,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3830,
+                "smile": 3880,
                 "pure": 1560,
                 "cool": 1880,
                 "hp": 3,
@@ -119811,7 +119811,7 @@
                 "image": "http://i.schoolido.lu/c/1246RoundMari.png"
             },
             "idolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 1820,
                 "cool": 2140,
                 "hp": 4,
@@ -119901,7 +119901,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3640,
+                "smile": 3690,
                 "pure": 2050,
                 "cool": 1560,
                 "hp": 3,
@@ -119910,7 +119910,7 @@
                 "image": "http://i.schoolido.lu/c/1247RoundRuby.png"
             },
             "idolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 2310,
                 "cool": 1820,
                 "hp": 4,
@@ -125474,7 +125474,7 @@
             "unidolized": {
                 "smile": 2040,
                 "pure": 1500,
-                "cool": 3710,
+                "cool": 3760,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -125483,7 +125483,7 @@
             "idolized": {
                 "smile": 2300,
                 "pure": 1760,
-                "cool": 4020,
+                "cool": 4120,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -125573,7 +125573,7 @@
             "unidolized": {
                 "smile": 1560,
                 "pure": 1880,
-                "cool": 3830,
+                "cool": 3880,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -125582,7 +125582,7 @@
             "idolized": {
                 "smile": 1820,
                 "pure": 2140,
-                "cool": 4140,
+                "cool": 4240,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -125672,7 +125672,7 @@
             "unidolized": {
                 "smile": 1590,
                 "pure": 1940,
-                "cool": 3730,
+                "cool": 3780,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -125681,7 +125681,7 @@
             "idolized": {
                 "smile": 1850,
                 "pure": 2200,
-                "cool": 4040,
+                "cool": 4140,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -125771,7 +125771,7 @@
             "unidolized": {
                 "smile": 1900,
                 "pure": 1550,
-                "cool": 3820,
+                "cool": 3870,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -125780,7 +125780,7 @@
             "idolized": {
                 "smile": 2160,
                 "pure": 1810,
-                "cool": 4130,
+                "cool": 4230,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -125870,7 +125870,7 @@
             "unidolized": {
                 "smile": 1620,
                 "pure": 1890,
-                "cool": 3750,
+                "cool": 3800,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -125879,7 +125879,7 @@
             "idolized": {
                 "smile": 1880,
                 "pure": 2150,
-                "cool": 4060,
+                "cool": 4160,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -125969,7 +125969,7 @@
             "unidolized": {
                 "smile": 1920,
                 "pure": 1540,
-                "cool": 3810,
+                "cool": 3860,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -125978,7 +125978,7 @@
             "idolized": {
                 "smile": 2180,
                 "pure": 1800,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -126068,7 +126068,7 @@
             "unidolized": {
                 "smile": 2020,
                 "pure": 1510,
-                "cool": 3720,
+                "cool": 3770,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -126077,7 +126077,7 @@
             "idolized": {
                 "smile": 2280,
                 "pure": 1770,
-                "cool": 4030,
+                "cool": 4130,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -126167,7 +126167,7 @@
             "unidolized": {
                 "smile": 2060,
                 "pure": 1490,
-                "cool": 3700,
+                "cool": 3750,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -126176,7 +126176,7 @@
             "idolized": {
                 "smile": 2320,
                 "pure": 1750,
-                "cool": 4010,
+                "cool": 4110,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -126266,7 +126266,7 @@
             "unidolized": {
                 "smile": 1600,
                 "pure": 1920,
-                "cool": 3740,
+                "cool": 3790,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -126275,7 +126275,7 @@
             "idolized": {
                 "smile": 1860,
                 "pure": 2180,
-                "cool": 4050,
+                "cool": 4150,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -138615,7 +138615,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3740,
+                "smile": 3790,
                 "pure": 1550,
                 "cool": 1970,
                 "hp": 3,
@@ -138624,7 +138624,7 @@
                 "image": "http://i.schoolido.lu/c/1432RoundChika.png"
             },
             "idolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 1810,
                 "cool": 2230,
                 "hp": 4,
@@ -138716,7 +138716,7 @@
             "unidolized": {
                 "smile": 2060,
                 "pure": 1540,
-                "cool": 3660,
+                "cool": 3710,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -138725,7 +138725,7 @@
             "idolized": {
                 "smile": 2320,
                 "pure": 1800,
-                "cool": 3970,
+                "cool": 4070,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -138814,7 +138814,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1900,
-                "pure": 3820,
+                "pure": 3870,
                 "cool": 1550,
                 "hp": 3,
                 "sis_base": 1,
@@ -138823,7 +138823,7 @@
             },
             "idolized": {
                 "smile": 2160,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 1810,
                 "hp": 4,
                 "sis_base": 1,
@@ -138914,7 +138914,7 @@
             "unidolized": {
                 "smile": 1550,
                 "pure": 2070,
-                "cool": 3640,
+                "cool": 3690,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -138923,7 +138923,7 @@
             "idolized": {
                 "smile": 1810,
                 "pure": 2330,
-                "cool": 3950,
+                "cool": 4050,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -139012,7 +139012,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1880,
-                "pure": 3830,
+                "pure": 3880,
                 "cool": 1560,
                 "hp": 3,
                 "sis_base": 1,
@@ -139021,7 +139021,7 @@
             },
             "idolized": {
                 "smile": 2140,
-                "pure": 4140,
+                "pure": 4240,
                 "cool": 1820,
                 "hp": 4,
                 "sis_base": 1,
@@ -139112,7 +139112,7 @@
             "unidolized": {
                 "smile": 1530,
                 "pure": 2080,
-                "cool": 3650,
+                "cool": 3700,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -139121,7 +139121,7 @@
             "idolized": {
                 "smile": 1790,
                 "pure": 2340,
-                "cool": 3960,
+                "cool": 4060,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 2,
@@ -139209,7 +139209,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3750,
+                "smile": 3800,
                 "pure": 1620,
                 "cool": 1890,
                 "hp": 3,
@@ -139218,7 +139218,7 @@
                 "image": "http://i.schoolido.lu/c/1438RoundHanamaru.png"
             },
             "idolized": {
-                "smile": 4060,
+                "smile": 4160,
                 "pure": 1880,
                 "cool": 2150,
                 "hp": 4,
@@ -139308,7 +139308,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3730,
+                "smile": 3780,
                 "pure": 1940,
                 "cool": 1590,
                 "hp": 3,
@@ -139317,7 +139317,7 @@
                 "image": "http://i.schoolido.lu/c/1439RoundMari.png"
             },
             "idolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 2200,
                 "cool": 1850,
                 "hp": 4,
@@ -139408,7 +139408,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1920,
-                "pure": 3810,
+                "pure": 3860,
                 "cool": 1540,
                 "hp": 3,
                 "sis_base": 1,
@@ -139417,7 +139417,7 @@
             },
             "idolized": {
                 "smile": 2180,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 1800,
                 "hp": 4,
                 "sis_base": 1,
@@ -147722,7 +147722,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3960,
+                "smile": 4060,
                 "pure": 1790,
                 "cool": 2340,
                 "hp": 3,
@@ -147731,7 +147731,7 @@
                 "image": "http://i.schoolido.lu/c/1516RoundHonoka.png"
             },
             "idolized": {
-                "smile": 3960,
+                "smile": 4060,
                 "pure": 1790,
                 "cool": 2340,
                 "hp": 3,
@@ -147823,7 +147823,7 @@
             "unidolized": {
                 "smile": 1750,
                 "pure": 2320,
-                "cool": 4010,
+                "cool": 4110,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -147832,7 +147832,7 @@
             "idolized": {
                 "smile": 1750,
                 "pure": 2320,
-                "cool": 4010,
+                "cool": 4110,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -147921,7 +147921,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2180,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 1800,
                 "hp": 3,
                 "sis_base": 1,
@@ -147930,7 +147930,7 @@
             },
             "idolized": {
                 "smile": 2180,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 1800,
                 "hp": 3,
                 "sis_base": 1,
@@ -148021,7 +148021,7 @@
             "unidolized": {
                 "smile": 2150,
                 "pure": 1880,
-                "cool": 4060,
+                "cool": 4160,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -148030,7 +148030,7 @@
             "idolized": {
                 "smile": 2150,
                 "pure": 1880,
-                "cool": 4060,
+                "cool": 4160,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -148118,7 +148118,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 2180,
                 "cool": 1860,
                 "hp": 3,
@@ -148127,7 +148127,7 @@
                 "image": "http://i.schoolido.lu/c/1520RoundRin.png"
             },
             "idolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 2180,
                 "cool": 1860,
                 "hp": 3,
@@ -148219,7 +148219,7 @@
             "unidolized": {
                 "smile": 2290,
                 "pure": 1790,
-                "cool": 4000,
+                "cool": 4100,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -148228,7 +148228,7 @@
             "idolized": {
                 "smile": 2290,
                 "pure": 1790,
-                "cool": 4000,
+                "cool": 4100,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -148317,7 +148317,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1850,
-                "pure": 4040,
+                "pure": 4140,
                 "cool": 2200,
                 "hp": 3,
                 "sis_base": 1,
@@ -148326,7 +148326,7 @@
             },
             "idolized": {
                 "smile": 1850,
-                "pure": 4040,
+                "pure": 4140,
                 "cool": 2200,
                 "hp": 3,
                 "sis_base": 1,
@@ -148416,7 +148416,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1820,
-                "pure": 3950,
+                "pure": 4050,
                 "cool": 2310,
                 "hp": 3,
                 "sis_base": 1,
@@ -148425,7 +148425,7 @@
             },
             "idolized": {
                 "smile": 1820,
-                "pure": 3950,
+                "pure": 4050,
                 "cool": 2310,
                 "hp": 3,
                 "sis_base": 1,
@@ -148514,7 +148514,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 1820,
                 "cool": 2140,
                 "hp": 3,
@@ -148523,7 +148523,7 @@
                 "image": "http://i.schoolido.lu/c/1524RoundNico.png"
             },
             "idolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 1820,
                 "cool": 2140,
                 "hp": 3,
@@ -148613,7 +148613,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 2180,
                 "cool": 1860,
                 "hp": 3,
@@ -148622,7 +148622,7 @@
                 "image": "http://i.schoolido.lu/c/1525RoundChika.png"
             },
             "idolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 2180,
                 "cool": 1860,
                 "hp": 3,
@@ -148714,7 +148714,7 @@
             "unidolized": {
                 "smile": 1820,
                 "pure": 2140,
-                "cool": 4140,
+                "cool": 4240,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -148723,7 +148723,7 @@
             "idolized": {
                 "smile": 1820,
                 "pure": 2140,
-                "cool": 4140,
+                "cool": 4240,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -148812,7 +148812,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1790,
-                "pure": 4000,
+                "pure": 4100,
                 "cool": 2290,
                 "hp": 3,
                 "sis_base": 1,
@@ -148821,7 +148821,7 @@
             },
             "idolized": {
                 "smile": 1790,
-                "pure": 4000,
+                "pure": 4100,
                 "cool": 2290,
                 "hp": 3,
                 "sis_base": 1,
@@ -148912,7 +148912,7 @@
             "unidolized": {
                 "smile": 2200,
                 "pure": 1850,
-                "cool": 4040,
+                "cool": 4140,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -148921,7 +148921,7 @@
             "idolized": {
                 "smile": 2200,
                 "pure": 1850,
-                "cool": 4040,
+                "cool": 4140,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -149010,7 +149010,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1750,
-                "pure": 4010,
+                "pure": 4110,
                 "cool": 2320,
                 "hp": 3,
                 "sis_base": 1,
@@ -149019,7 +149019,7 @@
             },
             "idolized": {
                 "smile": 1750,
-                "pure": 4010,
+                "pure": 4110,
                 "cool": 2320,
                 "hp": 3,
                 "sis_base": 1,
@@ -149110,7 +149110,7 @@
             "unidolized": {
                 "smile": 2340,
                 "pure": 1790,
-                "cool": 3960,
+                "cool": 4060,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -149119,7 +149119,7 @@
             "idolized": {
                 "smile": 2340,
                 "pure": 1790,
-                "cool": 3960,
+                "cool": 4060,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -149207,7 +149207,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 2180,
                 "cool": 1800,
                 "hp": 3,
@@ -149216,7 +149216,7 @@
                 "image": "http://i.schoolido.lu/c/1531RoundHanamaru.png"
             },
             "idolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 2180,
                 "cool": 1800,
                 "hp": 3,
@@ -149306,7 +149306,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 1820,
                 "cool": 2310,
                 "hp": 3,
@@ -149315,7 +149315,7 @@
                 "image": "http://i.schoolido.lu/c/1532RoundMari.png"
             },
             "idolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 1820,
                 "cool": 2310,
                 "hp": 3,
@@ -149406,7 +149406,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1880,
-                "pure": 4060,
+                "pure": 4160,
                 "cool": 2150,
                 "hp": 3,
                 "sis_base": 1,
@@ -149415,7 +149415,7 @@
             },
             "idolized": {
                 "smile": 1880,
-                "pure": 4060,
+                "pure": 4160,
                 "cool": 2150,
                 "hp": 3,
                 "sis_base": 1,
@@ -198616,7 +198616,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 2310,
                 "cool": 1820,
                 "hp": 3,
@@ -198625,7 +198625,7 @@
                 "image": "http://i.schoolido.lu/c/1962RoundHonoka.png"
             },
             "idolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 2310,
                 "cool": 1820,
                 "hp": 3,
@@ -198717,7 +198717,7 @@
             "unidolized": {
                 "smile": 2310,
                 "pure": 1820,
-                "cool": 3950,
+                "cool": 4050,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -198726,7 +198726,7 @@
             "idolized": {
                 "smile": 2310,
                 "pure": 1820,
-                "cool": 3950,
+                "cool": 4050,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -198815,7 +198815,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2320,
-                "pure": 4010,
+                "pure": 4110,
                 "cool": 1750,
                 "hp": 3,
                 "sis_base": 1,
@@ -198824,7 +198824,7 @@
             },
             "idolized": {
                 "smile": 2320,
-                "pure": 4010,
+                "pure": 4110,
                 "cool": 1750,
                 "hp": 3,
                 "sis_base": 1,
@@ -198915,7 +198915,7 @@
             "unidolized": {
                 "smile": 2340,
                 "pure": 1790,
-                "cool": 3960,
+                "cool": 4060,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -198924,7 +198924,7 @@
             "idolized": {
                 "smile": 2340,
                 "pure": 1790,
-                "cool": 3960,
+                "cool": 4060,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -199012,7 +199012,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 1800,
                 "cool": 2180,
                 "hp": 3,
@@ -199021,7 +199021,7 @@
                 "image": "http://i.schoolido.lu/c/1966RoundRin.png"
             },
             "idolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 1800,
                 "cool": 2180,
                 "hp": 3,
@@ -199113,7 +199113,7 @@
             "unidolized": {
                 "smile": 2200,
                 "pure": 1850,
-                "cool": 4040,
+                "cool": 4140,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -199122,7 +199122,7 @@
             "idolized": {
                 "smile": 2200,
                 "pure": 1850,
-                "cool": 4040,
+                "cool": 4140,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -199211,7 +199211,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1800,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 2180,
                 "hp": 3,
                 "sis_base": 1,
@@ -199220,7 +199220,7 @@
             },
             "idolized": {
                 "smile": 1800,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 2180,
                 "hp": 3,
                 "sis_base": 1,
@@ -199310,7 +199310,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1790,
-                "pure": 3960,
+                "pure": 4060,
                 "cool": 2340,
                 "hp": 3,
                 "sis_base": 1,
@@ -199319,7 +199319,7 @@
             },
             "idolized": {
                 "smile": 1790,
-                "pure": 3960,
+                "pure": 4060,
                 "cool": 2340,
                 "hp": 3,
                 "sis_base": 1,
@@ -199408,7 +199408,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4010,
+                "smile": 4110,
                 "pure": 2320,
                 "cool": 1750,
                 "hp": 3,
@@ -199417,7 +199417,7 @@
                 "image": "http://i.schoolido.lu/c/1970RoundNico.png"
             },
             "idolized": {
-                "smile": 4010,
+                "smile": 4110,
                 "pure": 2320,
                 "cool": 1750,
                 "hp": 3,
@@ -199507,7 +199507,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 2200,
                 "cool": 1850,
                 "hp": 3,
@@ -199516,7 +199516,7 @@
                 "image": "http://i.schoolido.lu/c/1971RoundChika.png"
             },
             "idolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 2200,
                 "cool": 1850,
                 "hp": 3,
@@ -199607,7 +199607,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2340,
-                "pure": 3960,
+                "pure": 4060,
                 "cool": 1790,
                 "hp": 3,
                 "sis_base": 1,
@@ -199616,7 +199616,7 @@
             },
             "idolized": {
                 "smile": 2340,
-                "pure": 3960,
+                "pure": 4060,
                 "cool": 1790,
                 "hp": 3,
                 "sis_base": 1,
@@ -199707,7 +199707,7 @@
             "unidolized": {
                 "smile": 2180,
                 "pure": 1800,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -199716,7 +199716,7 @@
             "idolized": {
                 "smile": 2180,
                 "pure": 1800,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -199804,7 +199804,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 2180,
                 "cool": 1800,
                 "hp": 3,
@@ -199813,7 +199813,7 @@
                 "image": "http://i.schoolido.lu/c/1974RoundDia.png"
             },
             "idolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 2180,
                 "cool": 1800,
                 "hp": 3,
@@ -199903,7 +199903,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 1850,
                 "cool": 2200,
                 "hp": 3,
@@ -199912,7 +199912,7 @@
                 "image": "http://i.schoolido.lu/c/1975RoundYou.png"
             },
             "idolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 1850,
                 "cool": 2200,
                 "hp": 3,
@@ -200003,7 +200003,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2340,
-                "pure": 3960,
+                "pure": 4060,
                 "cool": 1790,
                 "hp": 3,
                 "sis_base": 1,
@@ -200012,7 +200012,7 @@
             },
             "idolized": {
                 "smile": 2340,
-                "pure": 3960,
+                "pure": 4060,
                 "cool": 1790,
                 "hp": 3,
                 "sis_base": 1,
@@ -200103,7 +200103,7 @@
             "unidolized": {
                 "smile": 1800,
                 "pure": 2180,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -200112,7 +200112,7 @@
             "idolized": {
                 "smile": 1800,
                 "pure": 2180,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -200202,7 +200202,7 @@
             "unidolized": {
                 "smile": 1790,
                 "pure": 2340,
-                "cool": 3960,
+                "cool": 4060,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -200211,7 +200211,7 @@
             "idolized": {
                 "smile": 1790,
                 "pure": 2340,
-                "cool": 3960,
+                "cool": 4060,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -200300,7 +200300,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2180,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 1800,
                 "hp": 3,
                 "sis_base": 1,
@@ -200309,7 +200309,7 @@
             },
             "idolized": {
                 "smile": 2180,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 1800,
                 "hp": 3,
                 "sis_base": 1,
@@ -281724,7 +281724,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3970,
+                "smile": 4070,
                 "pure": 2320,
                 "cool": 1800,
                 "hp": 3,
@@ -281733,7 +281733,7 @@
                 "image": "http://i.schoolido.lu/c/2703RoundAyumu.png"
             },
             "idolized": {
-                "smile": 3970,
+                "smile": 4070,
                 "pure": 2320,
                 "cool": 1800,
                 "hp": 3,
@@ -281823,7 +281823,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 2180,
                 "cool": 1860,
                 "hp": 3,
@@ -281832,7 +281832,7 @@
                 "image": "http://i.schoolido.lu/c/2704RoundAi.png"
             },
             "idolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 2180,
                 "cool": 1860,
                 "hp": 3,
@@ -281922,7 +281922,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 1810,
                 "cool": 2330,
                 "hp": 3,
@@ -281931,7 +281931,7 @@
                 "image": "http://i.schoolido.lu/c/2705RoundSetsuna.png"
             },
             "idolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 1810,
                 "cool": 2330,
                 "hp": 3,
@@ -282022,7 +282022,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2160,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 1810,
                 "hp": 3,
                 "sis_base": 1,
@@ -282031,7 +282031,7 @@
             },
             "idolized": {
                 "smile": 2160,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 1810,
                 "hp": 3,
                 "sis_base": 1,
@@ -282121,7 +282121,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2290,
-                "pure": 4000,
+                "pure": 4100,
                 "cool": 1790,
                 "hp": 3,
                 "sis_base": 1,
@@ -282130,7 +282130,7 @@
             },
             "idolized": {
                 "smile": 2290,
-                "pure": 4000,
+                "pure": 4100,
                 "cool": 1790,
                 "hp": 3,
                 "sis_base": 1,
@@ -282220,7 +282220,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1820,
-                "pure": 4140,
+                "pure": 4240,
                 "cool": 2140,
                 "hp": 3,
                 "sis_base": 1,
@@ -282229,7 +282229,7 @@
             },
             "idolized": {
                 "smile": 1820,
-                "pure": 4140,
+                "pure": 4240,
                 "cool": 2140,
                 "hp": 3,
                 "sis_base": 1,
@@ -282319,7 +282319,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1760,
-                "pure": 4020,
+                "pure": 4120,
                 "cool": 2300,
                 "hp": 3,
                 "sis_base": 1,
@@ -282328,7 +282328,7 @@
             },
             "idolized": {
                 "smile": 1760,
-                "pure": 4020,
+                "pure": 4120,
                 "cool": 2300,
                 "hp": 3,
                 "sis_base": 1,
@@ -282417,7 +282417,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3960,
+                "smile": 4060,
                 "pure": 1790,
                 "cool": 2340,
                 "hp": 3,
@@ -282426,7 +282426,7 @@
                 "image": "http://i.schoolido.lu/c/2710RoundAi.png"
             },
             "idolized": {
-                "smile": 3960,
+                "smile": 4060,
                 "pure": 1790,
                 "cool": 2340,
                 "hp": 3,
@@ -282518,7 +282518,7 @@
             "unidolized": {
                 "smile": 2310,
                 "pure": 1780,
-                "cool": 3990,
+                "cool": 4090,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -282527,7 +282527,7 @@
             "idolized": {
                 "smile": 2310,
                 "pure": 1780,
-                "cool": 3990,
+                "cool": 4090,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -282617,7 +282617,7 @@
             "unidolized": {
                 "smile": 1850,
                 "pure": 2200,
-                "cool": 4040,
+                "cool": 4140,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -282626,7 +282626,7 @@
             "idolized": {
                 "smile": 1850,
                 "pure": 2200,
-                "cool": 4040,
+                "cool": 4140,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -282716,7 +282716,7 @@
             "unidolized": {
                 "smile": 2180,
                 "pure": 1800,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -282725,7 +282725,7 @@
             "idolized": {
                 "smile": 2180,
                 "pure": 1800,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -282815,7 +282815,7 @@
             "unidolized": {
                 "smile": 2180,
                 "pure": 1860,
-                "cool": 4050,
+                "cool": 4150,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -282824,7 +282824,7 @@
             "idolized": {
                 "smile": 2180,
                 "pure": 1860,
-                "cool": 4050,
+                "cool": 4150,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -282914,7 +282914,7 @@
             "unidolized": {
                 "smile": 2150,
                 "pure": 1880,
-                "cool": 4060,
+                "cool": 4160,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -282923,7 +282923,7 @@
             "idolized": {
                 "smile": 2150,
                 "pure": 1880,
-                "cool": 4060,
+                "cool": 4160,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -283012,7 +283012,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2180,
-                "pure": 4050,
+                "pure": 4150,
                 "cool": 1860,
                 "hp": 3,
                 "sis_base": 1,
@@ -283021,7 +283021,7 @@
             },
             "idolized": {
                 "smile": 2180,
-                "pure": 4050,
+                "pure": 4150,
                 "cool": 1860,
                 "hp": 3,
                 "sis_base": 1,
@@ -283110,7 +283110,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 1850,
                 "cool": 2200,
                 "hp": 3,
@@ -283119,7 +283119,7 @@
                 "image": "http://i.schoolido.lu/c/2717RoundSetsuna.png"
             },
             "idolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 1850,
                 "cool": 2200,
                 "hp": 3,
@@ -285381,7 +285381,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 2180,
                 "cool": 1800,
                 "hp": 3,
@@ -285390,7 +285390,7 @@
                 "image": "http://i.schoolido.lu/c/2736RoundKasumi.png"
             },
             "idolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 2180,
                 "cool": 1800,
                 "hp": 3,
@@ -285480,7 +285480,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4060,
+                "smile": 4160,
                 "pure": 1880,
                 "cool": 2150,
                 "hp": 3,
@@ -285489,7 +285489,7 @@
                 "image": "http://i.schoolido.lu/c/2737RoundShizuku.png"
             },
             "idolized": {
-                "smile": 4060,
+                "smile": 4160,
                 "pure": 1880,
                 "cool": 2150,
                 "hp": 3,
@@ -285579,7 +285579,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 2200,
                 "cool": 1850,
                 "hp": 3,
@@ -285588,7 +285588,7 @@
                 "image": "http://i.schoolido.lu/c/2738RoundRina.png"
             },
             "idolized": {
-                "smile": 4040,
+                "smile": 4140,
                 "pure": 2200,
                 "cool": 1850,
                 "hp": 3,
@@ -285679,7 +285679,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1880,
-                "pure": 4060,
+                "pure": 4160,
                 "cool": 2150,
                 "hp": 3,
                 "sis_base": 1,
@@ -285688,7 +285688,7 @@
             },
             "idolized": {
                 "smile": 1880,
-                "pure": 4060,
+                "pure": 4160,
                 "cool": 2150,
                 "hp": 3,
                 "sis_base": 1,
@@ -285778,7 +285778,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1770,
-                "pure": 3980,
+                "pure": 4080,
                 "cool": 2330,
                 "hp": 3,
                 "sis_base": 1,
@@ -285787,7 +285787,7 @@
             },
             "idolized": {
                 "smile": 1770,
-                "pure": 3980,
+                "pure": 4080,
                 "cool": 2330,
                 "hp": 3,
                 "sis_base": 1,
@@ -285877,7 +285877,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2310,
-                "pure": 3990,
+                "pure": 4090,
                 "cool": 1780,
                 "hp": 3,
                 "sis_base": 1,
@@ -285886,7 +285886,7 @@
             },
             "idolized": {
                 "smile": 2310,
-                "pure": 3990,
+                "pure": 4090,
                 "cool": 1780,
                 "hp": 3,
                 "sis_base": 1,
@@ -285976,7 +285976,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2160,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 1810,
                 "hp": 3,
                 "sis_base": 1,
@@ -285985,7 +285985,7 @@
             },
             "idolized": {
                 "smile": 2160,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 1810,
                 "hp": 3,
                 "sis_base": 1,
@@ -286076,7 +286076,7 @@
             "unidolized": {
                 "smile": 2200,
                 "pure": 1850,
-                "cool": 4040,
+                "cool": 4140,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -286085,7 +286085,7 @@
             "idolized": {
                 "smile": 2200,
                 "pure": 1850,
-                "cool": 4040,
+                "cool": 4140,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -286173,7 +286173,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 1800,
                 "cool": 2180,
                 "hp": 3,
@@ -286182,7 +286182,7 @@
                 "image": "http://i.schoolido.lu/c/2744RoundRina.png"
             },
             "idolized": {
-                "smile": 4120,
+                "smile": 4220,
                 "pure": 1800,
                 "cool": 2180,
                 "hp": 3,
@@ -286274,7 +286274,7 @@
             "unidolized": {
                 "smile": 1760,
                 "pure": 2300,
-                "cool": 4020,
+                "cool": 4120,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -286283,7 +286283,7 @@
             "idolized": {
                 "smile": 1760,
                 "pure": 2300,
-                "cool": 4020,
+                "cool": 4120,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -286373,7 +286373,7 @@
             "unidolized": {
                 "smile": 1810,
                 "pure": 2160,
-                "cool": 4130,
+                "cool": 4230,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -286382,7 +286382,7 @@
             "idolized": {
                 "smile": 1810,
                 "pure": 2160,
-                "cool": 4130,
+                "cool": 4230,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -286472,7 +286472,7 @@
             "unidolized": {
                 "smile": 2140,
                 "pure": 1820,
-                "cool": 4140,
+                "cool": 4240,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -286481,7 +286481,7 @@
             "idolized": {
                 "smile": 2140,
                 "pure": 1820,
-                "cool": 4140,
+                "cool": 4240,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -286569,7 +286569,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 2330,
                 "cool": 1810,
                 "hp": 3,
@@ -286578,7 +286578,7 @@
                 "image": "http://i.schoolido.lu/c/2748RoundKasumi.png"
             },
             "idolized": {
-                "smile": 3950,
+                "smile": 4050,
                 "pure": 2330,
                 "cool": 1810,
                 "hp": 3,
@@ -286669,7 +286669,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2330,
-                "pure": 3980,
+                "pure": 4080,
                 "cool": 1770,
                 "hp": 3,
                 "sis_base": 1,
@@ -286678,7 +286678,7 @@
             },
             "idolized": {
                 "smile": 2330,
-                "pure": 3980,
+                "pure": 4080,
                 "cool": 1770,
                 "hp": 3,
                 "sis_base": 1,
@@ -286769,7 +286769,7 @@
             "unidolized": {
                 "smile": 2280,
                 "pure": 1770,
-                "cool": 4010,
+                "cool": 4110,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -286778,7 +286778,7 @@
             "idolized": {
                 "smile": 2280,
                 "pure": 1770,
-                "cool": 4010,
+                "cool": 4110,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -287922,7 +287922,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4130,
+                "smile": 4230,
                 "pure": 1810,
                 "cool": 2160,
                 "hp": 3,
@@ -287931,7 +287931,7 @@
                 "image": "http://i.schoolido.lu/c/2760RoundKarin.png"
             },
             "idolized": {
-                "smile": 4130,
+                "smile": 4230,
                 "pure": 1810,
                 "cool": 2160,
                 "hp": 3,
@@ -288021,7 +288021,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 1820,
                 "cool": 2140,
                 "hp": 3,
@@ -288030,7 +288030,7 @@
                 "image": "http://i.schoolido.lu/c/2761RoundKanata.png"
             },
             "idolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 1820,
                 "cool": 2140,
                 "hp": 3,
@@ -288120,7 +288120,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3960,
+                "smile": 4060,
                 "pure": 2340,
                 "cool": 1790,
                 "hp": 3,
@@ -288129,7 +288129,7 @@
                 "image": "http://i.schoolido.lu/c/2762RoundEmma.png"
             },
             "idolized": {
-                "smile": 3960,
+                "smile": 4060,
                 "pure": 2340,
                 "cool": 1790,
                 "hp": 3,
@@ -288220,7 +288220,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1850,
-                "pure": 4040,
+                "pure": 4140,
                 "cool": 2200,
                 "hp": 3,
                 "sis_base": 1,
@@ -288229,7 +288229,7 @@
             },
             "idolized": {
                 "smile": 1850,
-                "pure": 4040,
+                "pure": 4140,
                 "cool": 2200,
                 "hp": 3,
                 "sis_base": 1,
@@ -288319,7 +288319,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2180,
-                "pure": 4050,
+                "pure": 4150,
                 "cool": 1860,
                 "hp": 3,
                 "sis_base": 1,
@@ -288328,7 +288328,7 @@
             },
             "idolized": {
                 "smile": 2180,
-                "pure": 4050,
+                "pure": 4150,
                 "cool": 1860,
                 "hp": 3,
                 "sis_base": 1,
@@ -288418,7 +288418,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2180,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 1800,
                 "hp": 3,
                 "sis_base": 1,
@@ -288427,7 +288427,7 @@
             },
             "idolized": {
                 "smile": 2180,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 1800,
                 "hp": 3,
                 "sis_base": 1,
@@ -288518,7 +288518,7 @@
             "unidolized": {
                 "smile": 2290,
                 "pure": 1790,
-                "cool": 3990,
+                "cool": 4090,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -288527,7 +288527,7 @@
             "idolized": {
                 "smile": 2290,
                 "pure": 1790,
-                "cool": 3990,
+                "cool": 4090,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -288615,7 +288615,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4060,
+                "smile": 4160,
                 "pure": 2150,
                 "cool": 1880,
                 "hp": 3,
@@ -288624,7 +288624,7 @@
                 "image": "http://i.schoolido.lu/c/2767RoundKanata.png"
             },
             "idolized": {
-                "smile": 4060,
+                "smile": 4160,
                 "pure": 2150,
                 "cool": 1880,
                 "hp": 3,
@@ -288715,7 +288715,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1860,
-                "pure": 4050,
+                "pure": 4150,
                 "cool": 2180,
                 "hp": 3,
                 "sis_base": 1,
@@ -288724,7 +288724,7 @@
             },
             "idolized": {
                 "smile": 1860,
-                "pure": 4050,
+                "pure": 4150,
                 "cool": 2180,
                 "hp": 3,
                 "sis_base": 1,
@@ -288815,7 +288815,7 @@
             "unidolized": {
                 "smile": 1770,
                 "pure": 2280,
-                "cool": 4030,
+                "cool": 4130,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -288824,7 +288824,7 @@
             "idolized": {
                 "smile": 1770,
                 "pure": 2280,
-                "cool": 4030,
+                "cool": 4130,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -288914,7 +288914,7 @@
             "unidolized": {
                 "smile": 2320,
                 "pure": 1750,
-                "cool": 4010,
+                "cool": 4110,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -288923,7 +288923,7 @@
             "idolized": {
                 "smile": 2320,
                 "pure": 1750,
-                "cool": 4010,
+                "cool": 4110,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -289013,7 +289013,7 @@
             "unidolized": {
                 "smile": 1880,
                 "pure": 2150,
-                "cool": 4060,
+                "cool": 4160,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -289022,7 +289022,7 @@
             "idolized": {
                 "smile": 1880,
                 "pure": 2150,
-                "cool": 4060,
+                "cool": 4160,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -289111,7 +289111,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1790,
-                "pure": 4000,
+                "pure": 4100,
                 "cool": 2290,
                 "hp": 3,
                 "sis_base": 1,
@@ -289120,7 +289120,7 @@
             },
             "idolized": {
                 "smile": 1790,
-                "pure": 4000,
+                "pure": 4100,
                 "cool": 2290,
                 "hp": 3,
                 "sis_base": 1,
@@ -289211,7 +289211,7 @@
             "unidolized": {
                 "smile": 2160,
                 "pure": 1820,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -289220,7 +289220,7 @@
             "idolized": {
                 "smile": 2160,
                 "pure": 1820,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -289308,7 +289308,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 2140,
                 "cool": 1820,
                 "hp": 3,
@@ -289317,7 +289317,7 @@
                 "image": "http://i.schoolido.lu/c/2774RoundEmma.png"
             },
             "idolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 2140,
                 "cool": 1820,
                 "hp": 3,
@@ -304385,7 +304385,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1760,
-                "pure": 4020,
+                "pure": 4120,
                 "cool": 2300,
                 "hp": 4,
                 "sis_base": 1,
@@ -304394,7 +304394,7 @@
             },
             "idolized": {
                 "smile": 1760,
-                "pure": 4020,
+                "pure": 4120,
                 "cool": 2300,
                 "hp": 4,
                 "sis_base": 1,
@@ -304483,7 +304483,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3970,
+                "smile": 4070,
                 "pure": 2320,
                 "cool": 1800,
                 "hp": 4,
@@ -304492,7 +304492,7 @@
                 "image": "http://i.schoolido.lu/c/2894RoundKeke.png"
             },
             "idolized": {
-                "smile": 3970,
+                "smile": 4070,
                 "pure": 2320,
                 "cool": 1800,
                 "hp": 4,
@@ -304584,7 +304584,7 @@
             "unidolized": {
                 "smile": 2180,
                 "pure": 1860,
-                "cool": 4050,
+                "cool": 4150,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -304593,7 +304593,7 @@
             "idolized": {
                 "smile": 2180,
                 "pure": 1860,
-                "cool": 4050,
+                "cool": 4150,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -304683,7 +304683,7 @@
             "unidolized": {
                 "smile": 2330,
                 "pure": 1770,
-                "cool": 3980,
+                "cool": 4080,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -304692,7 +304692,7 @@
             "idolized": {
                 "smile": 2330,
                 "pure": 1770,
-                "cool": 3980,
+                "cool": 4080,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -304781,7 +304781,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1800,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 2180,
                 "hp": 4,
                 "sis_base": 1,
@@ -304790,7 +304790,7 @@
             },
             "idolized": {
                 "smile": 1800,
-                "pure": 4120,
+                "pure": 4220,
                 "cool": 2180,
                 "hp": 4,
                 "sis_base": 1,
@@ -304881,7 +304881,7 @@
             "unidolized": {
                 "smile": 1820,
                 "pure": 2160,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -304890,7 +304890,7 @@
             "idolized": {
                 "smile": 1820,
                 "pure": 2160,
-                "cool": 4120,
+                "cool": 4220,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -304979,7 +304979,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1860,
-                "pure": 4050,
+                "pure": 4150,
                 "cool": 2180,
                 "hp": 4,
                 "sis_base": 1,
@@ -304988,7 +304988,7 @@
             },
             "idolized": {
                 "smile": 1860,
-                "pure": 4050,
+                "pure": 4150,
                 "cool": 2180,
                 "hp": 4,
                 "sis_base": 1,
@@ -305077,7 +305077,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 3980,
+                "smile": 4080,
                 "pure": 1770,
                 "cool": 2330,
                 "hp": 4,
@@ -305086,7 +305086,7 @@
                 "image": "http://i.schoolido.lu/c/2900RoundChisato.png"
             },
             "idolized": {
-                "smile": 3980,
+                "smile": 4080,
                 "pure": 1770,
                 "cool": 2330,
                 "hp": 4,
@@ -305176,7 +305176,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 1820,
                 "cool": 2140,
                 "hp": 4,
@@ -305185,7 +305185,7 @@
                 "image": "http://i.schoolido.lu/c/2901RoundSumire.png"
             },
             "idolized": {
-                "smile": 4140,
+                "smile": 4240,
                 "pure": 1820,
                 "cool": 2140,
                 "hp": 4,
@@ -305277,7 +305277,7 @@
             "unidolized": {
                 "smile": 1800,
                 "pure": 2320,
-                "cool": 3970,
+                "cool": 4070,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -305286,7 +305286,7 @@
             "idolized": {
                 "smile": 1800,
                 "pure": 2320,
-                "cool": 3970,
+                "cool": 4070,
                 "hp": 4,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -314170,7 +314170,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4130,
+                "smile": 4230,
                 "pure": 2160,
                 "cool": 1810,
                 "hp": 3,
@@ -314179,7 +314179,7 @@
                 "image": "http://i.schoolido.lu/c/2972RoundShioriko.png"
             },
             "idolized": {
-                "smile": 4130,
+                "smile": 4230,
                 "pure": 2160,
                 "cool": 1810,
                 "hp": 3,
@@ -314270,7 +314270,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2330,
-                "pure": 3980,
+                "pure": 4080,
                 "cool": 1770,
                 "hp": 3,
                 "sis_base": 1,
@@ -314279,7 +314279,7 @@
             },
             "idolized": {
                 "smile": 2330,
-                "pure": 3980,
+                "pure": 4080,
                 "cool": 1770,
                 "hp": 3,
                 "sis_base": 1,
@@ -314369,7 +314369,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1810,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 2160,
                 "hp": 3,
                 "sis_base": 1,
@@ -314378,7 +314378,7 @@
             },
             "idolized": {
                 "smile": 1810,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 2160,
                 "hp": 3,
                 "sis_base": 1,
@@ -314467,7 +314467,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 2180,
                 "cool": 1860,
                 "hp": 3,
@@ -314476,7 +314476,7 @@
                 "image": "http://i.schoolido.lu/c/2975RoundShioriko.png"
             },
             "idolized": {
-                "smile": 4050,
+                "smile": 4150,
                 "pure": 2180,
                 "cool": 1860,
                 "hp": 3,
@@ -314568,7 +314568,7 @@
             "unidolized": {
                 "smile": 1800,
                 "pure": 2320,
-                "cool": 3970,
+                "cool": 4070,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -314577,7 +314577,7 @@
             "idolized": {
                 "smile": 1800,
                 "pure": 2320,
-                "cool": 3970,
+                "cool": 4070,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -326236,7 +326236,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4030,
+                "smile": 4130,
                 "pure": 1750,
                 "cool": 2320,
                 "hp": 3,
@@ -326245,7 +326245,7 @@
                 "image": "http://i.schoolido.lu/c/3080RoundMia.png"
             },
             "idolized": {
-                "smile": 4030,
+                "smile": 4130,
                 "pure": 1750,
                 "cool": 2320,
                 "hp": 3,
@@ -326337,7 +326337,7 @@
             "unidolized": {
                 "smile": 1780,
                 "pure": 2310,
-                "cool": 3990,
+                "cool": 4090,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -326346,7 +326346,7 @@
             "idolized": {
                 "smile": 1780,
                 "pure": 2310,
-                "cool": 3990,
+                "cool": 4090,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -326435,7 +326435,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1790,
-                "pure": 3960,
+                "pure": 4060,
                 "cool": 2340,
                 "hp": 3,
                 "sis_base": 1,
@@ -326444,7 +326444,7 @@
             },
             "idolized": {
                 "smile": 1790,
-                "pure": 3960,
+                "pure": 4060,
                 "cool": 2340,
                 "hp": 3,
                 "sis_base": 1,
@@ -326534,7 +326534,7 @@
         "stats": {
             "unidolized": {
                 "smile": 1810,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 2160,
                 "hp": 3,
                 "sis_base": 1,
@@ -326543,7 +326543,7 @@
             },
             "idolized": {
                 "smile": 1810,
-                "pure": 4130,
+                "pure": 4230,
                 "cool": 2160,
                 "hp": 3,
                 "sis_base": 1,
@@ -326634,7 +326634,7 @@
             "unidolized": {
                 "smile": 2160,
                 "pure": 1810,
-                "cool": 4130,
+                "cool": 4230,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -326643,7 +326643,7 @@
             "idolized": {
                 "smile": 2160,
                 "pure": 1810,
-                "cool": 4130,
+                "cool": 4230,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -343216,7 +343216,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4030,
+                "smile": 4130,
                 "pure": 2320,
                 "cool": 1750,
                 "hp": 3,
@@ -343225,7 +343225,7 @@
                 "image": "http://i.schoolido.lu/c/3215RoundLanzhu.png"
             },
             "idolized": {
-                "smile": 4030,
+                "smile": 4130,
                 "pure": 2320,
                 "cool": 1750,
                 "hp": 3,
@@ -343315,7 +343315,7 @@
         "is_preidolized_non_promo": false,
         "stats": {
             "unidolized": {
-                "smile": 4000,
+                "smile": 4100,
                 "pure": 2290,
                 "cool": 1790,
                 "hp": 3,
@@ -343324,7 +343324,7 @@
                 "image": "http://i.schoolido.lu/c/3216RoundLanzhu.png"
             },
             "idolized": {
-                "smile": 4000,
+                "smile": 4100,
                 "pure": 2290,
                 "cool": 1790,
                 "hp": 3,
@@ -343415,7 +343415,7 @@
         "stats": {
             "unidolized": {
                 "smile": 2150,
-                "pure": 4060,
+                "pure": 4160,
                 "cool": 1880,
                 "hp": 3,
                 "sis_base": 1,
@@ -343424,7 +343424,7 @@
             },
             "idolized": {
                 "smile": 2150,
-                "pure": 4060,
+                "pure": 4160,
                 "cool": 1880,
                 "hp": 3,
                 "sis_base": 1,
@@ -343515,7 +343515,7 @@
             "unidolized": {
                 "smile": 2330,
                 "pure": 1810,
-                "cool": 3950,
+                "cool": 4050,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -343524,7 +343524,7 @@
             "idolized": {
                 "smile": 2330,
                 "pure": 1810,
-                "cool": 3950,
+                "cool": 4050,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -343614,7 +343614,7 @@
             "unidolized": {
                 "smile": 2160,
                 "pure": 1810,
-                "cool": 4130,
+                "cool": 4230,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
@@ -343623,7 +343623,7 @@
             "idolized": {
                 "smile": 2160,
                 "pure": 1810,
-                "cool": 4130,
+                "cool": 4230,
                 "hp": 3,
                 "sis_base": 1,
                 "sis_max": 1,
